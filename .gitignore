@@ -1,0 +1,25 @@
+# Environment / secrets
+.env
+.envrc
+
+# chezmoi local state
+.chezmoistate
+
+# OS
+.DS_Store
+Thumbbs.db
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+*.swp
+*~
+
+# Python (pre-commit)
+__pycache__/
+*.pyc
+.venv/
+
+# mise local config
+.mise.local.toml

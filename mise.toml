@@ -1,0 +1,8 @@
+# mise.toml — tooling para dotfiles
+# Instalar tudo: mise install
+
+[tools]
+chezmoi = "latest"
+pre-commit = "latest"
+gitleaks = "latest"
+shellcheck = "latest"

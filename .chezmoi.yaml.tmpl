@@ -1,0 +1,30 @@
+{{- /* ──────────────────────────────────────────────── */ -}}
+{{- /* chezmoi config — epoch-chrono/dotfiles          */ -}}
+{{- /* ──────────────────────────────────────────────── */ -}}
+
+{{- $osid   := .chezmoi.os -}}
+{{- $arch   := .chezmoi.arch -}}
+{{- $isNix  := stat "/etc/NIXOS" | not | not -}}
+
+{{- /* Interactive prompts on first init */ -}}
+{{- $email  := promptStringOnce . "email" "Git email" -}}
+{{- $context := promptChoiceOnce . "context" "Context (personal/client)" (list "personal" "client") -}}
+{{- $client := "" -}}
+{{- if eq $context "client" -}}
+{{-   $client = promptStringOnce . "client_slug" "Client slug (e.g. epoch, apoiase)" -}}
+{{- end -}}
+
+sourceDir: {{ .chezmoi.sourceDir | quote }}
+
+data:
+  os: {{ $osid | quote }}
+  arch: {{ $arch | quote }}
+  is_mac: {{ eq $osid "darwin" }}
+  is_linux: {{ eq $osid "linux" }}
+  is_nixos: {{ $isNix }}
+  email: {{ $email | quote }}
+  context: {{ $context | quote }}
+  client_slug: {{ $client | quote }}
+
+onepassword:
+  prompt: true

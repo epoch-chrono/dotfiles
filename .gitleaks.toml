@@ -1,0 +1,18 @@
+# .gitleaks.toml — Configuração do gitleaks para dotfiles
+# Allowlist para falsos positivos em templates chezmoi
+
+title = "dotfiles gitleaks config"
+
+[allowlist]
+description = "Allowed patterns"
+# Templates chezmoi contêm referências op:// que não são secrets reais
+regexTarget = "line"
+regexes = [
+  '''onepasswordRead\s+"op://''',
+  '''onepassword\s+"''',
+]
+# bootstrap.sh contém URLs públicas que podem triggerar falsos positivos
+paths = [
+  '''bootstrap\.sh''',
+  '''docs/.*\.md''',
+]

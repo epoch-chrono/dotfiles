@@ -1,0 +1,82 @@
+# .pre-commit-config.yaml
+# ============================================================
+# Guardrails de segurança — execução local antes do commit
+# ============================================================
+# Adaptado de github.com/epoch-chrono/sebastiao
+#
+# Instalação:
+#   mise install            # instala pre-commit + gitleaks + shellcheck
+#   pre-commit install      # ativa hooks no repo
+#
+# Uso manual:
+#   pre-commit run --all-files
+#   pre-commit autoupdate
+# ============================================================
+
+repos:
+
+  # ── Hooks gerais — qualidade e higiene ──────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-in-path
+
+  # ── Secret scanning — CRÍTICO ───────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.1
+    hooks:
+      - id: gitleaks
+
+  # ── Shell linting ───────────────────────────────────────────
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+        types: [shell]
+
+  # ── Conventional commits ────────────────────────────────────
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - chore
+          - docs
+          - refactor
+          - style
+          - ci
+          - test
+          - build
+
+  # ── Hooks locais ────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: chezmoi-template-lint
+        name: "chezmoi template syntax"
+        entry: bash -c 'for f in "$@"; do chezmoi execute-template < "$f" > /dev/null 2>&1 || (echo "FAIL: $f" && exit 1); done'
+        language: system
+        files: '\.tmpl$'
+        pass_filenames: true
+
+      - id: no-hardcoded-secrets
+        name: "check for hardcoded secrets in templates"
+        entry: bash -c 'for f in "$@"; do if grep -qP "(ghp_|ntn_|ops_|sk-|AKIA)" "$f"; then echo "FAIL: possible secret in $f" && exit 1; fi; done'
+        language: system
+        types: [file]
+        pass_filenames: true

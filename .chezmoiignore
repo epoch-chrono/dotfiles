@@ -1,0 +1,31 @@
+# ──────────────────────────────────────────────────
+# .chezmoiignore — conditional ignores by platform
+# ──────────────────────────────────────────────────
+
+# Repo scaffolding (not dotfiles)
+README.md
+LICENSE
+Makefile
+mise.toml
+bootstrap.sh
+commitlint.config.js
+docs/
+.pre-commit-config.yaml
+.gitleaks.toml
+.editorconfig
+
+# macOS-only configs — ignore on Linux
+{{ if ne .chezmoi.os "darwin" }}
+dot_cursor/
+Library/
+{{ end }}
+
+# Linux-only configs — ignore on macOS
+{{ if ne .chezmoi.os "linux" }}
+# (reserved for future linux-specific configs)
+{{ end }}
+
+# NixOS: skip bootstrap scripts (nix handles deps)
+{{ if .is_nixos }}
+run_once_before_00-install-deps.sh.tmpl
+{{ end }}
