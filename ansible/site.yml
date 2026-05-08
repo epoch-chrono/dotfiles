@@ -2,9 +2,11 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.2.0
+# Versão atual: 0.3.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
+#   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer
+#            quando algum default muda, evitando logout/login pra refletir)
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

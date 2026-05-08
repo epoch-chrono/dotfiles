@@ -10,6 +10,10 @@
 #
 # As tasks NÃO usam become — defaults do user são gravados em
 # ~/Library/Preferences/, propriedade do próprio user.
+#
+# Handlers em handlers/main.yml fazem killall de cfprefsd, Finder, Dock,
+# SystemUIServer ao final do play, MAS apenas quando 'changed' for true
+# (Ansible só executa handlers notified por tasks que mudaram).
 # ────────────────────────────────────────────────────────────────────────────
 
 - name: "macOS defaults — aplicar configurações declarativas"
@@ -22,7 +26,15 @@
   loop: "{{ macos_defaults }}"
   loop_control:
     label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
+  notify:
+    - reload cfprefsd
+    - restart Finder
+    - restart Dock
+    - restart SystemUIServer
 
 - name: "Mostrar resumo das configurações aplicadas"
   ansible.builtin.debug:
-    msg: "{{ macos_defaults | length }} defaults processados ({{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }})"
+    msg:
+      - "{{ macos_defaults | length }} defaults processados em {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}"
+      - "Se algum default modificou estado, handlers vão rodar killall em cfprefsd/Finder/Dock/SystemUIServer ao final do play."
+      - "Algumas configurações (ex: Full Keyboard Access, tracking speed) podem precisar de logout/login para refletir totalmente."

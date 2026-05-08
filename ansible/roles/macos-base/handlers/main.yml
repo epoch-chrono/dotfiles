@@ -1,0 +1,42 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/handlers/main.yml — restart de processos pós-defaults
+# ────────────────────────────────────────────────────────────────────────────
+# Handlers rodam ao FIM do play, e SOMENTE se notified por uma task que
+# reportou 'changed'. Em re-runs idempotentes (todos defaults retornam 'ok')
+# nada aqui executa — comportamento desejado: zero restart desnecessário.
+#
+# IMPORTANTE: ordem importa. Handlers rodam na ordem em que aparecem
+# NESTE arquivo, não na ordem em que são notified.
+#   1. cfprefsd primeiro (invalida cache global de preferences)
+#   2. Apps consumidores depois (relançam com cache fresh)
+#
+# Limitação: algumas configurações sistêmicas (ex: AppleKeyboardUIMode,
+# tracking speed do trackpad) só refletem totalmente após logout/login
+# ou reboot. Handlers cobrem ~80% dos casos. Para os 20% restantes,
+# logout/login resolve.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: reload cfprefsd
+  ansible.builtin.command:
+    cmd: killall cfprefsd
+  failed_when: false  # processo pode não estar rodando; launchd o relança
+  changed_when: true
+
+- name: restart Finder
+  ansible.builtin.command:
+    cmd: killall Finder
+  failed_when: false
+  changed_when: true
+
+- name: restart Dock
+  ansible.builtin.command:
+    cmd: killall Dock
+  failed_when: false
+  changed_when: true
+
+- name: restart SystemUIServer
+  ansible.builtin.command:
+    cmd: killall SystemUIServer
+  failed_when: false
+  changed_when: true
