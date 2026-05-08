@@ -1,0 +1,18 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# inventory/localhost.yml — host local (a própria máquina)
+# ────────────────────────────────────────────────────────────────────────────
+# O playbook roda no mesmo host que invoca o ansible-playbook. Usar
+# connection: local evita o overhead de SSH para si mesmo.
+#
+# ansible_python_interpreter aponta para o mesmo Python que está rodando
+# o ansible-playbook (no nosso caso, o do venv em
+# ~/.cache/dotfiles-bootstrap/venv). Isso garante que módulos Python das
+# tasks usem o mesmo ambiente.
+# ────────────────────────────────────────────────────────────────────────────
+
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"

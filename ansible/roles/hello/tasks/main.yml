@@ -1,0 +1,61 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/hello/tasks/main.yml — validação ponta-a-ponta da chain
+# ────────────────────────────────────────────────────────────────────────────
+# Esta role NÃO faz nada útil em produção. Existe apenas para validar que:
+#   1. gather_facts coletou informações do host (=> conexão funcionou)
+#   2. tasks user-level (sem become) executam corretamente
+#   3. become privilege escalation funciona SEM prompt de senha
+#      (=> NOPASSWD sudo configurado pelo bootstrap está ativo)
+#   4. assert valida o resultado de uma task anterior
+#
+# Quando todas as 4 tasks passarem, sabemos que a chain inteira
+# (bootstrap.sh -> venv -> ansible-core -> playbook -> become) funciona.
+# Após validação, esta role pode ser removida ou mantida como smoke test.
+#
+# Note: usamos ansible_facts.<key> em vez de ansible_<key> top-level
+# porque INJECT_FACTS_AS_VARS=True está deprecado (será removido em
+# ansible-core 2.24). ansible_facts é a forma future-proof.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Mostrar fatos coletados (valida gather_facts)"
+  ansible.builtin.debug:
+    msg:
+      - "Sistema:      {{ ansible_facts.system }} / {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version | default('-') }}"
+      - "Arquitetura:  {{ ansible_facts.architecture }}"
+      - "Hostname:     {{ ansible_facts.hostname }} (FQDN: {{ ansible_facts.fqdn }})"
+      - "Usuário:      {{ ansible_facts.user_id }} (uid={{ ansible_facts.user_uid }})"
+      - "Home:         {{ ansible_facts.user_dir }}"
+      - "Python:       {{ ansible_facts.python.version.major }}.{{ ansible_facts.python.version.minor }}.{{ ansible_facts.python.version.micro }} ({{ ansible_facts.python.executable }})"
+      - "Ansible:      {{ ansible_version.full }}"
+      - "Data/hora:    {{ ansible_facts.date_time.iso8601 }}"
+
+- name: "Criar arquivo marker em ~/.cache (valida tasks user-level)"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts.user_dir }}/.cache/dotfiles-bootstrap/ansible-first-run.txt"
+    content: |
+      Primeira execução do Ansible bem-sucedida.
+
+      Timestamp:    {{ ansible_facts.date_time.iso8601 }}
+      Host:         {{ ansible_facts.hostname }}
+      Usuário:      {{ ansible_facts.user_id }}
+      Python:       {{ ansible_facts.python.executable }}
+      Ansible:      {{ ansible_version.full }}
+
+      Chain validada:
+        bootstrap.sh -> venv -> ansible-core -> playbook -> become
+    mode: "0644"
+
+- name: "Rodar 'id -u' como root (valida become sem prompt)"
+  ansible.builtin.command:
+    cmd: id -u
+  become: true
+  register: become_check
+  changed_when: false
+
+- name: "Confirmar que become deu uid=0 (valida NOPASSWD sudo)"
+  ansible.builtin.assert:
+    that:
+      - become_check.stdout == "0"
+    success_msg: "OK — become escalou para uid=0 sem prompt de senha. NOPASSWD sudo está funcionando."
+    fail_msg: "FALHOU — esperado uid=0, recebido uid={{ become_check.stdout }}. Verifique /etc/sudoers.d/{{ ansible_facts.user_id }}."

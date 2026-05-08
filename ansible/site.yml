@@ -1,0 +1,22 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# site.yml — entry point do playbook
+# ────────────────────────────────────────────────────────────────────────────
+# Versão atual: 0.1.0 (apenas role hello, validação da chain)
+#
+# Executar:
+#   cd ~/.local/share/dotfiles/ansible
+#   ~/.cache/dotfiles-bootstrap/venv/bin/ansible-playbook site.yml
+#
+# Note: não usar --ask-become-pass. NOPASSWD sudo foi configurado pelo
+# bootstrap.sh (Etapa 2). Se o playbook pedir senha, algo está errado.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Hello — primeira execução"
+  hosts: localhost
+  gather_facts: true
+
+  roles:
+    - role: hello
+      tags:
+        - hello

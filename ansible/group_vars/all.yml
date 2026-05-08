@@ -1,0 +1,14 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# group_vars/all.yml — variáveis compartilhadas por todos os hosts
+# ────────────────────────────────────────────────────────────────────────────
+# Convenções:
+#   - Variáveis que se aplicam a qualquer host vão aqui.
+#   - Variáveis específicas de um host (futuramente) vão em
+#     ./host_vars/<hostname>.yml.
+#   - Para overrides locais não-versionados, criar ./vars/local.yml e
+#     incluir via vars_files no site.yml. Esse arquivo deve estar no
+#     .gitignore.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Placeholder — adicionar variáveis conforme as roles forem nascendo.
