@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.2.0
+# Version: 0.3.0
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) até o
@@ -12,6 +12,9 @@
 # Etapas (todas as plataformas):
 #   1. Pré-requisitos do SO
 #        - macOS:  Xcode Command Line Tools (git, python3, clang, make)
+#                  Tenta instalação headless via softwareupdate (funciona via
+#                  SSH, sem GUI). Cai no xcode-select --install (modo GUI) se
+#                  o headless falhar.
 #        - Linux:  git, python3 + venv, build tools, ca-certificates
 #   2. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
 #   3. Ansible-core no venv
@@ -77,7 +80,7 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.2.0 — zero-to-hero"
+echo "#  bootstrap.sh v0.3.0 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
@@ -94,13 +97,66 @@ install_prereqs_macos() {
         return 0
     fi
 
-    echo "Xcode CLT não detectado. Disparando instalador..."
+    echo "Xcode CLT não detectado."
     echo "Justificativa: sem CLT, /usr/bin/git e /usr/bin/python3 são stubs"
     echo "que disparam diálogo gráfico no primeiro uso, travando automação."
+    echo
+
+    # Tentativa 1: instalação headless via softwareupdate.
+    # Funciona via SSH e em qualquer ambiente sem GUI session.
+    # Referência: https://apple.stackexchange.com/q/107307
+    echo "Tentando instalação headless via softwareupdate..."
+
+    local marker="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+    touch "${marker}"
+
+    # softwareupdate -l só lista CLT se o marker acima existir.
+    # Wrappar em `if` desabilita set -e/pipefail caso softwareupdate falhe
+    # ou produza output inesperado.
+    local prod=""
+    local sw_output=""
+    if sw_output=$(softwareupdate -l 2>/dev/null); then
+        prod=$(printf '%s\n' "${sw_output}" \
+            | awk -F'*' '/\*.*Command Line/ {print $2}' \
+            | sed -E 's/^[[:space:]]+//' \
+            | head -n 1 \
+            | tr -d '\n' || true)
+    fi
+
+    if [ -n "${prod}" ]; then
+        echo "Pacote identificado: ${prod}"
+        echo "Instalando (sem prompt gráfico — pode demorar alguns minutos)..."
+        if softwareupdate -i "${prod}" --verbose; then
+            rm -f "${marker}"
+            echo "CLT instalado com sucesso (modo headless)."
+            # Validação pós-install
+            if xcode-select -p >/dev/null 2>&1; then
+                echo "Verificado: $(xcode-select -p)"
+                return 0
+            fi
+            echo "AVISO: install reportou sucesso mas xcode-select -p ainda falha."
+            echo "       Caindo no método GUI..."
+        else
+            echo "AVISO: softwareupdate -i falhou. Caindo no método GUI..."
+        fi
+    else
+        echo "AVISO: softwareupdate -l não retornou pacote CLT."
+        echo "       (formato de output pode ter mudado em macOS recente.)"
+        echo "       Caindo no método GUI..."
+    fi
+
+    rm -f "${marker}"
+
+    # Tentativa 2 (fallback): GUI dialog tradicional.
+    # Esse método não funciona via SSH — requer sessão gráfica ativa.
+    echo
+    echo "Disparando instalador GUI via xcode-select..."
     xcode-select --install
     echo
     echo "ATENÇÃO: a janela gráfica de instalação foi aberta."
     echo "         Aguarde a conclusão e rode este script novamente."
+    echo "         Se você está em SSH e não há sessão GUI, a janela não"
+    echo "         vai aparecer e o headless acima é a única alternativa."
     exit 1
 }
 
@@ -243,7 +299,7 @@ echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.2.0 concluído com sucesso"
+echo "#  Bootstrap v0.3.0 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Próximas etapas (ainda NÃO implementadas):"
