@@ -2,12 +2,12 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.4.0
+# Version: 0.5.0
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) até o
-# ponto onde o Ansible pode tomar conta. Tudo que vier depois (brew, rosetta,
-# defaults, mise, pacotes, chezmoi) é responsabilidade do playbook Ansible.
+# ponto onde o Ansible pode tomar conta. Tudo que vier depois (brew, defaults,
+# mise, pacotes, chezmoi) é responsabilidade do playbook Ansible.
 #
 # Etapas (todas as plataformas):
 #   1. Pré-requisitos do SO
@@ -22,14 +22,18 @@
 #          sudo por sintaxe inválida.
 #        - Opt-out: BOOTSTRAP_NOPASSWD_SUDO=0 bash bootstrap.sh
 #        - NixOS: skip + orientação para configuration.nix
-#   3. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
-#   4. Ansible-core no venv
-#   5. Clone do repo dotfiles
+#   3. Rosetta 2 (somente Darwin ARM64)
+#        - Headless via softwareupdate --install-rosetta --agree-to-license
+#        - Skip em Linux, Mac Intel, e Mac ARM com Rosetta já presente
+#        - Posicionado APÓS NOPASSWD para usar sudo sem prompt
+#   4. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
+#   5. Ansible-core no venv
+#   6. Clone do repo dotfiles
 #
 # Etapas futuras (não implementadas nesta versão):
-#   6. ansible-galaxy collection install
-#   7. ansible-playbook (provisiona sistema + instala chezmoi)
-#   8. chezmoi init --apply (deploy dos dotfiles)
+#   7. ansible-galaxy collection install
+#   8. ansible-playbook (provisiona sistema + instala chezmoi)
+#   9. chezmoi init --apply (deploy dos dotfiles)
 #
 # Plataformas suportadas:
 #   - macOS (qualquer versão recente)
@@ -87,7 +91,7 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.4.0 — zero-to-hero"
+echo "#  bootstrap.sh v0.5.0 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
@@ -276,6 +280,47 @@ install_prereqs_linux() {
     esac
 }
 
+# ── Função: Rosetta 2 (Darwin ARM64 only) ───────────────────────────────────
+install_rosetta() {
+    # Cross-OS guard: Rosetta só existe no macOS
+    if [ "${OS_NAME}" != "Darwin" ]; then
+        echo "Não é macOS (${OS_NAME}). Rosetta não aplicável. Pulando."
+        return 0
+    fi
+
+    # Architecture guard: Rosetta só faz sentido em Apple Silicon
+    local arch
+    arch="$(uname -m)"
+    if [ "${arch}" != "arm64" ]; then
+        echo "Mac é Intel (arch=${arch}). Rosetta desnecessária. Pulando."
+        return 0
+    fi
+
+    # Idempotência: Apple cria /Library/Apple/usr/share/rosetta após instalar
+    if [ -d /Library/Apple/usr/share/rosetta ]; then
+        echo "Rosetta 2 já instalada (/Library/Apple/usr/share/rosetta presente)."
+        echo "Pulando."
+        return 0
+    fi
+
+    echo "Instalando Rosetta 2 (headless, --agree-to-license)..."
+    echo "Justificativa: alguns binarios x86_64 ainda sao distribuidos"
+    echo "(ferramentas comerciais especificas, builds antigas de pacotes brew,"
+    echo "containers Docker x86). Rosetta permite rodar transparentemente."
+
+    # softwareupdate --install-rosetta requer root no macOS atual.
+    # Como esta etapa roda APOS NOPASSWD sudo (Etapa 2), nao ha prompt.
+    sudo softwareupdate --install-rosetta --agree-to-license
+
+    # Validação pós-install
+    if [ -d /Library/Apple/usr/share/rosetta ]; then
+        echo "Rosetta 2 instalada com sucesso."
+    else
+        die "softwareupdate completou mas /Library/Apple/usr/share/rosetta
+       nao existe. Investigue manualmente."
+    fi
+}
+
 # ── Função: NOPASSWD sudo (cross-OS) ────────────────────────────────────────
 configure_passwordless_sudo() {
     if [ "${BOOTSTRAP_NOPASSWD_SUDO:-1}" != "1" ]; then
@@ -373,8 +418,12 @@ esac
 log_step "Etapa 2: NOPASSWD sudo (${OS_NAME})"
 configure_passwordless_sudo
 
-# ── Etapa 3: Virtualenv isolado ─────────────────────────────────────────────
-log_step "Etapa 3: Virtualenv isolado para Ansible"
+# ── Etapa 3: Rosetta 2 (somente Darwin ARM64) ──────────────────────────────
+log_step "Etapa 3: Rosetta 2 (${OS_NAME} $(uname -m))"
+install_rosetta
+
+# ── Etapa 4: Virtualenv isolado ─────────────────────────────────────────────
+log_step "Etapa 4: Virtualenv isolado para Ansible"
 
 if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then
     echo "Venv já existe em ${VENV_DIR}, reusando."
@@ -391,8 +440,8 @@ echo "Venv ativado."
 echo "Python: $(command -v python3) ($(python3 --version))"
 echo "Pip:    $(command -v pip) ($(pip --version | awk '{print $2}'))"
 
-# ── Etapa 4: Ansible-core no venv ───────────────────────────────────────────
-log_step "Etapa 4: Ansible-core no venv"
+# ── Etapa 5: Ansible-core no venv ───────────────────────────────────────────
+log_step "Etapa 5: Ansible-core no venv"
 
 echo "Atualizando pip..."
 pip install --quiet --upgrade pip
@@ -403,8 +452,8 @@ pip install --quiet --upgrade ansible-core
 echo "Instalado:"
 ansible --version | sed 's/^/  /'
 
-# ── Etapa 5: Clone do repo dotfiles ─────────────────────────────────────────
-log_step "Etapa 5: Clone do repo dotfiles"
+# ── Etapa 6: Clone do repo dotfiles ─────────────────────────────────────────
+log_step "Etapa 6: Clone do repo dotfiles"
 
 if [ -d "${REPO_DIR}/.git" ]; then
     echo "Repo já clonado em ${REPO_DIR}."
@@ -423,13 +472,13 @@ echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.4.0 concluído com sucesso"
+echo "#  Bootstrap v0.5.0 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Próximas etapas (ainda NÃO implementadas):"
-echo "#    6. ansible-galaxy collection install -r requirements.yml"
-echo "#    7. ansible-playbook -i inventory/localhost.yml site.yml"
-echo "#    8. chezmoi init --apply"
+echo "#    7. ansible-galaxy collection install -r requirements.yml"
+echo "#    8. ansible-playbook -i inventory/localhost.yml site.yml"
+echo "#    9. chezmoi init --apply"
 echo "#"
 echo "#  Log salvo em: ${LOG_FILE}"
 echo "#  Para limpar venv após uso: rm -rf ${CACHE_DIR}"
