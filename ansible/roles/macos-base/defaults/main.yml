@@ -1,0 +1,81 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/defaults/main.yml — defaults declarativos do macOS
+# ────────────────────────────────────────────────────────────────────────────
+# Esta lista controla quais 'defaults write' são aplicados pela role.
+# Adicionar/remover entradas modifica diretamente o que fica escrito no
+# ~/Library/Preferences/.
+#
+# Para sobrescrever em outra máquina sem editar este arquivo, defina
+# 'macos_defaults' em group_vars/all.yml ou em vars/local.yml (gitignored).
+#
+# Cada item suporta:
+#   description: comentário em PT-BR (não usado pelo módulo, é documentação)
+#   domain:      domínio do defaults (NSGlobalDomain ou com.apple.<app>)
+#   key:         chave dentro do domínio
+#   type:        int | bool | string | array | dict | float
+#   value:       valor a escrever
+#   rollback:    comando para reverter (documentação, não usado)
+#
+# Para inspecionar o estado atual de um default antes de aplicar:
+#   defaults read NSGlobalDomain KeyRepeat
+#
+# Para reverter um default específico:
+#   defaults delete NSGlobalDomain KeyRepeat
+#
+# Algumas mudanças requerem logout/reboot para refletir totalmente
+# (especialmente as do Finder e do sistema de Full Keyboard Access).
+# ────────────────────────────────────────────────────────────────────────────
+
+macos_defaults:
+
+  # ── Teclado ────────────────────────────────────────────────────────────────
+  - description: "Velocidade de repetição de tecla (default macOS=6, menor=mais rápido)"
+    domain: NSGlobalDomain
+    key: KeyRepeat
+    type: int
+    value: 2
+    rollback: "defaults delete NSGlobalDomain KeyRepeat"
+
+  - description: "Delay antes de iniciar repetição (default macOS=25, menor=mais curto)"
+    domain: NSGlobalDomain
+    key: InitialKeyRepeat
+    type: int
+    value: 15
+    rollback: "defaults delete NSGlobalDomain InitialKeyRepeat"
+
+  - description: "Full Keyboard Access — Tab navega por TODOS os controles (3=full, 2=text/lists)"
+    domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: 3
+    rollback: "defaults delete NSGlobalDomain AppleKeyboardUIMode"
+
+  # ── Finder ────────────────────────────────────────────────────────────────
+  - description: "Mostrar extensões em todos os arquivos (mesmo conhecidos)"
+    domain: NSGlobalDomain
+    key: AppleShowAllExtensions
+    type: bool
+    value: true
+    rollback: "defaults delete NSGlobalDomain AppleShowAllExtensions"
+
+  - description: "Mostrar arquivos ocultos no Finder (.DS_Store, .git, .config etc.)"
+    domain: com.apple.finder
+    key: AppleShowAllFiles
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.finder AppleShowAllFiles"
+
+  - description: "Mostrar barra de caminho na parte inferior do Finder"
+    domain: com.apple.finder
+    key: ShowPathbar
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.finder ShowPathbar"
+
+  - description: "Mostrar barra de status (contagem de itens, espaço livre)"
+    domain: com.apple.finder
+    key: ShowStatusBar
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.finder ShowStatusBar"

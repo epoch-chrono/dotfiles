@@ -6,11 +6,20 @@
 #   ansible-galaxy collection install -r requirements.yml
 #   ansible-galaxy role install -r requirements.yml
 #
-# Por enquanto vazio — a role hello usa apenas módulos do ansible.builtin.
-# Conforme as roles reais forem nascendo (homebrew, macos-defaults, etc.)
-# adicionar collections aqui (community.general, ansible.posix, etc.).
+# (O bootstrap.sh roda 'ansible-galaxy collection install -r requirements.yml'
+# automaticamente como Etapa 7.)
+#
+# Pinning de versão — community.general:
+#   - Versão >=11 requer ansible-core 2.17+
+#   - Versão >=10 requer ansible-core 2.16+
+#   - Versão  ~9  é compatível com ansible-core 2.15 (Python 3.9 do CLT no Mac)
+#   Como o macOS Tahoe traz Python 3.9 com o CLT, ansible-core fica em 2.15.13,
+#   então pinamos community.general entre 8.0.0 e 11.0.0 (exclusivo).
+#   Quando migrarmos pra Python moderno via brew, esse range pode subir.
 # ────────────────────────────────────────────────────────────────────────────
 
-collections: []
+collections:
+  - name: community.general
+    version: ">=8.0.0,<11.0.0"
 
 roles: []

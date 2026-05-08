@@ -2,21 +2,39 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.1.0 (apenas role hello, validação da chain)
+# Versão atual: 0.2.0
+#   - 0.1.0: role hello (smoke test)
+#   - 0.2.0: + role macos-base (defaults declarativos)
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
 #   ~/.cache/dotfiles-bootstrap/venv/bin/ansible-playbook site.yml
 #
-# Note: não usar --ask-become-pass. NOPASSWD sudo foi configurado pelo
-# bootstrap.sh (Etapa 2). Se o playbook pedir senha, algo está errado.
+# Ou, mais comum: chamar via bootstrap.sh (Etapa 8) automaticamente.
+#
+# Tags úteis para runs cirúrgicos:
+#   --tags hello                   # Só smoke test
+#   --tags macos-base              # Só defaults do macOS
+#   --skip-tags hello              # Tudo menos hello
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "Hello — primeira execução"
+- name: "Provisioning do host local"
   hosts: localhost
   gather_facts: true
 
   roles:
+    # Smoke test — valida a chain bootstrap -> ansible -> become.
+    # Pode ser removida quando o playbook estiver maduro.
     - role: hello
       tags:
         - hello
+        - smoke
+
+    # macOS defaults declarativos (keyboard, finder, etc).
+    # Skip automático em Linux via 'when'.
+    - role: macos-base
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - macos-base
+        - macos
+        - defaults

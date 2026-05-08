@@ -1,0 +1,28 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/main.yml — aplica defaults declarativos
+# ────────────────────────────────────────────────────────────────────────────
+# Esta role roda apenas em macOS (controlado pelo `when` no site.yml).
+# Aqui assumimos que o gather_facts já confirmou Darwin.
+#
+# O módulo community.general.osx_defaults é idempotente: lê o valor atual
+# e só escreve se diferente do desejado. Re-runs reportam ok=N/changed=0.
+#
+# As tasks NÃO usam become — defaults do user são gravados em
+# ~/Library/Preferences/, propriedade do próprio user.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "macOS defaults — aplicar configurações declarativas"
+  community.general.osx_defaults:
+    domain: "{{ item.domain }}"
+    key: "{{ item.key }}"
+    type: "{{ item.type }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ macos_defaults }}"
+  loop_control:
+    label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
+
+- name: "Mostrar resumo das configurações aplicadas"
+  ansible.builtin.debug:
+    msg: "{{ macos_defaults | length }} defaults processados ({{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }})"

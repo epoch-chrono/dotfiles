@@ -23,3 +23,8 @@ __pycache__/
 
 # mise local config
 .mise.local.toml
+
+# Ansible — collections instaladas via galaxy + arquivos locais
+ansible/collections/
+ansible/vars/local.yml
+*.retry
