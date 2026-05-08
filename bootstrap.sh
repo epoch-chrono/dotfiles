@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.3.1
+# Version: 0.4.0
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) até o
@@ -16,14 +16,20 @@
 #                  SSH, sem GUI). Cai no xcode-select --install (modo GUI) se
 #                  o headless falhar.
 #        - Linux:  git, python3 + venv, build tools, ca-certificates
-#   2. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
-#   3. Ansible-core no venv
-#   4. Clone do repo dotfiles
+#   2. NOPASSWD sudo em /etc/sudoers.d/${USER}
+#        - Pede senha 1x; daí em diante, sudo (incluindo Ansible) roda sem
+#          prompt. Validação visudo -cf antes de instalar para evitar quebrar
+#          sudo por sintaxe inválida.
+#        - Opt-out: BOOTSTRAP_NOPASSWD_SUDO=0 bash bootstrap.sh
+#        - NixOS: skip + orientação para configuration.nix
+#   3. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
+#   4. Ansible-core no venv
+#   5. Clone do repo dotfiles
 #
 # Etapas futuras (não implementadas nesta versão):
-#   5. ansible-galaxy collection install
-#   6. ansible-playbook (provisiona sistema + instala chezmoi)
-#   7. chezmoi init --apply (deploy dos dotfiles)
+#   6. ansible-galaxy collection install
+#   7. ansible-playbook (provisiona sistema + instala chezmoi)
+#   8. chezmoi init --apply (deploy dos dotfiles)
 #
 # Plataformas suportadas:
 #   - macOS (qualquer versão recente)
@@ -47,6 +53,7 @@
 # pedir senha uma vez no início.
 #
 # Rollback:
+#   sudo rm -f /etc/sudoers.d/$(id -un)            # remove NOPASSWD sudo
 #   rm -rf ~/.cache/dotfiles-bootstrap ~/.local/share/dotfiles
 #   (Pacotes do SO instalados na Etapa 1 permanecem — são deps universais.)
 # ────────────────────────────────────────────────────────────────────────────
@@ -80,7 +87,7 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.3.1 — zero-to-hero"
+echo "#  bootstrap.sh v0.4.0 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
@@ -269,6 +276,90 @@ install_prereqs_linux() {
     esac
 }
 
+# ── Função: NOPASSWD sudo (cross-OS) ────────────────────────────────────────
+configure_passwordless_sudo() {
+    if [ "${BOOTSTRAP_NOPASSWD_SUDO:-1}" != "1" ]; then
+        echo "Configuração de NOPASSWD sudo desabilitada via"
+        echo "BOOTSTRAP_NOPASSWD_SUDO=0. Pulando."
+        return 0
+    fi
+
+    # NixOS: sudoers.d é resetado em nixos-rebuild — orientar config declarativa
+    if [ "${OS_NAME}" = "Linux" ] && [ -e /etc/NIXOS ]; then
+        echo "NixOS detectado. Configuração imperativa em /etc/sudoers.d/ é"
+        echo "resetada em nixos-rebuild. Adicione em configuration.nix:"
+        echo
+        echo "  security.sudo.extraRules = [{"
+        echo "    users = [ \"$(id -un)\" ];"
+        echo "    commands = [{ command = \"ALL\"; options = [ \"NOPASSWD\" ]; }];"
+        echo "  }];"
+        echo
+        echo "Pulando configuração imperativa."
+        return 0
+    fi
+
+    local user_name
+    user_name="$(id -un)"
+    local sudoers_file="/etc/sudoers.d/${user_name}"
+    local sudoers_line="${user_name} ALL=(ALL) NOPASSWD: ALL"
+
+    # Idempotência: se já configurado, sudo -n cat consegue ler sem prompt
+    if sudo -n cat "${sudoers_file}" 2>/dev/null | grep -qF "${sudoers_line}"; then
+        echo "NOPASSWD sudo já configurado em ${sudoers_file}, pulando."
+        return 0
+    fi
+
+    echo "Configurando NOPASSWD sudo para usuário '${user_name}'..."
+    echo
+    echo "ATENÇÃO: esta é a única vez que será solicitada senha de sudo no"
+    echo "         setup. Após esta etapa, sudo (incluindo Ansible) roda"
+    echo "         sem prompt."
+    echo
+    echo "Arquivo:  ${sudoers_file}"
+    echo "Rollback: sudo rm ${sudoers_file}"
+    echo "Opt-out:  BOOTSTRAP_NOPASSWD_SUDO=0 bash bootstrap.sh"
+    echo
+
+    # Tempfile com conteúdo + validação de sintaxe
+    local tempfile
+    tempfile=$(mktemp)
+    {
+        echo "# Configurado por bootstrap.sh em $(date +%Y-%m-%dT%H:%M:%S%z)"
+        echo "# Para reverter: sudo rm ${sudoers_file}"
+        echo "${sudoers_line}"
+    } > "${tempfile}"
+
+    # CRÍTICO: validar sintaxe ANTES de mover para /etc/sudoers.d/.
+    # Sintaxe inválida em sudoers quebra `sudo` completamente até alguém
+    # com acesso a single-user mode consertar. visudo -cf valida sem instalar.
+    if ! sudo visudo -cf "${tempfile}" >/dev/null; then
+        rm -f "${tempfile}"
+        die "Sintaxe inválida no sudoers temporário. Abortando para evitar quebrar sudo."
+    fi
+
+    # Detectar group correto observando /etc/sudoers (Mac=wheel, Linux=root)
+    local sudo_group="root"
+    if stat -f '%Sg' /etc/sudoers >/dev/null 2>&1; then
+        sudo_group="$(stat -f '%Sg' /etc/sudoers)"
+    elif stat -c '%G' /etc/sudoers >/dev/null 2>&1; then
+        sudo_group="$(stat -c '%G' /etc/sudoers)"
+    fi
+
+    # install -m 0440 atomicamente: copia + chmod + chown numa operação só
+    sudo install -m 0440 -o root -g "${sudo_group}" "${tempfile}" "${sudoers_file}"
+    rm -f "${tempfile}"
+
+    # Validação pós-install: sudo -n true só passa se NOPASSWD funcionou
+    if sudo -n true 2>/dev/null; then
+        echo "NOPASSWD sudo configurado com sucesso."
+        echo "Group do arquivo: ${sudo_group}"
+    else
+        die "Arquivo instalado em ${sudoers_file} mas 'sudo -n true' ainda
+       pede senha. Pode haver outras regras em /etc/sudoers ou
+       /etc/sudoers.d/ sobrescrevendo. Investigue manualmente."
+    fi
+}
+
 # ── Etapa 1: Pré-requisitos do SO ───────────────────────────────────────────
 log_step "Etapa 1: Pré-requisitos do SO (${OS_NAME})"
 
@@ -278,8 +369,12 @@ case "${OS_NAME}" in
     *)      die "SO não suportado: ${OS_NAME}" ;;
 esac
 
-# ── Etapa 2: Virtualenv isolado ─────────────────────────────────────────────
-log_step "Etapa 2: Virtualenv isolado para Ansible"
+# ── Etapa 2: NOPASSWD sudo ──────────────────────────────────────────────────
+log_step "Etapa 2: NOPASSWD sudo (${OS_NAME})"
+configure_passwordless_sudo
+
+# ── Etapa 3: Virtualenv isolado ─────────────────────────────────────────────
+log_step "Etapa 3: Virtualenv isolado para Ansible"
 
 if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then
     echo "Venv já existe em ${VENV_DIR}, reusando."
@@ -296,8 +391,8 @@ echo "Venv ativado."
 echo "Python: $(command -v python3) ($(python3 --version))"
 echo "Pip:    $(command -v pip) ($(pip --version | awk '{print $2}'))"
 
-# ── Etapa 3: Ansible-core no venv ───────────────────────────────────────────
-log_step "Etapa 3: Ansible-core no venv"
+# ── Etapa 4: Ansible-core no venv ───────────────────────────────────────────
+log_step "Etapa 4: Ansible-core no venv"
 
 echo "Atualizando pip..."
 pip install --quiet --upgrade pip
@@ -308,8 +403,8 @@ pip install --quiet --upgrade ansible-core
 echo "Instalado:"
 ansible --version | sed 's/^/  /'
 
-# ── Etapa 4: Clone do repo dotfiles ─────────────────────────────────────────
-log_step "Etapa 4: Clone do repo dotfiles"
+# ── Etapa 5: Clone do repo dotfiles ─────────────────────────────────────────
+log_step "Etapa 5: Clone do repo dotfiles"
 
 if [ -d "${REPO_DIR}/.git" ]; then
     echo "Repo já clonado em ${REPO_DIR}."
@@ -328,13 +423,13 @@ echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.3.1 concluído com sucesso"
+echo "#  Bootstrap v0.4.0 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Próximas etapas (ainda NÃO implementadas):"
-echo "#    5. ansible-galaxy collection install -r requirements.yml"
-echo "#    6. ansible-playbook -i inventory/localhost.yml site.yml"
-echo "#    7. chezmoi init --apply"
+echo "#    6. ansible-galaxy collection install -r requirements.yml"
+echo "#    7. ansible-playbook -i inventory/localhost.yml site.yml"
+echo "#    8. chezmoi init --apply"
 echo "#"
 echo "#  Log salvo em: ${LOG_FILE}"
 echo "#  Para limpar venv após uso: rm -rf ${CACHE_DIR}"
