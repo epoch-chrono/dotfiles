@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.3.0
+# Version: 0.3.1
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) até o
@@ -80,7 +80,7 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.3.0 — zero-to-hero"
+echo "#  bootstrap.sh v0.3.1 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
@@ -113,12 +113,18 @@ install_prereqs_macos() {
     # softwareupdate -l só lista CLT se o marker acima existir.
     # Wrappar em `if` desabilita set -e/pipefail caso softwareupdate falhe
     # ou produza output inesperado.
+    #
+    # Formato moderno (macOS 12+) tem prefixo "Label: " antes do nome real:
+    #   * Label: Command Line Tools for Xcode 26.4-26.4.1
+    #     Title: Command Line Tools for Xcode, Version: 26.4, ...
+    # O nome a ser passado pro `softwareupdate -i` é só o que vem depois
+    # de "Label: " (sem o "Label: " literal).
     local prod=""
     local sw_output=""
     if sw_output=$(softwareupdate -l 2>/dev/null); then
         prod=$(printf '%s\n' "${sw_output}" \
             | awk -F'*' '/\*.*Command Line/ {print $2}' \
-            | sed -E 's/^[[:space:]]+//' \
+            | sed -E 's/^[[:space:]]+//; s/^Label:[[:space:]]*//' \
             | head -n 1 \
             | tr -d '\n' || true)
     fi
@@ -126,26 +132,49 @@ install_prereqs_macos() {
     if [ -n "${prod}" ]; then
         echo "Pacote identificado: ${prod}"
         echo "Instalando (sem prompt gráfico — pode demorar alguns minutos)..."
-        if softwareupdate -i "${prod}" --verbose; then
-            rm -f "${marker}"
-            echo "CLT instalado com sucesso (modo headless)."
-            # Validação pós-install
-            if xcode-select -p >/dev/null 2>&1; then
-                echo "Verificado: $(xcode-select -p)"
-                return 0
-            fi
-            echo "AVISO: install reportou sucesso mas xcode-select -p ainda falha."
-            echo "       Caindo no método GUI..."
+
+        # Captura output completo e exit code separadamente.
+        # Não dá pra confiar só no exit code: softwareupdate -i pode retornar
+        # 0 mesmo dizendo "No such update" no stdout.
+        local sw_install_log=""
+        local sw_install_rc=0
+        if sw_install_log=$(softwareupdate -i "${prod}" --verbose 2>&1); then
+            sw_install_rc=0
         else
-            echo "AVISO: softwareupdate -i falhou. Caindo no método GUI..."
+            sw_install_rc=$?
         fi
+        printf '%s\n' "${sw_install_log}"
+
+        # Detecta sucesso real combinando 3 sinais: exit code, ausência de
+        # mensagens de erro conhecidas, e disponibilidade do xcode-select.
+        local install_failed=0
+        if [ "${sw_install_rc}" -ne 0 ]; then
+            echo "AVISO: softwareupdate -i retornou exit ${sw_install_rc}."
+            install_failed=1
+        elif printf '%s\n' "${sw_install_log}" \
+                | grep -qE "(No such update|No updates? (are|is) available|cannot be downloaded|failed)"; then
+            echo "AVISO: softwareupdate reportou exit 0 mas output indica falha."
+            install_failed=1
+        elif ! xcode-select -p >/dev/null 2>&1; then
+            echo "AVISO: install completou sem erro mas xcode-select -p ainda falha."
+            install_failed=1
+        fi
+
+        rm -f "${marker}"
+
+        if [ "${install_failed}" -eq 0 ]; then
+            echo "CLT instalado com sucesso (modo headless)."
+            echo "Verificado: $(xcode-select -p)"
+            return 0
+        fi
+
+        echo "Caindo no método GUI..."
     else
         echo "AVISO: softwareupdate -l não retornou pacote CLT."
         echo "       (formato de output pode ter mudado em macOS recente.)"
         echo "       Caindo no método GUI..."
+        rm -f "${marker}"
     fi
-
-    rm -f "${marker}"
 
     # Tentativa 2 (fallback): GUI dialog tradicional.
     # Esse método não funciona via SSH — requer sessão gráfica ativa.
@@ -299,7 +328,7 @@ echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.3.0 concluído com sucesso"
+echo "#  Bootstrap v0.3.1 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Próximas etapas (ainda NÃO implementadas):"
