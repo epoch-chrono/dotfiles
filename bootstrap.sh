@@ -2,12 +2,12 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.5.0
+# Version: 0.6.0
 # Repository: github.com/epoch-chrono/dotfiles
 #
-# Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) até o
-# ponto onde o Ansible pode tomar conta. Tudo que vier depois (brew, defaults,
-# mise, pacotes, chezmoi) é responsabilidade do playbook Ansible.
+# Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) de zero
+# até com o playbook Ansible aplicado, em UM único comando. O playbook é o
+# que instala brew, mise, chezmoi, dotfiles, defaults macOS, etc.
 #
 # Etapas (todas as plataformas):
 #   1. Pré-requisitos do SO
@@ -28,12 +28,14 @@
 #        - Posicionado APÓS NOPASSWD para usar sudo sem prompt
 #   4. Virtualenv isolado em ${XDG_CACHE_HOME:-~/.cache}/dotfiles-bootstrap/venv
 #   5. Ansible-core no venv
-#   6. Clone do repo dotfiles
+#   6. Clone do repo dotfiles em ~/.local/share/dotfiles
+#   7. ansible-galaxy collection install -r ansible/requirements.yml
+#   8. ansible-playbook ansible/site.yml (sem --ask-become-pass, NOPASSWD ativo)
+#        - Opt-out: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
+#          (pula 7 e 8; útil para refrescar prereqs sem aplicar config)
 #
-# Etapas futuras (não implementadas nesta versão):
-#   7. ansible-galaxy collection install
-#   8. ansible-playbook (provisiona sistema + instala chezmoi)
-#   9. chezmoi init --apply (deploy dos dotfiles)
+# Etapas futuras (a cargo do playbook Ansible, NÃO do bootstrap):
+#   - chezmoi init --apply (deploy de dotfiles via role do playbook)
 #
 # Plataformas suportadas:
 #   - macOS (qualquer versão recente)
@@ -91,7 +93,7 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.5.0 — zero-to-hero"
+echo "#  bootstrap.sh v0.6.0 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
@@ -469,16 +471,45 @@ echo "Estado atual do repo:"
 git -C "${REPO_DIR}" log --oneline -1 | sed 's/^/  /'
 echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 
+# ── Etapas 7 e 8: Ansible Galaxy + Playbook ─────────────────────────────────
+# Opt-out: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
+# (útil pra quando quiser refrescar prereqs sem aplicar o playbook)
+if [ "${BOOTSTRAP_RUN_PLAYBOOK:-1}" != "1" ]; then
+    echo
+    echo "#--- $(date +%Y%m%d-%H%M%S) - Etapas 7 e 8: PULADAS ---#"
+    echo "BOOTSTRAP_RUN_PLAYBOOK=0 detectado. Pulando galaxy e playbook."
+    echo "Para aplicar manualmente:"
+    echo "  cd ${REPO_DIR}/ansible"
+    echo "  ${VENV_DIR}/bin/ansible-galaxy collection install -r requirements.yml"
+    echo "  ${VENV_DIR}/bin/ansible-playbook site.yml"
+else
+    ansible_dir="${REPO_DIR}/ansible"
+    if [ ! -d "${ansible_dir}" ]; then
+        die "${ansible_dir} não existe. Repo desatualizado ou estrutura ausente."
+    fi
+    cd "${ansible_dir}"
+
+    # ── Etapa 7: Galaxy collections ─────────────────────────────────────────
+    log_step "Etapa 7: Ansible Galaxy collections"
+    if [ -f requirements.yml ]; then
+        ansible-galaxy collection install -r requirements.yml
+    else
+        echo "AVISO: ${ansible_dir}/requirements.yml não encontrado. Pulando galaxy."
+    fi
+
+    # ── Etapa 8: Ansible playbook ───────────────────────────────────────────
+    log_step "Etapa 8: Ansible playbook (site.yml)"
+    if [ ! -f site.yml ]; then
+        die "${ansible_dir}/site.yml não encontrado. Estrutura do repo está incompleta."
+    fi
+    ansible-playbook site.yml
+fi
+
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.5.0 concluído com sucesso"
+echo "#  Bootstrap v0.6.0 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
-echo "#"
-echo "#  Próximas etapas (ainda NÃO implementadas):"
-echo "#    7. ansible-galaxy collection install -r requirements.yml"
-echo "#    8. ansible-playbook -i inventory/localhost.yml site.yml"
-echo "#    9. chezmoi init --apply"
 echo "#"
 echo "#  Log salvo em: ${LOG_FILE}"
 echo "#  Para limpar venv após uso: rm -rf ${CACHE_DIR}"
