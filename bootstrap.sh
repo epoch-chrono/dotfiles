@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — Mac zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.1.0
+# Version: 0.1.1
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar um Mac recém-formatado até o ponto onde o Ansible
@@ -36,6 +36,20 @@
 
 set -euo pipefail
 
+# ── Guard: este bootstrap é exclusivo para macOS ────────────────────────────
+# O escopo do script é Mac. Provisionamento de Linux/outros SOs vai ser
+# tratado pelo playbook Ansible (que tem facts nativos para OS detection)
+# em uma fase posterior. Falhar cedo aqui evita erros confusos como
+# "xcode-select: command not found" no meio da execução.
+OS_NAME="$(uname -s)"
+if [ "${OS_NAME}" != "Darwin" ]; then
+    echo "ERRO: este bootstrap é exclusivo para macOS." >&2
+    echo "      Sistema detectado: ${OS_NAME}" >&2
+    echo "      Provisionamento de Linux/outros SOs será adicionado em" >&2
+    echo "      versão futura via Ansible." >&2
+    exit 1
+fi
+
 # ── Variáveis ───────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/epoch-chrono/dotfiles"
 REPO_DIR="${HOME}/.local/share/dotfiles"
@@ -50,7 +64,7 @@ exec > >(tee -a "${LOG_FILE}") 2>&1
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.1.0 — Mac zero-to-hero"
+echo "#  bootstrap.sh v0.1.1 — Mac zero-to-hero"
 echo "#  Início: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  Log:    ${LOG_FILE}"
 echo "#  Repo:   ${REPO_URL}"
@@ -127,7 +141,7 @@ echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.1.0 concluído com sucesso"
+echo "#  Bootstrap v0.1.1 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Próximas etapas (ainda NÃO implementadas):"
