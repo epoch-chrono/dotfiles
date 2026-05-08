@@ -1,86 +1,140 @@
-#!/bin/sh
-# ──────────────────────────────────────────────────
-# bootstrap.sh — minimal bootstrap for dotfiles
-# ──────────────────────────────────────────────────
-# Installs the bare minimum to get chezmoi running:
-#   1. System packages: git, curl, fish
-#   2. chezmoi (official installer)
-#   3. chezmoi init --apply (pulls repo, runs templates)
+#!/bin/bash
+# ────────────────────────────────────────────────────────────────────────────
+# bootstrap.sh — Mac zero-to-hero bootstrap (Camada 1)
+# ────────────────────────────────────────────────────────────────────────────
+# Version: 0.1.0
+# Repository: github.com/epoch-chrono/dotfiles
 #
-# Usage:
-#   curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh | sh
+# Responsabilidade: levar um Mac recém-formatado até o ponto onde o Ansible
+# pode tomar conta. Tudo que vier depois (brew, rosetta, defaults, mise,
+# pacotes, chezmoi) é responsabilidade do playbook Ansible.
 #
-# After this, chezmoi's run_once_before scripts handle:
-#   - mise (cross-platform toolchain manager)
-#   - fisher + fish plugins
-#   - post-setup (chsh, completions, etc.)
-# ──────────────────────────────────────────────────
-set -eu
+# Etapas v0.1.0 (até clone do repo):
+#   1. Xcode Command Line Tools
+#   2. Virtualenv isolado (~/.cache/dotfiles-bootstrap/venv)
+#   3. Ansible-core no venv
+#   4. Clone do repo dotfiles
+#
+# Etapas futuras (não implementadas nesta versão):
+#   5. ansible-galaxy collection install
+#   6. ansible-playbook (provisiona sistema + instala chezmoi)
+#   7. chezmoi init --apply (deploy dos dotfiles)
+#
+# Uso:
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+#
+# Modo paranoico (inspeciona antes de executar):
+#   curl -fsSL -o /tmp/bootstrap.sh \
+#     https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh
+#   less /tmp/bootstrap.sh
+#   bash /tmp/bootstrap.sh
+#
+# Rollback:
+#   rm -rf ~/.cache/dotfiles-bootstrap ~/.local/share/dotfiles
+#   (CLT permanece instalado — é dependência universal e não causa problema)
+# ────────────────────────────────────────────────────────────────────────────
 
-DOTFILES_REPO="epoch-chrono"
+set -euo pipefail
 
-info()  { printf '\033[0;34m[info]\033[0m  %s\n' "$1"; }
-warn()  { printf '\033[0;33m[warn]\033[0m  %s\n' "$1"; }
-error() { printf '\033[0;31m[error]\033[0m %s\n' "$1" >&2; exit 1; }
+# ── Variáveis ───────────────────────────────────────────────────────────────
+REPO_URL="https://github.com/epoch-chrono/dotfiles"
+REPO_DIR="${HOME}/.local/share/dotfiles"
+CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/dotfiles-bootstrap"
+VENV_DIR="${CACHE_DIR}/venv"
+LOG_DIR="${CACHE_DIR}/logs"
+LOG_FILE="${LOG_DIR}/bootstrap-$(date +%Y%m%d-%H%M%S).log"
 
-# ── Detect OS + package manager ───────────────────
-install_system_packages() {
-    info "Detecting package manager..."
+# ── Setup de log (tee para terminal + arquivo) ──────────────────────────────
+mkdir -p "${LOG_DIR}"
+exec > >(tee -a "${LOG_FILE}") 2>&1
 
-    if [ -e /etc/NIXOS ]; then
-        info "NixOS detected — skipping system packages (managed by nix flake)"
-        return 0
-    elif command -v apt-get >/dev/null 2>&1; then
-        info "Debian/Ubuntu detected (apt)"
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq git curl fish build-essential
-    elif command -v dnf >/dev/null 2>&1; then
-        info "Fedora/RHEL detected (dnf)"
-        sudo dnf install -y -q git curl fish gcc make
-    elif command -v apk >/dev/null 2>&1; then
-        info "Alpine detected (apk)"
-        sudo apk add --quiet git curl fish build-base
-    elif command -v pacman >/dev/null 2>&1; then
-        info "Arch detected (pacman)"
-        sudo pacman -Sy --noconfirm --quiet git curl fish base-devel
-    elif command -v brew >/dev/null 2>&1; then
-        info "macOS/Homebrew detected"
-        brew install git curl fish
-    elif [ "$(uname -s)" = "Darwin" ]; then
-        info "macOS detected — installing Homebrew first..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-        brew install git curl fish
-    else
-        error "Unsupported OS or package manager. Install git, curl, and fish manually."
-    fi
-}
+# ── Banner inicial ──────────────────────────────────────────────────────────
+echo "#============================================================#"
+echo "#  bootstrap.sh v0.1.0 — Mac zero-to-hero"
+echo "#  Início: $(date +%Y-%m-%dT%H:%M:%S%z)"
+echo "#  Log:    ${LOG_FILE}"
+echo "#  Repo:   ${REPO_URL}"
+echo "#  Destino do clone: ${REPO_DIR}"
+echo "#  Venv:   ${VENV_DIR}"
+echo "#============================================================#"
 
-# ── Install chezmoi ───────────────────────────────
-install_chezmoi() {
-    if command -v chezmoi >/dev/null 2>&1; then
-        info "chezmoi already installed: $(chezmoi --version)"
-        return 0
-    fi
+# ── Etapa 1: Xcode Command Line Tools ───────────────────────────────────────
+echo
+echo "#--- $(date +%Y%m%d-%H%M%S) - Etapa 1: Xcode Command Line Tools ---#"
 
-    info "Installing chezmoi..."
-    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
-    export PATH="$HOME/.local/bin:$PATH"
-}
+if xcode-select -p >/dev/null 2>&1; then
+    echo "CLT já instalado em: $(xcode-select -p)"
+    echo "Versão: $(/usr/bin/xcrun --version 2>/dev/null || echo 'desconhecida')"
+else
+    echo "CLT não detectado. Disparando instalador..."
+    xcode-select --install
+    echo
+    echo "ATENÇÃO: a janela gráfica de instalação foi aberta."
+    echo "         Aguarde a conclusão e rode este script novamente."
+    exit 1
+fi
 
-# ── Apply dotfiles ────────────────────────────────
-apply_dotfiles() {
-    info "Initializing dotfiles from github.com/${DOTFILES_REPO}/dotfiles..."
-    chezmoi init --apply "$DOTFILES_REPO"
-}
+# ── Etapa 2: Virtualenv isolado ─────────────────────────────────────────────
+echo
+echo "#--- $(date +%Y%m%d-%H%M%S) - Etapa 2: Virtualenv isolado para Ansible ---#"
 
-# ── Main ──────────────────────────────────────────
-main() {
-    info "Starting dotfiles bootstrap..."
-    install_system_packages
-    install_chezmoi
-    apply_dotfiles
-    info "Bootstrap complete. Restart your shell or run: exec fish -l"
-}
+if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then
+    echo "Venv já existe em ${VENV_DIR}, reusando."
+else
+    echo "Criando venv em ${VENV_DIR}..."
+    mkdir -p "$(dirname "${VENV_DIR}")"
+    python3 -m venv "${VENV_DIR}"
+    echo "Venv criado."
+fi
 
-main "$@"
+# shellcheck disable=SC1091
+. "${VENV_DIR}/bin/activate"
+echo "Venv ativado."
+echo "Python: $(command -v python3) ($(python3 --version))"
+echo "Pip:    $(command -v pip) ($(pip --version | awk '{print $2}'))"
+
+# ── Etapa 3: Ansible-core no venv ───────────────────────────────────────────
+echo
+echo "#--- $(date +%Y%m%d-%H%M%S) - Etapa 3: Ansible-core no venv ---#"
+
+echo "Atualizando pip..."
+pip install --quiet --upgrade pip
+
+echo "Instalando/atualizando ansible-core..."
+pip install --quiet --upgrade ansible-core
+
+echo "Instalado:"
+ansible --version | sed 's/^/  /'
+
+# ── Etapa 4: Clone do repo dotfiles ─────────────────────────────────────────
+echo
+echo "#--- $(date +%Y%m%d-%H%M%S) - Etapa 4: Clone do repo dotfiles ---#"
+
+if [ -d "${REPO_DIR}/.git" ]; then
+    echo "Repo já clonado em ${REPO_DIR}."
+    echo "Atualizando com git pull --ff-only..."
+    git -C "${REPO_DIR}" pull --ff-only
+else
+    echo "Clonando ${REPO_URL} em ${REPO_DIR}..."
+    mkdir -p "$(dirname "${REPO_DIR}")"
+    git clone "${REPO_URL}" "${REPO_DIR}"
+fi
+
+echo "Estado atual do repo:"
+git -C "${REPO_DIR}" log --oneline -1 | sed 's/^/  /'
+echo "  Branch: $(git -C "${REPO_DIR}" branch --show-current)"
+
+# ── Banner final ────────────────────────────────────────────────────────────
+echo
+echo "#============================================================#"
+echo "#  Bootstrap v0.1.0 concluído com sucesso"
+echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
+echo "#"
+echo "#  Próximas etapas (ainda NÃO implementadas):"
+echo "#    5. ansible-galaxy collection install -r requirements.yml"
+echo "#    6. ansible-playbook -i inventory/localhost.yml site.yml"
+echo "#    7. chezmoi init --apply"
+echo "#"
+echo "#  Log salvo em: ${LOG_FILE}"
+echo "#  Para limpar venv após uso: rm -rf ${CACHE_DIR}"
+echo "#============================================================#"
