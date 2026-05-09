@@ -1,0 +1,33 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/general.yml
+# ────────────────────────────────────────────────────────────────────────────
+# Aplica defaults gerais do sistema:
+#   - Date & Time:   24h
+#   - Language/Region: en-US/pt-BR + en_BR locale + métricas brasileiras
+#   - Autocorrect:   off (smart quotes, dashes, capitalization, period, spelling)
+#   - Painéis:       Save/Print expandidos por padrão
+#
+# Notify dispara handlers (cfprefsd/Finder/Dock/SystemUIServer) ao final do
+# play, mas SOMENTE se algum item mudou (idempotência preservada).
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "macOS / general — aplicar defaults"
+  community.general.osx_defaults:
+    domain: "{{ item.domain }}"
+    key: "{{ item.key }}"
+    type: "{{ item.type }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ macos_defaults_general }}"
+  loop_control:
+    label: "{{ item.domain }} / {{ item.key }}"
+  notify:
+    - reload cfprefsd
+    - restart Finder
+    - restart Dock
+    - restart SystemUIServer
+
+- name: "macOS / general — resumo"
+  ansible.builtin.debug:
+    msg: "{{ macos_defaults_general | length }} defaults gerais processados"

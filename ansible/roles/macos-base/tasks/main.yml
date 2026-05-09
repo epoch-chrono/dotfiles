@@ -1,40 +1,28 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/macos-base/tasks/main.yml — aplica defaults declarativos
+# roles/macos-base/tasks/main.yml — dispatcher
 # ────────────────────────────────────────────────────────────────────────────
-# Esta role roda apenas em macOS (controlado pelo `when` no site.yml).
-# Aqui assumimos que o gather_facts já confirmou Darwin.
+# Cada tasks/<scope>.yml itera sobre macos_defaults_<scope> em
+# defaults/main.yml. Tags permitem runs cirúrgicos:
 #
-# O módulo community.general.osx_defaults é idempotente: lê o valor atual
-# e só escreve se diferente do desejado. Re-runs reportam ok=N/changed=0.
+#   ansible-playbook site.yml --tags general    # só general
+#   ansible-playbook site.yml --tags keyboard   # só keyboard
+#   ansible-playbook site.yml --tags macos-base # tudo da role
 #
-# As tasks NÃO usam become — defaults do user são gravados em
-# ~/Library/Preferences/, propriedade do próprio user.
-#
-# Handlers em handlers/main.yml fazem killall de cfprefsd, Finder, Dock,
-# SystemUIServer ao final do play, MAS apenas quando 'changed' for true
-# (Ansible só executa handlers notified por tasks que mudaram).
+# A role inteira só executa em macOS (when no site.yml).
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "macOS defaults — aplicar configurações declarativas"
-  community.general.osx_defaults:
-    domain: "{{ item.domain }}"
-    key: "{{ item.key }}"
-    type: "{{ item.type }}"
-    value: "{{ item.value }}"
-    state: present
-  loop: "{{ macos_defaults }}"
-  loop_control:
-    label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
-  notify:
-    - reload cfprefsd
-    - restart Finder
-    - restart Dock
-    - restart SystemUIServer
+- name: "macos-base — General (Date/Time, Language/Region, autocorrect)"
+  ansible.builtin.import_tasks: general.yml
+  tags:
+    - general
 
-- name: "Mostrar resumo das configurações aplicadas"
-  ansible.builtin.debug:
-    msg:
-      - "{{ macos_defaults | length }} defaults processados em {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}"
-      - "Se algum default modificou estado, handlers vão rodar killall em cfprefsd/Finder/Dock/SystemUIServer ao final do play."
-      - "Algumas configurações (ex: Full Keyboard Access, tracking speed) podem precisar de logout/login para refletir totalmente."
+- name: "macos-base — Keyboard"
+  ansible.builtin.import_tasks: keyboard.yml
+  tags:
+    - keyboard
+
+- name: "macos-base — Finder"
+  ansible.builtin.import_tasks: finder.yml
+  tags:
+    - finder

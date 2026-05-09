@@ -1,57 +1,116 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/macos-base/defaults/main.yml — defaults declarativos do macOS
+# roles/macos-base/defaults/main.yml — defaults declarativos por domínio
 # ────────────────────────────────────────────────────────────────────────────
-# Esta lista controla quais 'defaults write' são aplicados pela role.
-# Adicionar/remover entradas modifica diretamente o que fica escrito no
-# ~/Library/Preferences/.
+# Cada domínio tem seu próprio array, consumido pelo respectivo
+# tasks/<dominio>.yml. Para sobrescrever, definir o array em
+# group_vars/all.yml ou em vars/local.yml (gitignored).
 #
-# Para sobrescrever em outra máquina sem editar este arquivo, defina
-# 'macos_defaults' em group_vars/all.yml ou em vars/local.yml (gitignored).
-#
-# Cada item suporta:
+# Schema de cada item:
 #   description: comentário em PT-BR (não usado pelo módulo, é documentação)
-#   domain:      domínio do defaults (NSGlobalDomain ou com.apple.<app>)
+#   domain:      domínio (NSGlobalDomain, com.apple.<app>, ou path absoluto
+#                como /Library/Preferences/com.apple.SoftwareUpdate para
+#                defaults sistêmicos)
 #   key:         chave dentro do domínio
 #   type:        int | bool | string | array | dict | float
 #   value:       valor a escrever
 #   rollback:    comando para reverter (documentação, não usado)
-#
-# Para inspecionar o estado atual de um default antes de aplicar:
-#   defaults read NSGlobalDomain KeyRepeat
-#
-# Para reverter um default específico:
-#   defaults delete NSGlobalDomain KeyRepeat
-#
-# Algumas mudanças requerem logout/reboot para refletir totalmente
-# (especialmente as do Finder e do sistema de Full Keyboard Access).
 # ────────────────────────────────────────────────────────────────────────────
 
-macos_defaults:
+# ── General ────────────────────────────────────────────────────────────────
+# Locale, idioma, formatos numéricos/data, calendário, atualizações.
+general_defaults:
 
-  # ── Teclado ────────────────────────────────────────────────────────────────
-  - description: "Velocidade de repetição de tecla (default macOS=6, menor=mais rápido)"
+  - description: "Formato 24h em todo o sistema"
     domain: NSGlobalDomain
-    key: KeyRepeat
-    type: int
-    value: 2
-    rollback: "defaults delete NSGlobalDomain KeyRepeat"
+    key: AppleICUForce24HourTime
+    type: bool
+    value: true
+    rollback: "defaults delete NSGlobalDomain AppleICUForce24HourTime"
 
-  - description: "Delay antes de iniciar repetição (default macOS=25, menor=mais curto)"
+  - description: "Idiomas preferidos em ordem (English primário, Portuguese-BR secundário)"
     domain: NSGlobalDomain
-    key: InitialKeyRepeat
-    type: int
-    value: 15
-    rollback: "defaults delete NSGlobalDomain InitialKeyRepeat"
+    key: AppleLanguages
+    type: array
+    value:
+      - en-US
+      - pt-BR
+    rollback: "defaults delete NSGlobalDomain AppleLanguages"
 
-  - description: "Full Keyboard Access — Tab navega por TODOS os controles (3=full, 2=text/lists)"
+  - description: "Locale: Inglês com formatos brasileiros (data, número, moeda)"
     domain: NSGlobalDomain
-    key: AppleKeyboardUIMode
-    type: int
-    value: 3
-    rollback: "defaults delete NSGlobalDomain AppleKeyboardUIMode"
+    key: AppleLocale
+    type: string
+    value: "en_BR"
+    rollback: "defaults delete NSGlobalDomain AppleLocale"
 
-  # ── Finder ────────────────────────────────────────────────────────────────
+  - description: "Temperatura em Celsius"
+    domain: NSGlobalDomain
+    key: AppleTemperatureUnit
+    type: string
+    value: "Celsius"
+    rollback: "defaults delete NSGlobalDomain AppleTemperatureUnit"
+
+  - description: "Sistema métrico habilitado"
+    domain: NSGlobalDomain
+    key: AppleMetricUnits
+    type: bool
+    value: true
+    rollback: "defaults delete NSGlobalDomain AppleMetricUnits"
+
+  - description: "Unidade de medida em centímetros"
+    domain: NSGlobalDomain
+    key: AppleMeasurementUnits
+    type: string
+    value: "Centimeters"
+    rollback: "defaults delete NSGlobalDomain AppleMeasurementUnits"
+
+  - description: "Primeiro dia da semana — Sunday=1, Monday=2 (calendário gregoriano)"
+    domain: NSGlobalDomain
+    key: AppleFirstWeekday
+    type: dict
+    value:
+      gregorian: 1
+    rollback: "defaults delete NSGlobalDomain AppleFirstWeekday"
+
+# ── Software Update ────────────────────────────────────────────────────────
+# Preferências sistêmicas (path /Library/Preferences/...) — requer sudo.
+# Aplicado via task com become: true em tasks/general.yml.
+software_update_defaults:
+
+  - description: "Verificação automática de novas atualizações"
+    domain: /Library/Preferences/com.apple.SoftwareUpdate
+    key: AutomaticCheckEnabled
+    type: bool
+    value: true
+
+  - description: "Download automático de atualizações disponíveis"
+    domain: /Library/Preferences/com.apple.SoftwareUpdate
+    key: AutomaticDownload
+    type: bool
+    value: true
+
+  - description: "Instalação automática de atualizações de macOS"
+    domain: /Library/Preferences/com.apple.SoftwareUpdate
+    key: AutomaticallyInstallMacOSUpdates
+    type: bool
+    value: true
+
+  - description: "Instalação automática de dados de configuração (XProtect, MRT)"
+    domain: /Library/Preferences/com.apple.SoftwareUpdate
+    key: ConfigDataInstall
+    type: bool
+    value: true
+
+  - description: "Instalação automática de atualizações críticas/segurança"
+    domain: /Library/Preferences/com.apple.SoftwareUpdate
+    key: CriticalUpdateInstall
+    type: bool
+    value: true
+
+# ── Finder ─────────────────────────────────────────────────────────────────
+finder_defaults:
+
   - description: "Mostrar extensões em todos os arquivos (mesmo conhecidos)"
     domain: NSGlobalDomain
     key: AppleShowAllExtensions
@@ -79,3 +138,27 @@ macos_defaults:
     type: bool
     value: true
     rollback: "defaults delete com.apple.finder ShowStatusBar"
+
+# ── Keyboard ───────────────────────────────────────────────────────────────
+keyboard_defaults:
+
+  - description: "Velocidade de repetição de tecla (default macOS=6, menor=mais rápido)"
+    domain: NSGlobalDomain
+    key: KeyRepeat
+    type: int
+    value: 2
+    rollback: "defaults delete NSGlobalDomain KeyRepeat"
+
+  - description: "Delay antes de iniciar repetição (default macOS=25, menor=mais curto)"
+    domain: NSGlobalDomain
+    key: InitialKeyRepeat
+    type: int
+    value: 15
+    rollback: "defaults delete NSGlobalDomain InitialKeyRepeat"
+
+  - description: "Full Keyboard Access — Tab navega por TODOS os controles (3=full, 2=text/lists)"
+    domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: 3
+    rollback: "defaults delete NSGlobalDomain AppleKeyboardUIMode"
