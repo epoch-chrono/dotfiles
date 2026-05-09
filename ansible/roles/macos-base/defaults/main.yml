@@ -122,19 +122,21 @@ appearance_defaults:
 trackpad_defaults:
 
   # Tap to click — built-in trackpad
+  # NOTA: Clicking é armazenado como INT (0/1) no plist, não bool — usar
+  # type: bool aqui leva a "Type mismatch. Type in defaults: int"
   - description: "Tap to click no trackpad built-in"
     domain: com.apple.AppleMultitouchTrackpad
     key: Clicking
-    type: bool
-    value: true
+    type: int
+    value: 1
     rollback: "defaults delete com.apple.AppleMultitouchTrackpad Clicking"
 
   # Tap to click — Bluetooth trackpad (Magic Trackpad externo)
   - description: "Tap to click no trackpad Bluetooth (Magic Trackpad)"
     domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
     key: Clicking
-    type: bool
-    value: true
+    type: int
+    value: 1
     rollback: "defaults delete com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking"
 
   # Tracking speed

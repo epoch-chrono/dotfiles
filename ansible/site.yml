@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.7.0
+# Versão atual: 0.7.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -22,6 +22,8 @@
 #   - 0.7.0: + tasks/trackpad.yml: tap-to-click (built-in + Bluetooth),
 #            tracking speed 1.5, App Exposé com 3-finger swipe down,
 #            tapBehavior por currentHost para apps legacy
+#   - 0.7.1: fix trackpad — Clicking é int (0/1) no plist, não bool;
+#            mesmo padrão do bug de tilesize/largesize do dock
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
