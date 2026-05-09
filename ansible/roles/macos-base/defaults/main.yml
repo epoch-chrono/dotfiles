@@ -109,12 +109,21 @@ appearance_defaults:
 # ── Dock + Hot Corners ─────────────────────────────────────────────────────
 # Tamanho do Dock, magnification, e desativação de todos os 4 hot corners.
 #
+# Sobre os tipos:
+#   tilesize/largesize são armazenados como FLOAT no plist do Dock em
+#   macOS Tahoe (e em pelo menos algumas versões anteriores). Usar
+#   type: int leva a "Type mismatch. Type in defaults: float" porque
+#   osx_defaults é estrito sobre tipo quando a chave já existe.
+#   Por isso tilesize e largesize estão como type: float.
+#
 # Sobre o tamanho:
 #   tilesize  : tamanho dos ícones em pixels. Range exposto na UI: 16–128.
 #               Default macOS ≈ 48. Aqui: 48 (~30% do range visual da UI).
+#               IMPORTANTE: macOS armazena como FLOAT, não int (mesmo
+#               aceitando inteiros como input).
 #   magnification : bool. Necessário true pra que largesize tenha efeito.
 #   largesize : tamanho dos ícones quando hover/magnificado. Range 16–128.
-#               Aqui: 90 (~70% do range visual).
+#               Aqui: 90 (~70% do range visual). Também armazenado como FLOAT.
 #
 # Sobre hot corners:
 #   wvous-{tl,tr,bl,br}-corner   = 0 → "no action" (corner desabilitado)
@@ -128,8 +137,8 @@ dock_defaults:
   - description: "Tamanho dos ícones do Dock — 48px (~30% do range UI 16-128)"
     domain: com.apple.dock
     key: tilesize
-    type: int
-    value: 48
+    type: float
+    value: 48.0
     rollback: "defaults delete com.apple.dock tilesize"
 
   - description: "Magnification habilitada (necessária pra largesize ter efeito)"
@@ -142,8 +151,8 @@ dock_defaults:
   - description: "Tamanho magnificado dos ícones do Dock — 90px (~70% do range)"
     domain: com.apple.dock
     key: largesize
-    type: int
-    value: 90
+    type: float
+    value: 90.0
     rollback: "defaults delete com.apple.dock largesize"
 
   # Hot corners — todos desabilitados (action 0 = no action)
