@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.9.0
+# Versão atual: 0.9.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -43,6 +43,12 @@
 #            Idempotente via shell único com contador de mudanças (CHANGES=N).
 #            Detecta MDM profile management e aborta com mensagem clara
 #            se settings estão gerenciados (não modificáveis via CLI).
+#   - 0.9.1: fix firewall — refatoração completa. Versão anterior fazia
+#            check+set por flag em loop com 'set -e'; em macOS Tahoe o
+#            daemon reinicia ao mudar stealthmode, e a próxima chamada
+#            --get retorna rc 255 antes do daemon ficar pronto. Solução:
+#            aplicar todas as flags numa ÚNICA invocação do socketfilterfw
+#            (sintaxe documentada). Idempotência via diff antes/depois.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

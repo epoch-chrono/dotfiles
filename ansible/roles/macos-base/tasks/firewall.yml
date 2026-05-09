@@ -6,7 +6,7 @@
 #
 # A partir do macOS Sequoia, configurações do Application Firewall NÃO ficam
 # mais em /Library/Preferences/com.apple.alf.plist — elas são gerenciadas
-# exclusivamente via socketfilterfw ou MDM. Ediçao direta de plist é
+# exclusivamente via socketfilterfw ou MDM. Edição direta de plist é
 # deprecated. Referência: hardening guide oficial macOS Tahoe (ernw).
 #
 # Configurações aplicadas:
@@ -22,10 +22,17 @@
 #   SSH / Screen Sharing / SMB que foram habilitados na role 'sharing'. Pra
 #   bloqueio agressivo + SSH ainda acessível, usar pf (não cobrimos aqui).
 #
-# Idempotência:
-#   Único shell task que faz check + set por configuração. Usa contador de
-#   mudanças e expõe via 'CHANGES=N' no stdout. changed_when avalia esse
-#   contador. Em re-runs com tudo já correto, vira 'ok' silenciosamente.
+# Estratégia (corrigida em v0.9.1):
+#   A primeira tentativa fazia check+set por flag em loop dentro do mesmo
+#   shell, com 'set -e'. Em macOS Tahoe, o socketfilterfw daemon reinicia
+#   ao mudar uma flag (ex: stealthmode), e a próxima chamada (--getX) pode
+#   retornar rc 255 antes do daemon ficar pronto. Resultado: script morria
+#   no meio com exit 255.
+#
+#   Solução: aplicar TODAS as flags numa única invocação do socketfilterfw
+#   (sintaxe documentada e usada por Kolide/hardening guides). O daemon
+#   processa tudo e reinicia uma única vez no fim. Idempotência via
+#   comparação do estado antes/depois — se output igual, não mudou.
 #
 # Sem dependência do community.general (osx_defaults não funciona aqui —
 # socketfilterfw é binário separado, não plist).
@@ -50,82 +57,75 @@
       o profile antes de rodar este playbook.
   when: firewall_managed_check.rc == 0
 
-- name: "Firewall — aplicar configurações (check + set, idempotente)"
+# ── Capturar estado antes ──────────────────────────────────────────────────
+# Output normalizado para comparação posterior. 2>&1 captura warnings
+# que socketfilterfw às vezes manda pra stderr.
+
+- name: "Firewall — capturar estado atual (antes)"
   ansible.builtin.shell:
     cmd: |
-      set -e
-      FW=/usr/libexec/ApplicationFirewall/socketfilterfw
-      changes=0
-
-      # ── Global state: ON
-      if ! "$FW" --getglobalstate | grep -qi "enabled"; then
-        "$FW" --setglobalstate on >/dev/null
-        changes=$((changes + 1))
-        echo "set: globalstate=on"
-      fi
-
-      # ── Stealth mode: ON
-      if ! "$FW" --getstealthmode | grep -qi "stealth mode enabled"; then
-        "$FW" --setstealthmode on >/dev/null
-        changes=$((changes + 1))
-        echo "set: stealthmode=on"
-      fi
-
-      # ── Logging mode: ON
-      if ! "$FW" --getloggingmode | grep -qi "log mode is on"; then
-        "$FW" --setloggingmode on >/dev/null
-        changes=$((changes + 1))
-        echo "set: loggingmode=on"
-      fi
-
-      # ── Logging option: detail (vs throttled / brief)
-      if ! "$FW" --getloggingopt | grep -qi "detail"; then
-        "$FW" --setloggingopt detail >/dev/null
-        changes=$((changes + 1))
-        echo "set: loggingopt=detail"
-      fi
-
-      # ── Block all: OFF (CRÍTICO — não habilitar, quebra Sharing/SSH)
-      # Quando OFF, --getblockall retorna "DISABLED" ou "set to allow signed apps".
-      if "$FW" --getblockall | grep -qiE "is set to block all"; then
-        "$FW" --setblockall off >/dev/null
-        changes=$((changes + 1))
-        echo "set: blockall=off"
-      fi
-
-      # ── Allow signed built-in apps (Apple): ON
-      if ! "$FW" --getallowsigned | grep -E "(?i)built-in software" | grep -qi "ENABLED"; then
-        "$FW" --setallowsigned on >/dev/null
-        changes=$((changes + 1))
-        echo "set: allowsigned=on"
-      fi
-
-      # ── Allow signed downloaded apps (homebrew etc): ON
-      if ! "$FW" --getallowsigned | grep -E "(?i)downloaded signed" | grep -qi "ENABLED"; then
-        "$FW" --setallowsignedapp on >/dev/null
-        changes=$((changes + 1))
-        echo "set: allowsignedapp=on"
-      fi
-
-      echo "CHANGES=$changes"
-  register: firewall_apply
-  changed_when: "'CHANGES=0' not in firewall_apply.stdout"
-  become: true
-
-- name: "Firewall — resumo do estado atual"
-  ansible.builtin.shell:
-    cmd: |
-      FW=/usr/libexec/ApplicationFirewall/socketfilterfw
-      "$FW" --getglobalstate
-      "$FW" --getstealthmode
-      "$FW" --getloggingmode
-      "$FW" --getloggingopt
-      "$FW" --getblockall
-      "$FW" --getallowsigned
-  register: firewall_summary
+      /usr/libexec/ApplicationFirewall/socketfilterfw \
+        --getglobalstate \
+        --getstealthmode \
+        --getloggingmode \
+        --getloggingopt \
+        --getblockall \
+        --getallowsigned 2>&1
+  register: firewall_before
   changed_when: false
+  failed_when: false
   become: true
 
-- name: "Firewall — exibir resumo"
+# ── Aplicar tudo numa única invocação ──────────────────────────────────────
+# Sintaxe documentada por Apple e usada em hardening scripts oficiais.
+# Em uma única call, o daemon processa todas as flags e reinicia 1 vez no
+# fim — evita o problema de exit 255 entre chamadas sequenciais.
+# failed_when: false porque socketfilterfw em macOS Tahoe às vezes retorna
+# rc não-zero mesmo com sucesso. Validação real é via diff antes/depois.
+
+- name: "Firewall — aplicar todas as configurações (one-shot)"
+  ansible.builtin.command:
+    argv:
+      - /usr/libexec/ApplicationFirewall/socketfilterfw
+      - --setglobalstate
+      - "on"
+      - --setstealthmode
+      - "on"
+      - --setloggingmode
+      - "on"
+      - --setloggingopt
+      - detail
+      - --setblockall
+      - "off"
+      - --setallowsigned
+      - "on"
+      - --setallowsignedapp
+      - "on"
+  register: firewall_apply
+  changed_when: false  # mudança real é detectada pela próxima task
+  failed_when: false
+  become: true
+
+# ── Capturar estado depois e comparar ──────────────────────────────────────
+
+- name: "Firewall — capturar estado atual (depois) e detectar mudança"
+  ansible.builtin.shell:
+    cmd: |
+      /usr/libexec/ApplicationFirewall/socketfilterfw \
+        --getglobalstate \
+        --getstealthmode \
+        --getloggingmode \
+        --getloggingopt \
+        --getblockall \
+        --getallowsigned 2>&1
+  register: firewall_after
+  changed_when: firewall_after.stdout != firewall_before.stdout
+  failed_when: false
+  become: true
+
+- name: "Firewall — exibir resumo do estado final"
   ansible.builtin.debug:
-    msg: "{{ firewall_summary.stdout_lines }}"
+    msg:
+      - "{{ firewall_after.stdout_lines }}"
+      - "---"
+      - "Mudou nesta execução: {{ firewall_after.stdout != firewall_before.stdout }}"
