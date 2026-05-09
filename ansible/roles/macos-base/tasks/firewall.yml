@@ -1,0 +1,131 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/firewall.yml — Application Firewall (socketfilterfw)
+# ────────────────────────────────────────────────────────────────────────────
+# Cobre o painel "Network > Firewall" do System Settings via socketfilterfw.
+#
+# A partir do macOS Sequoia, configurações do Application Firewall NÃO ficam
+# mais em /Library/Preferences/com.apple.alf.plist — elas são gerenciadas
+# exclusivamente via socketfilterfw ou MDM. Ediçao direta de plist é
+# deprecated. Referência: hardening guide oficial macOS Tahoe (ernw).
+#
+# Configurações aplicadas:
+#   - Global state: ON (firewall ligado)
+#   - Stealth mode: ON (não responde a ICMP echo / probes em portas fechadas)
+#   - Logging mode: ON, com opt = detail (logs em /var/log/appfirewall.log)
+#   - Block all: OFF (CRÍTICO — manter OFF, ver nota abaixo)
+#   - Allow signed (built-in Apple apps): ON
+#   - Allow signedapp (downloaded signed apps, ex: homebrew): ON
+#
+# NOTA SOBRE 'block all':
+#   Block all incoming sobrescreve TODAS as exceções por app. Se ON, quebra
+#   SSH / Screen Sharing / SMB que foram habilitados na role 'sharing'. Pra
+#   bloqueio agressivo + SSH ainda acessível, usar pf (não cobrimos aqui).
+#
+# Idempotência:
+#   Único shell task que faz check + set por configuração. Usa contador de
+#   mudanças e expõe via 'CHANGES=N' no stdout. changed_when avalia esse
+#   contador. Em re-runs com tudo já correto, vira 'ok' silenciosamente.
+#
+# Sem dependência do community.general (osx_defaults não funciona aqui —
+# socketfilterfw é binário separado, não plist).
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Firewall — verificar se há MDM profile gerenciando settings"
+  ansible.builtin.shell:
+    cmd: |
+      /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>&1 \
+        | grep -qi "Firewall settings cannot be modified from command line"
+  register: firewall_managed_check
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: "Firewall — abortar se gerenciado por MDM"
+  ansible.builtin.fail:
+    msg: |
+      Application Firewall está sendo gerenciado por um MDM profile.
+      socketfilterfw não consegue modificar via CLI nesse caso.
+      Configure via MDM (PayloadType com.apple.security.firewall) ou remova
+      o profile antes de rodar este playbook.
+  when: firewall_managed_check.rc == 0
+
+- name: "Firewall — aplicar configurações (check + set, idempotente)"
+  ansible.builtin.shell:
+    cmd: |
+      set -e
+      FW=/usr/libexec/ApplicationFirewall/socketfilterfw
+      changes=0
+
+      # ── Global state: ON
+      if ! "$FW" --getglobalstate | grep -qi "enabled"; then
+        "$FW" --setglobalstate on >/dev/null
+        changes=$((changes + 1))
+        echo "set: globalstate=on"
+      fi
+
+      # ── Stealth mode: ON
+      if ! "$FW" --getstealthmode | grep -qi "stealth mode enabled"; then
+        "$FW" --setstealthmode on >/dev/null
+        changes=$((changes + 1))
+        echo "set: stealthmode=on"
+      fi
+
+      # ── Logging mode: ON
+      if ! "$FW" --getloggingmode | grep -qi "log mode is on"; then
+        "$FW" --setloggingmode on >/dev/null
+        changes=$((changes + 1))
+        echo "set: loggingmode=on"
+      fi
+
+      # ── Logging option: detail (vs throttled / brief)
+      if ! "$FW" --getloggingopt | grep -qi "detail"; then
+        "$FW" --setloggingopt detail >/dev/null
+        changes=$((changes + 1))
+        echo "set: loggingopt=detail"
+      fi
+
+      # ── Block all: OFF (CRÍTICO — não habilitar, quebra Sharing/SSH)
+      # Quando OFF, --getblockall retorna "DISABLED" ou "set to allow signed apps".
+      if "$FW" --getblockall | grep -qiE "is set to block all"; then
+        "$FW" --setblockall off >/dev/null
+        changes=$((changes + 1))
+        echo "set: blockall=off"
+      fi
+
+      # ── Allow signed built-in apps (Apple): ON
+      if ! "$FW" --getallowsigned | grep -E "(?i)built-in software" | grep -qi "ENABLED"; then
+        "$FW" --setallowsigned on >/dev/null
+        changes=$((changes + 1))
+        echo "set: allowsigned=on"
+      fi
+
+      # ── Allow signed downloaded apps (homebrew etc): ON
+      if ! "$FW" --getallowsigned | grep -E "(?i)downloaded signed" | grep -qi "ENABLED"; then
+        "$FW" --setallowsignedapp on >/dev/null
+        changes=$((changes + 1))
+        echo "set: allowsignedapp=on"
+      fi
+
+      echo "CHANGES=$changes"
+  register: firewall_apply
+  changed_when: "'CHANGES=0' not in firewall_apply.stdout"
+  become: true
+
+- name: "Firewall — resumo do estado atual"
+  ansible.builtin.shell:
+    cmd: |
+      FW=/usr/libexec/ApplicationFirewall/socketfilterfw
+      "$FW" --getglobalstate
+      "$FW" --getstealthmode
+      "$FW" --getloggingmode
+      "$FW" --getloggingopt
+      "$FW" --getblockall
+      "$FW" --getallowsigned
+  register: firewall_summary
+  changed_when: false
+  become: true
+
+- name: "Firewall — exibir resumo"
+  ansible.builtin.debug:
+    msg: "{{ firewall_summary.stdout_lines }}"

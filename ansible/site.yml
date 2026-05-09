@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.8.2
+# Versão atual: 0.9.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -37,6 +37,12 @@
 #            Tahoe/Sequoia, 'launchctl enable system/com.apple.smbd'
 #            falha com "Could not find service" se o plist nunca foi
 #            bootstrapped no system domain.
+#   - 0.9.0: + tasks/firewall.yml: Application Firewall via socketfilterfw
+#            (globalstate on, stealthmode on, loggingmode on com loggingopt
+#            detail, allowsigned on, allowsignedapp on, blockall off).
+#            Idempotente via shell único com contador de mudanças (CHANGES=N).
+#            Detecta MDM profile management e aborta com mensagem clara
+#            se settings estão gerenciados (não modificáveis via CLI).
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -52,6 +58,7 @@
 #   --tags dock            # Só Dock + hot corners
 #   --tags trackpad        # Só trackpad (tap, speed, gestures)
 #   --tags sharing         # Só sharing (hostname + daemons)
+#   --tags firewall        # Só firewall (Application Firewall)
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
 #   --skip-tags hello      # Tudo menos smoke test

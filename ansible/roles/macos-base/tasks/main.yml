@@ -40,6 +40,11 @@
   tags:
     - sharing
 
+- name: "Importar tasks de Firewall (Application Firewall via socketfilterfw)"
+  ansible.builtin.import_tasks: firewall.yml
+  tags:
+    - firewall
+
 - name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:
