@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # bootstrap.sh — zero-to-hero bootstrap (Camada 1)
 # ────────────────────────────────────────────────────────────────────────────
-# Version: 0.6.0
+# Version: 0.7.0
 # Repository: github.com/epoch-chrono/dotfiles
 #
 # Responsabilidade: levar uma máquina recém-formatada (Mac ou Linux) de zero
@@ -30,9 +30,13 @@
 #   5. Ansible-core no venv
 #   6. Clone do repo dotfiles em ~/.local/share/dotfiles
 #   7. ansible-galaxy collection install -r ansible/requirements.yml
-#   8. ansible-playbook ansible/site.yml (sem --ask-become-pass, NOPASSWD ativo)
-#        - Opt-out: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
-#          (pula 7 e 8; útil para refrescar prereqs sem aplicar config)
+#   8. ansible-playbook ansible/site.yml --extra-vars mac_hostname=${MAC_HOSTNAME}
+#        - Sem --ask-become-pass (NOPASSWD sudo ativo).
+#        - MAC_HOSTNAME é OBRIGATÓRIA quando o playbook roda. Validada antes
+#          de qualquer side effect — script aborta com mensagem clara se
+#          ausente.
+#        - Opt-out completo: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
+#          (pula 7 e 8; também desativa exigência de MAC_HOSTNAME)
 #
 # Etapas futuras (a cargo do playbook Ansible, NÃO do bootstrap):
 #   - chezmoi init --apply (deploy de dotfiles via role do playbook)
@@ -66,6 +70,30 @@
 
 set -euo pipefail
 
+# ── Validação de variáveis obrigatórias ─────────────────────────────────────
+# MAC_HOSTNAME: obrigatória sempre que o playbook for executado (Etapas 7-8).
+# É usada pra setar ComputerName / HostName / LocalHostName na role sharing.
+# Falha cedo (antes de qualquer side effect) com mensagem clara.
+if [ "${BOOTSTRAP_RUN_PLAYBOOK:-1}" = "1" ] && [ -z "${MAC_HOSTNAME:-}" ]; then
+    cat >&2 <<EOF
+ERRO: a variável de ambiente MAC_HOSTNAME é obrigatória.
+
+Esse valor é aplicado pelo playbook como ComputerName, HostName e
+LocalHostName da máquina (System Settings > General > Sharing).
+
+Como passar:
+  MAC_HOSTNAME=meumac bash -c "\$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+
+Ou exportando no ambiente antes:
+  export MAC_HOSTNAME=meumac
+  bash -c "\$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+
+Se quiser pular o playbook (apenas refrescar prereqs), use:
+  BOOTSTRAP_RUN_PLAYBOOK=0 bash -c "\$(curl -fsSL ...)"
+EOF
+    exit 1
+fi
+
 # ── Variáveis ───────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/epoch-chrono/dotfiles"
 REPO_DIR="${HOME}/.local/share/dotfiles"
@@ -93,13 +121,14 @@ die() {
 
 # ── Banner inicial ──────────────────────────────────────────────────────────
 echo "#============================================================#"
-echo "#  bootstrap.sh v0.6.0 — zero-to-hero"
+echo "#  bootstrap.sh v0.7.0 — zero-to-hero"
 echo "#  Início:  $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#  SO:      ${OS_NAME}"
 echo "#  Log:     ${LOG_FILE}"
 echo "#  Repo:    ${REPO_URL}"
 echo "#  Destino: ${REPO_DIR}"
 echo "#  Venv:    ${VENV_DIR}"
+echo "#  Hostname desejado: ${MAC_HOSTNAME:-(playbook desabilitado)}"
 echo "#============================================================#"
 
 # ── Funções de pré-requisitos por SO ────────────────────────────────────────
@@ -502,13 +531,13 @@ else
     if [ ! -f site.yml ]; then
         die "${ansible_dir}/site.yml não encontrado. Estrutura do repo está incompleta."
     fi
-    ansible-playbook site.yml
+    ansible-playbook site.yml --extra-vars "mac_hostname=${MAC_HOSTNAME}"
 fi
 
 # ── Banner final ────────────────────────────────────────────────────────────
 echo
 echo "#============================================================#"
-echo "#  Bootstrap v0.6.0 concluído com sucesso"
+echo "#  Bootstrap v0.7.0 concluído com sucesso"
 echo "#  Fim: $(date +%Y-%m-%dT%H:%M:%S%z)"
 echo "#"
 echo "#  Log salvo em: ${LOG_FILE}"

@@ -1,24 +1,20 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/macos-base/tasks/keyboard.yml
+# roles/macos-base/tasks/keyboard.yml — defaults de teclado
 # ────────────────────────────────────────────────────────────────────────────
-# Defaults de teclado:
-#   - KeyRepeat:           velocidade de repetição
-#   - InitialKeyRepeat:    delay antes de iniciar repetição
-#   - AppleKeyboardUIMode: Tab navega TODOS os controles (Full Keyboard Access)
-#
-# Lembrete: KeyRepeat e InitialKeyRepeat costumam exigir logout/login para
-# refletir totalmente em alguns apps (mesmo com handlers killall).
+# KeyRepeat e InitialKeyRepeat costumam exigir logout/login para refletir
+# totalmente em alguns apps (mesmo com handlers killall). Full Keyboard
+# Access (AppleKeyboardUIMode) também tende a precisar logout/login.
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "macOS / keyboard — aplicar defaults"
+- name: "Keyboard — defaults"
   community.general.osx_defaults:
     domain: "{{ item.domain }}"
     key: "{{ item.key }}"
     type: "{{ item.type }}"
     value: "{{ item.value }}"
     state: present
-  loop: "{{ macos_defaults_keyboard }}"
+  loop: "{{ keyboard_defaults }}"
   loop_control:
     label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
   notify:
@@ -26,7 +22,3 @@
     - restart Finder
     - restart Dock
     - restart SystemUIServer
-
-- name: "macOS / keyboard — resumo"
-  ansible.builtin.debug:
-    msg: "{{ macos_defaults_keyboard | length }} defaults de teclado processados"

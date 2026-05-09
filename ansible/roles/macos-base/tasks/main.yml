@@ -1,28 +1,31 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/macos-base/tasks/main.yml — dispatcher
+# roles/macos-base/tasks/main.yml — entry point por domínio
 # ────────────────────────────────────────────────────────────────────────────
-# Cada tasks/<scope>.yml itera sobre macos_defaults_<scope> em
-# defaults/main.yml. Tags permitem runs cirúrgicos:
+# Esta role roda apenas em macOS (controlado pelo `when` no site.yml).
+# Cada domínio tem seu próprio arquivo + tag, permitindo runs cirúrgicos:
 #
-#   ansible-playbook site.yml --tags general    # só general
-#   ansible-playbook site.yml --tags keyboard   # só keyboard
-#   ansible-playbook site.yml --tags macos-base # tudo da role
+#   ansible-playbook site.yml --tags general
+#   ansible-playbook site.yml --tags 'finder,keyboard'
 #
-# A role inteira só executa em macOS (when no site.yml).
+# Cada tasks/<dominio>.yml itera sobre o array <dominio>_defaults definido
+# em defaults/main.yml.
+#
+# Handlers em handlers/main.yml restartam cfprefsd/Finder/Dock/SystemUIServer
+# ao final do play, MAS apenas quando alguma task notifying reportou changed.
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "macos-base — General (Date/Time, Language/Region, autocorrect)"
+- name: "Importar tasks de General (locale, idioma, software update)"
   ansible.builtin.import_tasks: general.yml
   tags:
     - general
 
-- name: "macos-base — Keyboard"
-  ansible.builtin.import_tasks: keyboard.yml
-  tags:
-    - keyboard
-
-- name: "macos-base — Finder"
+- name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:
     - finder
+
+- name: "Importar tasks de Keyboard"
+  ansible.builtin.import_tasks: keyboard.yml
+  tags:
+    - keyboard

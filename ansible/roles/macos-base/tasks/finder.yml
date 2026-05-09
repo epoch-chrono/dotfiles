@@ -1,30 +1,17 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/macos-base/tasks/finder.yml
-# ────────────────────────────────────────────────────────────────────────────
-# Defaults do Finder:
-#   - AppleShowAllExtensions:  mostrar extensões em todos arquivos
-#   - AppleShowAllFiles:       mostrar arquivos ocultos
-#   - ShowPathbar:             barra de caminho embaixo
-#   - ShowStatusBar:           barra de status com contagem/espaço
+# roles/macos-base/tasks/finder.yml — defaults do Finder
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "macOS / finder — aplicar defaults"
+- name: "Finder — defaults"
   community.general.osx_defaults:
     domain: "{{ item.domain }}"
     key: "{{ item.key }}"
     type: "{{ item.type }}"
     value: "{{ item.value }}"
     state: present
-  loop: "{{ macos_defaults_finder }}"
+  loop: "{{ finder_defaults }}"
   loop_control:
     label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
   notify:
-    - reload cfprefsd
     - restart Finder
-    - restart Dock
-    - restart SystemUIServer
-
-- name: "macOS / finder — resumo"
-  ansible.builtin.debug:
-    msg: "{{ macos_defaults_finder | length }} defaults de Finder processados"
