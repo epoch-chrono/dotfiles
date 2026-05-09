@@ -4,9 +4,48 @@ Cross-platform dotfiles managed with [chezmoi](https://www.chezmoi.io/), secured
 
 One command. Any machine. Same environment.
 
+## Quickstart
+
+The bootstrap is a single bash script that provisions an isolated venv,
+installs Ansible, clones this repo, and runs the playbook. It requires
+two prerequisites on Linux: `curl` (or `wget`) to fetch the script,
+and `python3`. macOS ships with both.
+
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+# 1. Define the hostname this machine should have (required)
+export TARGET_HOSTNAME=mymachine
+
+# 2. Run the bootstrap
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
 ```
+
+### If `curl` is not available
+
+On Ubuntu Server minimal and other lean Linux installs, `curl` may
+be absent. Pick one:
+
+```sh
+# Option A — install curl first
+sudo apt-get update && sudo apt-get install -y curl    # Debian/Ubuntu
+sudo dnf install -y curl                                # Fedora/RHEL
+
+# Option B — use wget (often pre-installed on Ubuntu)
+export TARGET_HOSTNAME=mymachine
+bash -c "$(wget -qO- https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+
+# Option C — clone via git and run locally
+sudo apt-get install -y git
+git clone https://github.com/epoch-chrono/dotfiles.git ~/.local/share/dotfiles
+cd ~/.local/share/dotfiles
+TARGET_HOSTNAME=mymachine bash bootstrap.sh
+```
+
+### Environment variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `TARGET_HOSTNAME` | yes (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | Hostname applied by the playbook (1-63 chars, `[a-zA-Z0-9-]+`) |
+| `BOOTSTRAP_RUN_PLAYBOOK` | no | Set to `0` to skip the Ansible playbook (only run prereqs steps) |
 
 ## What's inside
 

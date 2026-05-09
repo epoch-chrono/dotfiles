@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.8.0
+# Versão atual: 0.8.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -27,7 +27,10 @@
 #   - 0.8.0: + tasks/sharing.yml: hostname (ComputerName/HostName/
 #            LocalHostName via scutil), Remote Login (SSH) via
 #            systemsetup, Screen Sharing e File Sharing via launchctl
-#            enable + kickstart. Consome a var mac_hostname obrigatória.
+#            enable + kickstart. Consome a var target_hostname obrigatória.
+#   - 0.8.1: rename MAC_HOSTNAME -> TARGET_HOSTNAME e mac_hostname ->
+#            target_hostname. O bootstrap agora roda em Linux também,
+#            então a var precisa ser neutra em relação a OS.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
