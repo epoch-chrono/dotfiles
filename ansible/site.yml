@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.8.1
+# Versão atual: 0.8.2
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -31,6 +31,12 @@
 #   - 0.8.1: rename MAC_HOSTNAME -> TARGET_HOSTNAME e mac_hostname ->
 #            target_hostname. O bootstrap agora roda em Linux também,
 #            então a var precisa ser neutra em relação a OS.
+#   - 0.8.2: fix sharing — Screen/File Sharing com cadeia robusta
+#            (bootstrap → fallback load -w → enable → kickstart) +
+#            best-effort com aviso ao final se não habilitou. Em macOS
+#            Tahoe/Sequoia, 'launchctl enable system/com.apple.smbd'
+#            falha com "Could not find service" se o plist nunca foi
+#            bootstrapped no system domain.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

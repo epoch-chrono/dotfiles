@@ -5,8 +5,8 @@
 # Cobre o painel "General > Sharing" do System Settings:
 #   - Hostname: ComputerName, HostName, LocalHostName via scutil
 #   - Remote Login (SSH): systemsetup -setremotelogin
-#   - Screen Sharing: launchctl enable + kickstart com.apple.screensharing
-#   - File Sharing (SMB): launchctl enable + kickstart com.apple.smbd
+#   - Screen Sharing: bootstrap/load -w + enable + kickstart com.apple.screensharing
+#   - File Sharing (SMB): bootstrap/load -w + enable + kickstart com.apple.smbd
 #
 # Todas as tasks abaixo são task-based (sem array em defaults) porque cada
 # uma tem semântica própria — não dá pra unificar em loop osx_defaults.
@@ -89,8 +89,13 @@
   become: true
 
 # ── Screen Sharing ─────────────────────────────────────────────────────────
-# launchctl enable + kickstart -k. enable é idempotente; kickstart -k
-# sempre re-inicia, então só rodamos se o serviço não estiver running.
+# Sequência robusta para macOS Tahoe/Sequoia:
+#   1. bootstrap (moderno) — registra o plist no system domain
+#   2. fallback: load -w (legacy) — usado se bootstrap falhar (SIP/SSV)
+#   3. enable + kickstart -k — garante enabled e rodando
+# Best-effort: se ao final o serviço não estiver running, avisa mas não
+# quebra o playbook. Automação de Sharing daemons em macOS recente é
+# frágil por causa do System Volume read-only e restrições de SIP.
 
 - name: "Screen Sharing — verificar status atual"
   ansible.builtin.shell:
@@ -100,15 +105,45 @@
   changed_when: false
   become: true
 
-- name: "Screen Sharing — habilitar e iniciar"
+- name: "Screen Sharing — habilitar e iniciar (best-effort)"
   ansible.builtin.shell:
     cmd: |
-      launchctl enable system/com.apple.screensharing
-      launchctl kickstart -k system/com.apple.screensharing
+      set +e
+      # 1. Tenta bootstrap (sintaxe moderna)
+      launchctl bootstrap system /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null
+      # 2. Fallback legacy se ainda nao registrou
+      launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null
+      # 3. Garante enabled e rodando
+      launchctl enable system/com.apple.screensharing 2>/dev/null
+      launchctl kickstart -k system/com.apple.screensharing 2>/dev/null
+      # Tolerar erros — re-validamos com state na proxima task
+      exit 0
   when: screensharing_status.stdout is not search('state\s*=\s*running')
   become: true
+  register: screensharing_enable
+
+- name: "Screen Sharing — re-validar estado após tentativa"
+  ansible.builtin.shell:
+    cmd: launchctl print system/com.apple.screensharing 2>&1 | grep -E "^\s+state\s*=" | head -1
+  register: screensharing_status_after
+  failed_when: false
+  changed_when: false
+  become: true
+  when: screensharing_status.stdout is not search('state\s*=\s*running')
+
+- name: "Screen Sharing — aviso se não habilitou"
+  ansible.builtin.debug:
+    msg:
+      - "AVISO: Screen Sharing não foi habilitado automaticamente."
+      - "Estado final: {{ screensharing_status_after.stdout | default('NOT_FOUND') | trim }}"
+      - "Habilite manualmente: System Settings > General > Sharing > Screen Sharing"
+  when:
+    - screensharing_status.stdout is not search('state\s*=\s*running')
+    - screensharing_status_after.stdout is defined
+    - screensharing_status_after.stdout is not search('state\s*=\s*running')
 
 # ── File Sharing (SMB) ─────────────────────────────────────────────────────
+# Mesma estrutura best-effort do Screen Sharing.
 
 - name: "File Sharing (SMB) — verificar status atual"
   ansible.builtin.shell:
@@ -118,13 +153,39 @@
   changed_when: false
   become: true
 
-- name: "File Sharing (SMB) — habilitar e iniciar"
+- name: "File Sharing (SMB) — habilitar e iniciar (best-effort)"
   ansible.builtin.shell:
     cmd: |
-      launchctl enable system/com.apple.smbd
-      launchctl kickstart -k system/com.apple.smbd
+      set +e
+      launchctl bootstrap system /System/Library/LaunchDaemons/com.apple.smbd.plist 2>/dev/null
+      launchctl load -w /System/Library/LaunchDaemons/com.apple.smbd.plist 2>/dev/null
+      launchctl enable system/com.apple.smbd 2>/dev/null
+      launchctl kickstart -k system/com.apple.smbd 2>/dev/null
+      exit 0
   when: smbd_status.stdout is not search('state\s*=\s*running')
   become: true
+  register: smbd_enable
+
+- name: "File Sharing (SMB) — re-validar estado após tentativa"
+  ansible.builtin.shell:
+    cmd: launchctl print system/com.apple.smbd 2>&1 | grep -E "^\s+state\s*=" | head -1
+  register: smbd_status_after
+  failed_when: false
+  changed_when: false
+  become: true
+  when: smbd_status.stdout is not search('state\s*=\s*running')
+
+- name: "File Sharing (SMB) — aviso se não habilitou"
+  ansible.builtin.debug:
+    msg:
+      - "AVISO: File Sharing (SMB) não foi habilitado automaticamente."
+      - "Estado final: {{ smbd_status_after.stdout | default('NOT_FOUND') | trim }}"
+      - "Em macOS Tahoe/Sequoia, automação de SMB pode falhar por restrições de SIP/SSV."
+      - "Habilite manualmente: System Settings > General > Sharing > File Sharing"
+  when:
+    - smbd_status.stdout is not search('state\s*=\s*running')
+    - smbd_status_after.stdout is defined
+    - smbd_status_after.stdout is not search('state\s*=\s*running')
 
 # ── Resumo ─────────────────────────────────────────────────────────────────
 
