@@ -10,6 +10,9 @@
 #            + tasks/general.yml: 24h, Locale en_BR, idiomas en/pt-BR,
 #              Celsius, métricas, primeiro dia da semana = domingo,
 #              software update automático (sudo)
+#   - 0.4.1: fix AppleFirstWeekday — community.general 10.x não suporta
+#            type:dict; aplicado via 'defaults write -dict-add' com check
+#            prévio para preservar idempotência
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

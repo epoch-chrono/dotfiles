@@ -6,6 +6,11 @@
 #   - Date & Time → 24-hour time
 #   - Language & Region → idioma, locale, calendário, métricas brasileiras
 #   - Software Update → atualizações automáticas (requer sudo)
+#
+# AppleFirstWeekday é tratado fora do array general_defaults porque é um
+# dict ({gregorian: 1}) e o community.general.osx_defaults <11.0 não aceita
+# type: dict. Aplicado abaixo via 'defaults write -dict-add' com check
+# prévio pra preservar idempotência e só notificar handlers em mudança real.
 # ────────────────────────────────────────────────────────────────────────────
 
 - name: "General — defaults user-level (locale, idioma, métricas)"
@@ -23,6 +28,29 @@
     - restart Finder
     - restart Dock
     - restart SystemUIServer
+
+# ── AppleFirstWeekday: workaround para dict (community.general <11) ─────────
+
+- name: "AppleFirstWeekday — verificar valor atual"
+  ansible.builtin.command:
+    cmd: defaults read NSGlobalDomain AppleFirstWeekday
+  register: appleweek_check
+  failed_when: false
+  changed_when: false
+
+- name: "AppleFirstWeekday — aplicar dict gregorian=1 (Sunday) se necessário"
+  ansible.builtin.command:
+    cmd: defaults write NSGlobalDomain AppleFirstWeekday -dict-add gregorian -int 1
+  when: >
+    appleweek_check.rc != 0
+    or appleweek_check.stdout is not search('gregorian\s*=\s*1')
+  notify:
+    - reload cfprefsd
+    - restart Finder
+    - restart Dock
+    - restart SystemUIServer
+
+# ── Software Update (sistêmico, requer sudo) ───────────────────────────────
 
 - name: "Software Update — defaults sistêmicos (requer sudo)"
   community.general.osx_defaults:
