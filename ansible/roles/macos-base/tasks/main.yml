@@ -35,6 +35,11 @@
   tags:
     - trackpad
 
+- name: "Importar tasks de Sharing (hostname + Remote Login + Screen/File Sharing)"
+  ansible.builtin.import_tasks: sharing.yml
+  tags:
+    - sharing
+
 - name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:

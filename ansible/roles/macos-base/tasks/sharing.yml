@@ -1,0 +1,138 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/sharing.yml — Hostname + Sharing daemons
+# ────────────────────────────────────────────────────────────────────────────
+# Cobre o painel "General > Sharing" do System Settings:
+#   - Hostname: ComputerName, HostName, LocalHostName via scutil
+#   - Remote Login (SSH): systemsetup -setremotelogin
+#   - Screen Sharing: launchctl enable + kickstart com.apple.screensharing
+#   - File Sharing (SMB): launchctl enable + kickstart com.apple.smbd
+#
+# Todas as tasks abaixo são task-based (sem array em defaults) porque cada
+# uma tem semântica própria — não dá pra unificar em loop osx_defaults.
+#
+# Idempotência: cada task tem um check prévio que registra estado atual.
+# A action só roda quando a condição não bate. Em re-runs, todas viram
+# 'skipping' (sem changed, sem ruído).
+#
+# Variável obrigatória: mac_hostname (passada via --extra-vars pelo
+# bootstrap.sh; o bootstrap aborta se MAC_HOSTNAME não estiver setado).
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Sharing — validar que mac_hostname está definida"
+  ansible.builtin.assert:
+    that:
+      - mac_hostname is defined
+      - mac_hostname | length > 0
+      - mac_hostname | length <= 63
+      - mac_hostname is match('^[a-zA-Z0-9-]+$')
+    fail_msg: >-
+      mac_hostname inválida (precisa ser ASCII alphanumeric + hifen,
+      1-63 chars). Valor atual: "{{ mac_hostname | default('UNDEFINED') }}"
+    success_msg: "mac_hostname válida: {{ mac_hostname }}"
+
+# ── Hostname (3 chaves) ────────────────────────────────────────────────────
+
+- name: "Hostname — ler ComputerName atual"
+  ansible.builtin.command:
+    cmd: scutil --get ComputerName
+  register: computer_name_current
+  failed_when: false
+  changed_when: false
+
+- name: "Hostname — setar ComputerName"
+  ansible.builtin.command:
+    cmd: scutil --set ComputerName "{{ mac_hostname }}"
+  when: (computer_name_current.stdout | trim) != mac_hostname
+  become: true
+
+- name: "Hostname — ler HostName atual"
+  ansible.builtin.command:
+    cmd: scutil --get HostName
+  register: host_name_current
+  failed_when: false
+  changed_when: false
+
+- name: "Hostname — setar HostName"
+  ansible.builtin.command:
+    cmd: scutil --set HostName "{{ mac_hostname }}"
+  when: (host_name_current.stdout | trim) != mac_hostname
+  become: true
+
+- name: "Hostname — ler LocalHostName atual"
+  ansible.builtin.command:
+    cmd: scutil --get LocalHostName
+  register: local_host_name_current
+  failed_when: false
+  changed_when: false
+
+- name: "Hostname — setar LocalHostName"
+  ansible.builtin.command:
+    cmd: scutil --set LocalHostName "{{ mac_hostname }}"
+  when: (local_host_name_current.stdout | trim) != mac_hostname
+  become: true
+
+# ── Remote Login (SSH) ─────────────────────────────────────────────────────
+
+- name: "Remote Login (SSH) — verificar status atual"
+  ansible.builtin.command:
+    cmd: systemsetup -getremotelogin
+  register: remote_login_status
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: "Remote Login (SSH) — habilitar"
+  ansible.builtin.command:
+    cmd: systemsetup -setremotelogin on
+  when: '"Remote Login: On" not in remote_login_status.stdout'
+  become: true
+
+# ── Screen Sharing ─────────────────────────────────────────────────────────
+# launchctl enable + kickstart -k. enable é idempotente; kickstart -k
+# sempre re-inicia, então só rodamos se o serviço não estiver running.
+
+- name: "Screen Sharing — verificar status atual"
+  ansible.builtin.shell:
+    cmd: launchctl print system/com.apple.screensharing 2>&1 | grep -E "^\s+state\s*=" | head -1
+  register: screensharing_status
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: "Screen Sharing — habilitar e iniciar"
+  ansible.builtin.shell:
+    cmd: |
+      launchctl enable system/com.apple.screensharing
+      launchctl kickstart -k system/com.apple.screensharing
+  when: screensharing_status.stdout is not search('state\s*=\s*running')
+  become: true
+
+# ── File Sharing (SMB) ─────────────────────────────────────────────────────
+
+- name: "File Sharing (SMB) — verificar status atual"
+  ansible.builtin.shell:
+    cmd: launchctl print system/com.apple.smbd 2>&1 | grep -E "^\s+state\s*=" | head -1
+  register: smbd_status
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: "File Sharing (SMB) — habilitar e iniciar"
+  ansible.builtin.shell:
+    cmd: |
+      launchctl enable system/com.apple.smbd
+      launchctl kickstart -k system/com.apple.smbd
+  when: smbd_status.stdout is not search('state\s*=\s*running')
+  become: true
+
+# ── Resumo ─────────────────────────────────────────────────────────────────
+
+- name: "Sharing — resumo"
+  ansible.builtin.debug:
+    msg:
+      - "Hostname desejado: {{ mac_hostname }}"
+      - "ComputerName atual:  {{ computer_name_current.stdout | trim | default('?') }}"
+      - "HostName atual:      {{ host_name_current.stdout | trim | default('?') }}"
+      - "LocalHostName atual: {{ local_host_name_current.stdout | trim | default('?') }}"
+      - "Após mudança de hostname, abrir nova sessão de terminal para o prompt refletir."

@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.7.1
+# Versão atual: 0.8.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -24,6 +24,10 @@
 #            tapBehavior por currentHost para apps legacy
 #   - 0.7.1: fix trackpad — Clicking é int (0/1) no plist, não bool;
 #            mesmo padrão do bug de tilesize/largesize do dock
+#   - 0.8.0: + tasks/sharing.yml: hostname (ComputerName/HostName/
+#            LocalHostName via scutil), Remote Login (SSH) via
+#            systemsetup, Screen Sharing e File Sharing via launchctl
+#            enable + kickstart. Consome a var mac_hostname obrigatória.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -38,6 +42,7 @@
 #   --tags appearance      # Só appearance (tema, cores, sidebar)
 #   --tags dock            # Só Dock + hot corners
 #   --tags trackpad        # Só trackpad (tap, speed, gestures)
+#   --tags sharing         # Só sharing (hostname + daemons)
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
 #   --skip-tags hello      # Tudo menos smoke test
