@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.4.0
+# Versão atual: 0.7.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -17,11 +17,11 @@
 #            Highlight Purple (RGB normalizado), Sidebar icon size Small
 #   - 0.6.0: + tasks/dock.yml: Dock size 48 / magnification 90,
 #            Hot Corners desabilitados (todos os 4 cantos = sem ação)
-#   - 0.6.1: fix tilesize/largesize são float, não int (Type mismatch)
-#   - 0.7.0: + tasks/trackpad.yml: tap-to-click, tracking speed 1.5,
-#            3-finger vertical swipe (Mission Control + App Exposé)
 #   - 0.6.1: fix dock — tilesize/largesize como type:float (macOS Tahoe
 #            armazena como float no plist; type:int dava Type mismatch)
+#   - 0.7.0: + tasks/trackpad.yml: tap-to-click (built-in + Bluetooth),
+#            tracking speed 1.5, App Exposé com 3-finger swipe down,
+#            tapBehavior por currentHost para apps legacy
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
