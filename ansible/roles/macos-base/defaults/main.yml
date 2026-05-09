@@ -106,6 +106,60 @@ appearance_defaults:
     value: 1
     rollback: "defaults delete NSGlobalDomain NSTableViewDefaultSizeMode"
 
+# ── Trackpad ───────────────────────────────────────────────────────────────
+# Tap to click, tracking speed, gestures.
+#
+# Tap to click: macOS lê de várias chaves redundantes — built-in trackpad,
+# Bluetooth trackpad, global domain. Setar todas para garantir reconhecimento.
+# Há ainda uma chave "ByHost" (com.apple.mouse.tapBehavior) tratada em task
+# separada porque exige host: currentHost.
+#
+# Tracking speed: range visual 0-3.0 no slider. 1.5 ≈ 50% (preferência do user).
+# É float (NSGlobalDomain).
+#
+# Three-finger vertical swipe = 2: habilita Mission Control (up) e
+# App Exposé (down) com 3 dedos no trackpad.
+trackpad_defaults:
+
+  # Tap to click — built-in trackpad
+  - description: "Tap to click no trackpad built-in"
+    domain: com.apple.AppleMultitouchTrackpad
+    key: Clicking
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.AppleMultitouchTrackpad Clicking"
+
+  # Tap to click — Bluetooth trackpad (Magic Trackpad externo)
+  - description: "Tap to click no trackpad Bluetooth (Magic Trackpad)"
+    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+    key: Clicking
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking"
+
+  # Tracking speed
+  - description: "Velocidade de rastreamento do trackpad — 1.5 (~50% do slider 0-3.0)"
+    domain: NSGlobalDomain
+    key: com.apple.trackpad.scaling
+    type: float
+    value: 1.5
+    rollback: "defaults delete NSGlobalDomain com.apple.trackpad.scaling"
+
+  # Three-finger vertical swipe — Mission Control (up) + App Exposé (down)
+  - description: "3-finger vertical swipe habilita Mission Control + App Exposé (built-in)"
+    domain: com.apple.AppleMultitouchTrackpad
+    key: TrackpadThreeFingerVertSwipeGesture
+    type: int
+    value: 2
+    rollback: "defaults delete com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture"
+
+  - description: "3-finger vertical swipe habilita Mission Control + App Exposé (Bluetooth)"
+    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+    key: TrackpadThreeFingerVertSwipeGesture
+    type: int
+    value: 2
+    rollback: "defaults delete com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture"
+
 # ── Dock + Hot Corners ─────────────────────────────────────────────────────
 # Tamanho do Dock, magnification, e desativação de todos os 4 hot corners.
 #

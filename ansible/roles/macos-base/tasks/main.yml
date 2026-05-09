@@ -30,6 +30,11 @@
   tags:
     - dock
 
+- name: "Importar tasks de Trackpad (tap, speed, gestures)"
+  ansible.builtin.import_tasks: trackpad.yml
+  tags:
+    - trackpad
+
 - name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:

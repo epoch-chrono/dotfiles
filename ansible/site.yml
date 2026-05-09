@@ -17,6 +17,11 @@
 #            Highlight Purple (RGB normalizado), Sidebar icon size Small
 #   - 0.6.0: + tasks/dock.yml: Dock size 48 / magnification 90,
 #            Hot Corners desabilitados (todos os 4 cantos = sem ação)
+#   - 0.6.1: fix tilesize/largesize são float, não int (Type mismatch)
+#   - 0.7.0: + tasks/trackpad.yml: tap-to-click, tracking speed 1.5,
+#            3-finger vertical swipe (Mission Control + App Exposé)
+#   - 0.6.1: fix dock — tilesize/largesize como type:float (macOS Tahoe
+#            armazena como float no plist; type:int dava Type mismatch)
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -30,6 +35,7 @@
 #   --tags general         # Só general (24h, locale, autocorrect)
 #   --tags appearance      # Só appearance (tema, cores, sidebar)
 #   --tags dock            # Só Dock + hot corners
+#   --tags trackpad        # Só trackpad (tap, speed, gestures)
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
 #   --skip-tags hello      # Tudo menos smoke test

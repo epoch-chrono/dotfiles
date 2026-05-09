@@ -1,0 +1,45 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/trackpad.yml — Trackpad (tap, speed, gestures)
+# ────────────────────────────────────────────────────────────────────────────
+# Cobre o painel "Trackpad" do System Settings:
+#   - Point & Click → Tap to Click
+#   - Point & Click → Tracking Speed (1.5)
+#   - More Gestures → App Exposé: Swipe Down with Three Fingers
+#                  → Mission Control: Swipe Up with Three Fingers
+#
+# Mudanças no trackpad refletem geralmente em ~3-5s sem killall, mas pra
+# garantir aplicação imediata, notify cfprefsd + SystemUIServer.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Trackpad — defaults user-level"
+  community.general.osx_defaults:
+    domain: "{{ item.domain }}"
+    key: "{{ item.key }}"
+    type: "{{ item.type }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ trackpad_defaults }}"
+  loop_control:
+    label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
+  notify:
+    - reload cfprefsd
+    - restart SystemUIServer
+
+# ── Tap behavior por host (ByHost — NSGlobalDomain) ────────────────────────
+# Esta chave fica em ~/Library/Preferences/ByHost/.GlobalPreferences.<UUID>.plist
+# (não em ~/Library/Preferences/.GlobalPreferences.plist) e exige host: currentHost.
+# É usada por apps legacy que leem mouse.tapBehavior em vez das chaves
+# AppleMultitouchTrackpad/Clicking. Mantemos pra robustez.
+
+- name: "Trackpad — tap behavior por host (apps legacy)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: com.apple.mouse.tapBehavior
+    type: int
+    value: 1
+    host: currentHost
+    state: present
+  notify:
+    - reload cfprefsd
+    - restart SystemUIServer
