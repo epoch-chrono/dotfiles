@@ -65,10 +65,46 @@ general_defaults:
     value: "Centimeters"
     rollback: "defaults delete NSGlobalDomain AppleMeasurementUnits"
 
-# Nota: AppleFirstWeekday é dict ({gregorian: 1}) e o osx_defaults da versão
-# 10.x do community.general não suporta type: dict (só foi adicionado na 11.x,
-# que requer ansible-core 2.16+ — incompatível com Python 3.9 do CLT).
-# É aplicado via tasks/general.yml usando 'defaults write -dict-add' direto.
+# Nota: AppleFirstWeekday é dict ({gregorian: 1}) e o osx_defaults do
+# community.general 10.x não suporta type: dict (suporte adicionado só na
+# 11.x, que requer ansible-core 2.16+ — incompatível com Python 3.9 do CLT).
+# Aplicado via tasks/general.yml usando 'defaults write -dict-add' direto.
+
+# ── Appearance ─────────────────────────────────────────────────────────────
+# Tema, accent color, highlight color, sidebar icon size.
+#
+# AppleInterfaceStyle (Light/Dark fixo) é tratado como state: absent em
+# tasks/appearance.yml, fora deste array, porque osx_defaults com
+# state: absent + value não combina bem com loop de items.
+appearance_defaults:
+
+  - description: "Auto switching entre Light e Dark mode (segue horário do sistema)"
+    domain: NSGlobalDomain
+    key: AppleInterfaceStyleSwitchesAutomatically
+    type: bool
+    value: true
+    rollback: "defaults delete NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically"
+
+  - description: "Cor de destaque do sistema: Purple (5). Mapeamento: -1 graphite, 0 red, 1 orange, 2 yellow, 3 green, 4 blue, 5 purple, 6 pink"
+    domain: NSGlobalDomain
+    key: AppleAccentColor
+    type: int
+    value: 5
+    rollback: "defaults delete NSGlobalDomain AppleAccentColor"
+
+  - description: "Cor de seleção de texto: Purple (RGB 0.968627 0.831373 1.000000)"
+    domain: NSGlobalDomain
+    key: AppleHighlightColor
+    type: string
+    value: "0.968627 0.831373 1.000000 Purple"
+    rollback: "defaults delete NSGlobalDomain AppleHighlightColor"
+
+  - description: "Tamanho dos ícones da sidebar: Small (1=small, 2=medium, 3=large)"
+    domain: NSGlobalDomain
+    key: NSTableViewDefaultSizeMode
+    type: int
+    value: 1
+    rollback: "defaults delete NSGlobalDomain NSTableViewDefaultSizeMode"
 
 # ── Software Update ────────────────────────────────────────────────────────
 # Preferências sistêmicas (path /Library/Preferences/...) — requer sudo.

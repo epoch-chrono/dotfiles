@@ -13,6 +13,8 @@
 #   - 0.4.1: fix AppleFirstWeekday — community.general 10.x não suporta
 #            type:dict; aplicado via 'defaults write -dict-add' com check
 #            prévio para preservar idempotência
+#   - 0.5.0: + tasks/appearance.yml: Auto theme (Light/Dark), Accent Purple,
+#            Highlight Purple (RGB normalizado), Sidebar icon size Small
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -24,6 +26,7 @@
 #   --tags hello           # Só smoke test
 #   --tags macos-base      # Toda a role macos-base
 #   --tags general         # Só general (24h, locale, autocorrect)
+#   --tags appearance      # Só appearance (tema, cores, sidebar)
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
 #   --skip-tags hello      # Tudo menos smoke test

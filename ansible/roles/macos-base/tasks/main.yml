@@ -20,6 +20,11 @@
   tags:
     - general
 
+- name: "Importar tasks de Appearance (tema, accent, highlight, sidebar)"
+  ansible.builtin.import_tasks: appearance.yml
+  tags:
+    - appearance
+
 - name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:

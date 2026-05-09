@@ -1,0 +1,43 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/appearance.yml — tema, cores, sidebar
+# ────────────────────────────────────────────────────────────────────────────
+# Cobre o painel "Appearance" do System Settings:
+#   - Auto theme (Light/Dark conforme horário do sistema)
+#   - Accent color: Purple
+#   - Highlight color: Purple
+#   - Sidebar icon size: Small
+#
+# AppleInterfaceStyle controla o modo manual:
+#   - presente com valor "Dark" → Dark fixo
+#   - ausente (state: absent) → Light fixo OU Auto (depende do
+#     AppleInterfaceStyleSwitchesAutomatically)
+# Para ativar Auto, precisa: chave ausente + Switches=true.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Appearance — remover override fixo de Light/Dark (habilita Auto)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleInterfaceStyle
+    state: absent
+  notify:
+    - reload cfprefsd
+    - restart Finder
+    - restart Dock
+    - restart SystemUIServer
+
+- name: "Appearance — defaults declarativos (auto theme, accent, highlight, sidebar)"
+  community.general.osx_defaults:
+    domain: "{{ item.domain }}"
+    key: "{{ item.key }}"
+    type: "{{ item.type }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ appearance_defaults }}"
+  loop_control:
+    label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
+  notify:
+    - reload cfprefsd
+    - restart Finder
+    - restart Dock
+    - restart SystemUIServer
