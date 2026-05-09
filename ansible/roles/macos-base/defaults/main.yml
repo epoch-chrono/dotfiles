@@ -106,6 +106,91 @@ appearance_defaults:
     value: 1
     rollback: "defaults delete NSGlobalDomain NSTableViewDefaultSizeMode"
 
+# ── Dock + Hot Corners ─────────────────────────────────────────────────────
+# Tamanho do Dock, magnification, e desativação de todos os 4 hot corners.
+#
+# Sobre o tamanho:
+#   tilesize  : tamanho dos ícones em pixels. Range exposto na UI: 16–128.
+#               Default macOS ≈ 48. Aqui: 48 (~30% do range visual da UI).
+#   magnification : bool. Necessário true pra que largesize tenha efeito.
+#   largesize : tamanho dos ícones quando hover/magnificado. Range 16–128.
+#               Aqui: 90 (~70% do range visual).
+#
+# Sobre hot corners:
+#   wvous-{tl,tr,bl,br}-corner   = 0 → "no action" (corner desabilitado)
+#   wvous-{tl,tr,bl,br}-modifier = 0 → sem modifier key
+#   Outros valores possíveis em corner: 2 Mission Control, 3 App Windows,
+#     4 Desktop, 5 Start saver, 6 Disable saver, 10 Sleep display,
+#     11 Launchpad, 12 Notification Center, 13 Lock Screen
+dock_defaults:
+
+  # Size & magnification
+  - description: "Tamanho dos ícones do Dock — 48px (~30% do range UI 16-128)"
+    domain: com.apple.dock
+    key: tilesize
+    type: int
+    value: 48
+    rollback: "defaults delete com.apple.dock tilesize"
+
+  - description: "Magnification habilitada (necessária pra largesize ter efeito)"
+    domain: com.apple.dock
+    key: magnification
+    type: bool
+    value: true
+    rollback: "defaults delete com.apple.dock magnification"
+
+  - description: "Tamanho magnificado dos ícones do Dock — 90px (~70% do range)"
+    domain: com.apple.dock
+    key: largesize
+    type: int
+    value: 90
+    rollback: "defaults delete com.apple.dock largesize"
+
+  # Hot corners — todos desabilitados (action 0 = no action)
+  - description: "Hot corner topo-esquerdo: sem ação"
+    domain: com.apple.dock
+    key: wvous-tl-corner
+    type: int
+    value: 0
+  - description: "Hot corner topo-esquerdo: sem modifier key"
+    domain: com.apple.dock
+    key: wvous-tl-modifier
+    type: int
+    value: 0
+
+  - description: "Hot corner topo-direito: sem ação"
+    domain: com.apple.dock
+    key: wvous-tr-corner
+    type: int
+    value: 0
+  - description: "Hot corner topo-direito: sem modifier key"
+    domain: com.apple.dock
+    key: wvous-tr-modifier
+    type: int
+    value: 0
+
+  - description: "Hot corner inferior-esquerdo: sem ação"
+    domain: com.apple.dock
+    key: wvous-bl-corner
+    type: int
+    value: 0
+  - description: "Hot corner inferior-esquerdo: sem modifier key"
+    domain: com.apple.dock
+    key: wvous-bl-modifier
+    type: int
+    value: 0
+
+  - description: "Hot corner inferior-direito: sem ação"
+    domain: com.apple.dock
+    key: wvous-br-corner
+    type: int
+    value: 0
+  - description: "Hot corner inferior-direito: sem modifier key"
+    domain: com.apple.dock
+    key: wvous-br-modifier
+    type: int
+    value: 0
+
 # ── Software Update ────────────────────────────────────────────────────────
 # Preferências sistêmicas (path /Library/Preferences/...) — requer sudo.
 # Aplicado via task com become: true em tasks/general.yml.

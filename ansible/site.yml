@@ -15,6 +15,8 @@
 #            prévio para preservar idempotência
 #   - 0.5.0: + tasks/appearance.yml: Auto theme (Light/Dark), Accent Purple,
 #            Highlight Purple (RGB normalizado), Sidebar icon size Small
+#   - 0.6.0: + tasks/dock.yml: Dock size 48 / magnification 90,
+#            Hot Corners desabilitados (todos os 4 cantos = sem ação)
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -27,6 +29,7 @@
 #   --tags macos-base      # Toda a role macos-base
 #   --tags general         # Só general (24h, locale, autocorrect)
 #   --tags appearance      # Só appearance (tema, cores, sidebar)
+#   --tags dock            # Só Dock + hot corners
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
 #   --skip-tags hello      # Tudo menos smoke test

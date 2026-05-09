@@ -1,0 +1,25 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/macos-base/tasks/dock.yml — Dock + Hot Corners
+# ────────────────────────────────────────────────────────────────────────────
+# Cobre o painel "Desktop & Dock" do System Settings:
+#   - Dock size, magnification
+#   - Hot Corners (todos desabilitados)
+#
+# Mudanças no Dock requerem killall Dock para refletir. Os handlers da
+# role já fazem isso quando notify dispara (apenas em mudança real).
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Dock — defaults declarativos (size, magnification, hot corners)"
+  community.general.osx_defaults:
+    domain: "{{ item.domain }}"
+    key: "{{ item.key }}"
+    type: "{{ item.type }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ dock_defaults }}"
+  loop_control:
+    label: "{{ item.domain }} / {{ item.key }} = {{ item.value }}"
+  notify:
+    - reload cfprefsd
+    - restart Dock

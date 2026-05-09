@@ -25,6 +25,11 @@
   tags:
     - appearance
 
+- name: "Importar tasks de Dock (size, magnification, hot corners)"
+  ansible.builtin.import_tasks: dock.yml
+  tags:
+    - dock
+
 - name: "Importar tasks de Finder"
   ansible.builtin.import_tasks: finder.yml
   tags:
