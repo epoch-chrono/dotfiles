@@ -4,7 +4,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # Ordem das fases:
 #   1. Pré-check: /opt/homebrew/bin/brew existe (garantido por install.yml).
-#   2. mas-cli: garantir o binary instalado (pré-req das fases 3 e 5).
+#   2. mas-cli: garantir o binary instalado (pré-req das fases 3, 5 e 6).
 #   3. MAS cleanup: remover apps Apple "lixo" (state: absent).
 #   4. Brew bundle: aplicar Brewfile (taps + formulas + casks).
 #      Importante: MAS apps NÃO estão mais no Brewfile — saíram pra cá
@@ -14,6 +14,10 @@
 #      community.general.mas. Failed_when permissivo: bootstrap segue
 #      mesmo se um app individual falhar (ex: Apple ID nunca clicou
 #      "Get" em algum app).
+#   6. MAS upgrade: upgrade_all de todos os apps MAS instalados.
+#      Inclui apps fora do mas_apps_to_install (manualmente instalados).
+#      Diferença consciente do brew (--no-upgrade): MAS não tem release
+#      management equivalente; modelo "update sempre" é o esperado.
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -136,3 +140,32 @@
         1. Abrir App Store, buscar cada app que falhou, clicar "Get".
         2. Re-rodar bootstrap.
   when: mas_failed_apps | length > 0
+
+
+# ── 6. MAS upgrade ────────────────────────────────────────────────────────
+# Upgrade de TODOS os apps MAS instalados (incluindo apps que o user
+# instalou manualmente fora do mas_apps_to_install — boa hygiene).
+#
+# Diferença consciente do brew: brew bundle usa --no-upgrade pra
+# reprodutibilidade (versões pinadas via Brewfile). MAS não tem release
+# management equivalente — apps são distribuídos via Apple, modelo
+# "update sempre". Pra Safari extensions especificamente, ter a versão
+# mais recente importa por segurança.
+#
+# failed_when: false: upgrades podem falhar por razões transitórias
+# (rede, app individual, etc). Não derrubar bootstrap por isso.
+
+- name: "MAS — upgrade de todos os apps MAS instalados"
+  community.general.mas:
+    upgrade_all: true
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
+  register: mas_upgrade_result
+  failed_when: false
+
+- name: "MAS — exibir resumo do upgrade"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Upgrade aplicado em ' + (mas_upgrade_result.msg | default('todos os apps')) | string
+         if mas_upgrade_result.changed
+         else 'Nenhum upgrade necessário (todos os apps já estão na versão mais recente)' }}
