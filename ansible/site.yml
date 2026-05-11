@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.9.2
+# Versão atual: 0.10.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -55,6 +55,12 @@
 #            socketfilterfw retorna 'usage:' (rc não-zero) ao recebê-las.
 #            Removidas do playbook. Logging agora deve ser gerenciado via
 #            unified logging subsystem com.apple.alf (fora do escopo).
+#   - 0.10.0: + role homebrew (instalação mínima — só o binary em
+#             /opt/homebrew/bin/brew). Usa installer oficial com
+#             NONINTERACTIVE=1, depende do NOPASSWD sudo configurado pelo
+#             bootstrap. Sem tap, sem packages, sem shell integration —
+#             tudo isso fica para iterações futuras. Skip automático em
+#             Linux via when:Darwin na role.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
@@ -73,6 +79,7 @@
 #   --tags firewall        # Só firewall (Application Firewall)
 #   --tags keyboard        # Só teclado
 #   --tags finder          # Só Finder
+#   --tags homebrew        # Só Homebrew (instalação)
 #   --skip-tags hello      # Tudo menos smoke test
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -94,3 +101,11 @@
       tags:
         - macos-base
         - macos
+
+    # Homebrew — apenas a instalação do binary. Sem tap, sem packages, sem
+    # shell integration por enquanto. Pacotes ficam para iteração futura.
+    # Skip automático em Linux via 'when' dentro da role.
+    - role: homebrew
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - homebrew

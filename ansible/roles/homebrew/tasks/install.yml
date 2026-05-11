@@ -1,0 +1,51 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/homebrew/tasks/install.yml — instalação do Homebrew via installer oficial
+# ────────────────────────────────────────────────────────────────────────────
+# Estratégia:
+#   1. Detectar se /opt/homebrew/bin/brew já existe (Apple Silicon path).
+#   2. Se não existir, rodar o installer oficial com NONINTERACTIVE=1.
+#      O installer chama sudo internamente quando precisa criar /opt/homebrew
+#      e fazer chown — com NOPASSWD sudo já configurado pelo bootstrap.sh,
+#      isso passa sem prompt.
+#   3. Validar que `brew --version` responde corretamente.
+#
+# Notas:
+#   - /opt/homebrew é o prefix oficial em Apple Silicon (não /usr/local).
+#   - NONINTERACTIVE=1 é uma env var documentada pelo installer que pula
+#     o "Press RETURN to continue or any other key to abort".
+#   - Não modificamos PATH ou shell config aqui. Shell integration vai ser
+#     responsabilidade do chezmoi (dotfiles), separação de camadas.
+#   - become: false é o default, e é o que queremos — o installer roda como
+#     usuário comum e chama sudo só quando precisa de privilégio elevado.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Homebrew — verificar se já está instalado"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/brew
+  register: brew_binary
+
+- name: "Homebrew — instalar via installer oficial (NONINTERACTIVE)"
+  ansible.builtin.shell:
+    cmd: |
+      NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  when: not brew_binary.stat.exists
+  register: brew_install_result
+  changed_when: brew_install_result.rc == 0
+  # become: false é o default; o installer chama sudo internamente
+
+- name: "Homebrew — verificar versão instalada"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/brew --version
+  register: brew_version
+  changed_when: false
+  failed_when: brew_version.rc != 0
+
+- name: "Homebrew — exibir versão e prefixo"
+  ansible.builtin.debug:
+    msg:
+      - "{{ brew_version.stdout_lines }}"
+      - "Prefix: /opt/homebrew"
+      - "Binary: /opt/homebrew/bin/brew"
+      - "Shell integration NÃO foi configurada — fica para o chezmoi."

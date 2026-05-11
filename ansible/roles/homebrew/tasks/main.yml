@@ -1,0 +1,18 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/homebrew/tasks/main.yml — entry point
+# ────────────────────────────────────────────────────────────────────────────
+# Role gerencia a instalação do Homebrew (https://brew.sh) em macOS.
+# Linux (Linuxbrew) não é coberto por aqui — Linux usa apt/dnf/etc nativos.
+#
+# Esta versão é INTENCIONALMENTE mínima: só instala o brew binary e valida.
+# Sem tap, sem package, sem shell integration. Pacotes virão em iterações
+# futuras (provavelmente via Brewfile em ansible/roles/homebrew/files/).
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Importar tasks de install (Homebrew)"
+  ansible.builtin.import_tasks: install.yml
+  when: ansible_os_family == "Darwin"
+  tags:
+    - homebrew
+    - install
