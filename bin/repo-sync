@@ -123,15 +123,27 @@ function check_brew
     end
 
     set -l tmp_dump (mktemp)
-    brew bundle dump --file=$tmp_dump --force --no-vscode 2>/dev/null
+    if not brew bundle dump --file=$tmp_dump --force --no-vscode 2>/dev/null
+        err "brew bundle dump falhou"
+        rm -f $tmp_dump
+        return 2
+    end
 
-    set -l repo_entries (normalize_brewfile < $BREWFILE | psub)
-    set -l actual_entries (normalize_brewfile < $tmp_dump | psub)
+    # IMPORTANTE: psub cria named pipe que existe APENAS durante a execução
+    # do comando que o consome. Não pode ser capturado em variável antes —
+    # o pipe seria fechado antes do uso. Por isso o psub fica inline em cada
+    # chamada de `comm`.
 
-    # Entries no repo mas não instaladas (missing)
-    set -l missing (comm -23 $repo_entries $actual_entries)
-    # Entries instaladas mas não no repo (extra)
-    set -l extra (comm -13 $repo_entries $actual_entries)
+    set -l missing ( \
+        comm -23 \
+            (normalize_brewfile < $BREWFILE | psub) \
+            (normalize_brewfile < $tmp_dump | psub) \
+    )
+    set -l extra ( \
+        comm -13 \
+            (normalize_brewfile < $BREWFILE | psub) \
+            (normalize_brewfile < $tmp_dump | psub) \
+    )
 
     rm -f $tmp_dump
 

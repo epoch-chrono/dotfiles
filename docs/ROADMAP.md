@@ -170,6 +170,47 @@ Não-blocker — incrementos progressivos, cada fase pagando seu próprio custo.
 - Documentar workflow per-project: `flake.nix` + `.envrc` com `use flake`
 
 
+## Convenções de código
+
+### Sintaxe portável em scripts versionados
+
+Scripts em `bin/` (e hooks chezmoi futuros) usam sintaxe portável de coreutils:
+compatível com BSD + GNU `awk`, `sed`, `grep`, etc. Não dependem de
+`gawk`/`gsed`/etc. especificamente, nem de paths absolutos pra binários.
+
+**Motivação.**
+
+- **Cross-platform.** O mesmo script roda no macOS (com BSD tools nativos ou
+  com GNU via brew), no Linux com GNU nativo, e no NixOS futuro. Não importa
+  qual versão o PATH resolve.
+- **Robustez a mudanças de PATH.** O shell pessoal do user pode prepender GNU
+  tools no PATH (recomendado pro uso interativo). Essa config NÃO quebra
+  scripts versionados que assumem só features portáveis.
+- **Bootstrap-friendly.** Scripts funcionam em contextos com PATH minimal
+  (SSH non-interactive, CI, container), onde GNU tools podem não estar
+  acessíveis pelo nome curto.
+
+**Exemplo prático.**
+
+```awk
+# Portável (BSD + GNU): usa sub destrutivo
+/id:.*"[0-9]+"/ {
+    s = $0
+    sub(/.*id:[[:space:]]*"/, "", s)
+    sub(/".*/, "", s)
+    print s
+}
+
+# Evitar: GNU-only (match com 3 args, captura em array)
+match($0, /id:[[:space:]]*"([0-9]+)"/, m) { print m[1] }
+```
+
+**Onde GNU tools vão entrar.** Em `dot_config/fish/config.fish` (via chezmoi),
+o user prepende `gnubin` dirs ao PATH pra que `awk` invoque `gawk`, `sed`
+invoque `gsed`, etc. — comportamento previsível e mais features no terminal
+interativo. Mas isso é config pessoal, fora do escopo de scripts versionados.
+
+
 ## TODOs pontuais (backlog técnico)
 
 Itens isolados que não cabem nas fatias acima.
