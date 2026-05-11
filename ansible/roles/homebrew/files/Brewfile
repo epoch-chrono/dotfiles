@@ -51,7 +51,7 @@ tap "hudochenkov/sshpass"
 # Common Fate Granted — AWS access tooling. Binários hospedados em
 # releases.commonfate.io (não GitHub), por isso o plugin asdf-granted
 # falha buscando no GitHub. Tap oficial da Common Fate.
-tap "common-fate/granted"
+tap "fwdcloudsec/granted"
 
 # Cloudquery — cloud asset discovery / inventory.
 tap "cloudquery/tap"
@@ -213,8 +213,8 @@ brew "watch"              # rodar comando periodicamente
 brew "sshpass"
 
 # Granted (CLI principal). gdeploy fica de fora por padrão — adicionar
-# se ainda usado: brew "common-fate/granted/gdeploy"
-brew "common-fate/granted/granted"
+# se ainda usado: brew "fwdcloudsec/granted/gdeploy"
+brew "fwdcloudsec/granted/granted"
 
 # Cloudquery CLI.
 brew "cloudquery/tap/cloudquery"
