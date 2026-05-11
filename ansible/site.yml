@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.11.1
+# Versão atual: 0.12.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -78,6 +78,40 @@
 #             visível no output: brew bundle rodava 2 vezes por execução.
 #             Inofensivo (segunda vez vinha "Using everything"), mas
 #             confuso e desperdiça tempo. Removida a duplicata.
+#   - 0.12.0: Brewfile expandido — curadoria completa de formulas do Mac
+#             antigo após análise de "brew leaves --installed-on-request"
+#             vs mise registry. Total: 67 entradas (4 taps + 4 formulas-de-
+#             tap + 59 core). Estrutura por categoria com comentários
+#             contextualizando cada bloco:
+#               1. Taps externos (sshpass, granted, cloudquery, powerpipe)
+#               2. Brew pre-reqs: linguagens base (python@3.13, elixir,
+#                  rust). Coexistem com mise; mise vence no PATH pra uso
+#                  diário, brew fica como "system runtime" pra deps.
+#               3. Brew pre-reqs: build/image universal (make, imagemagick).
+#                  Muitas formulas brew dependem, manter aqui evita
+#                  duplicacao.
+#               4. System replacements GNU/newer-than-system: binutils,
+#                  diffutils, file-formula, findutils, gawk, git, gnu-*,
+#                  gnupg, gpatch, grep, gzip, less, openssh, rsync, wget,
+#                  bash-completion@2.
+#               5. Shells: fish, fish-lsp, zsh, zsh-completions, nushell,
+#                  elvish.
+#               6. Mac-specific: duti, maclaunch, pinentry-mac.
+#               7. Network/security: clamav, mtr, nmap, p7zip, socat,
+#                  tcpdump, tcpflow.
+#               8. Container/cloud: podman-compose, mongodb-atlas-cli,
+#                  kubescape, prowler.
+#               9. CLI utilities: asciinema, bfg, bitwarden-cli, bore-cli,
+#                  cpulimit, dateutils, detox, dos2unix, exercism,
+#                  graphviz, gtop, himalaya, magic-wormhole, ponysay,
+#                  summarize, sysbench, timewarrior, tree, watch.
+#              10. Formulas dos taps: sshpass, granted, cloudquery,
+#                  powerpipe.
+#             Foram para o mise: btop, fastfetch, mas, tmux, postgresql.
+#             Foram removidos (obsoletos no stack atual): stow (chezmoi
+#             cobre), screen (tmux), colordiff (delta via mise),
+#             reattach-to-user-namespace (desnecessario desde tmux 2.6),
+#             telnet (nc -zv cobre).
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

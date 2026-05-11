@@ -4,58 +4,190 @@
 # Aplicado via: brew bundle --no-upgrade --file=Brewfile
 # Documentação: https://docs.brew.sh/Brew-Bundle-and-Brewfile
 #
-# Estratégia de fontes (mise-first com fallback pragmático):
-#   1. mise-first: linguagens, runtimes, e CLIs com binários em GitHub
-#      Releases publicados com nomenclatura padrão (asdf/aqua compatível).
-#      Exemplos validados como mise-OK: k9s, popeye.
-#   2. brew (fallback): pre-reqs (linguagens base), apps GUI (casks),
-#      e tools onde o ecossistema do mise quebra para macOS arm64.
-#      Exemplos validados como mise-quebrado:
-#        - granted: binários em releases.commonfate.io, não no GitHub.
-#        - kafkactl: asset darwin_arm64 não publicado.
+# Estratégia de fontes (decisão por categoria, não absoluta):
 #
-# Built-ins do brew (não precisam tap explícito):
+#   1. mise para versionar:
+#      - Linguagens versionadas (Python, Node, Go, Ruby) — mise pré-reqs
+#      - CLIs versionáveis com binários em GitHub Releases padrão
+#        (k9s, popeye, btop, fastfetch, tmux, postgresql, mas, etc)
+#      - Backends preferidos: aqua > github > asdf
+#
+#   2. brew para:
+#      - Linguagens base que também são pre-reqs de muitas formulas
+#        (Python, Elixir, Rust) — coexistem com mise; mise vence no PATH
+#      - Deps universais (make, imagemagick) que muitas formulas brew
+#        precisam — manter brew evita duplicação e conflito de paths
+#      - Replacements de utilities sistêmicas (GNU sed/grep/tar/etc)
+#      - Apps GUI (casks — futuro)
+#      - Tools onde mise quebra (granted hospedado em releases.commonfate.io,
+#        sshpass binary C abandonado, etc)
+#
+#   3. Critério prático para "fica em ambos":
+#      Se uma linguagem é pre-req de várias formulas brew E é versionada,
+#      faz sentido coexistir. Mise vence no PATH; brew fica como "system
+#      runtime" pra deps. Validado para python; mesmo padrão para elixir
+#      e rust.
+#
+# Built-ins do brew (NÃO precisam tap explícito):
 #   - homebrew/core e homebrew/cask: built-in desde sempre
 #   - homebrew/bundle e homebrew/services: built-in desde brew 4.5.0
 # ===========================================================================
 
-# ── Taps externos ─────────────────────────────────────────────────────────
-# brew bundle auto-tapa, mas declaramos explicitamente para documentação
-# e pra deixar a relação tap-formula visualmente óbvia.
 
-# sshpass binary. Não está em homebrew/core por questões de segurança
-# (passar senha em CLI). Tap mantido por hudochenkov; sem commits há 10
-# anos mas o binary é estável (sshpass é C clássico, raramente muda).
+# ── Taps externos ─────────────────────────────────────────────────────────
+# Cada tap aqui foi avaliado contra a regra mise-first e ficou no brew
+# por razões específicas. brew bundle auto-tapa, mas declaramos
+# explicitamente para documentação.
+
+# sshpass binary. Não em homebrew/core por questões de segurança
+# (passa senha em CLI). Tap mantido por hudochenkov; sem commits há 10
+# anos mas o binary é C clássico, raramente muda. Sem alternativa mise.
 tap "hudochenkov/sshpass"
 
 # Common Fate Granted — AWS access tooling. Binários hospedados em
 # releases.commonfate.io (não GitHub), por isso o plugin asdf-granted
-# falha. Tap é mantido oficialmente pela Common Fate.
+# falha buscando no GitHub. Tap oficial da Common Fate.
 tap "common-fate/granted"
 
-# Cloudquery — cloud asset discovery / inventory. Não validado em mise
-# ainda; mantém aqui por enquanto pra não perder ao migrar.
+# Cloudquery — cloud asset discovery / inventory.
 tap "cloudquery/tap"
 
-# Turbot Powerpipe — dashboards de segurança/compliance. Não validado em
-# mise ainda; mantém aqui por enquanto pra não perder ao migrar.
+# Turbot Powerpipe — dashboards de segurança/compliance.
 tap "turbot/tap"
 
-# ── Linguagens base / pré-requisitos ──────────────────────────────────────
-# Python: usado como dep por muitas formulas e diretamente para scripts.
-# Versão fixada explicitamente pra estabilidade de virtualenvs e dos
-# scripts que dependem de um Python específico.
+
+# ── Brew pre-reqs: linguagens base ────────────────────────────────────────
+# Coexistem com mise. Mise gerencia versionamento para uso diário; brew
+# mantém versão "system" usada como dep por outras formulas. Mise deve
+# vir antes no PATH (configurado via shellenv depois).
+
+# Python: dep de muitas formulas + uso direto pra scripts.
+# Versão fixada explicitamente pra estabilidade de virtualenvs.
 brew "python@3.13"
 
+# Elixir: pre-req potencial de outras formulas. Uso diário via mise.
+brew "elixir"
+
+# Rust: usado como dep por algumas formulas (compilação from-source).
+# Uso diário (cargo, rustc) via mise.
+brew "rust"
+
+
+# ── Brew pre-reqs: build / image processing universal ─────────────────────
+# Não são linguagens, mas são "deps universais" — muitas formulas
+# dependem delas. Manter no brew evita duplicação e conflito de paths
+# (mise não cobre bem deps nativas como libpng, libjpeg, etc).
+
+# GNU Make. Base de qualquer build. /usr/bin/make do Xcode CLT existe
+# mas é antigo. Brew make é mais novo e necessário para muitos Makefiles
+# modernos que assumem GNU make >= 4.x.
+brew "make"
+
+# ImageMagick. Conjunto enorme de deps nativas (libpng, libjpeg, libtiff,
+# libwebp, libheic, libavif, ghostscript, etc). Brew gerencia tudo
+# automaticamente. Uso pessoal é casual (convert, resize) mas várias
+# formulas brew têm imagemagick como dep — manter aqui evita conflito.
+brew "imagemagick"
+
+
+# ── System replacements: GNU / newer-than-system ──────────────────────────
+# Substituem (ou complementam) versões antigas/BSD do sistema base macOS.
+# Necessário pra compatibilidade com scripts shell que assumem comportamento
+# GNU, ou pra ter versões mais recentes/seguras.
+
+brew "binutils"           # GNU binutils (ld, as, ar, etc — não no /usr/bin)
+brew "diffutils"          # GNU diff (mais flexível que BSD diff)
+brew "file-formula"       # GNU file (newer than /usr/bin/file)
+brew "findutils"          # GNU find/locate/xargs (gfind, glocate, gxargs)
+brew "gawk"               # GNU awk (vs BSD awk do sistema)
+brew "git"                # newer than /usr/bin/git do Xcode CLT
+brew "gnu-indent"         # GNU indent (formatador C)
+brew "gnu-sed"            # GNU sed (vs BSD sed — diferenças em -i, regex)
+brew "gnu-tar"            # GNU tar (vs BSD tar)
+brew "gnu-which"          # GNU which
+brew "gnupg"              # GPG (não vem no macOS)
+brew "gpatch"             # GNU patch
+brew "grep"               # GNU grep (suporta PCRE etc — vs BSD grep)
+brew "gzip"               # GNU gzip
+brew "less"               # newer than /usr/bin/less
+brew "openssh"            # newer ssh client/server (vs Apple's)
+brew "rsync"              # newer rsync (macOS tem rsync 2.6 ancient)
+brew "wget"               # não vem no macOS
+
+# Bash completions. Usado mesmo com fish como shell padrão: completions
+# de tools "bash-only" são portadas para fish via script auxiliar.
+brew "bash-completion@2"
+
+
+# ── Shells alternativos ───────────────────────────────────────────────────
+# Mesmo o shell padrão sendo fish, manter os outros pra experimentos
+# eventuais e por consistência (zsh é o default macOS, válido ter newer).
+
+brew "fish"               # shell preferido (preferência registrada)
+brew "fish-lsp"           # LSP para fish (helix integration)
+brew "zsh"                # default macOS, versão mais nova
+brew "zsh-completions"    # completions adicionais zsh
+brew "nushell"            # experimento futuro
+brew "elvish"             # experimento futuro
+
+
+# ── Mac-specific utilities ────────────────────────────────────────────────
+
+brew "duti"               # default URI handlers (associações de tipo)
+brew "maclaunch"          # gerenciar launch agents/daemons
+brew "pinentry-mac"       # GPG pinentry para macOS
+
+
+# ── Network / security ────────────────────────────────────────────────────
+
+brew "clamav"             # antivirus (scan ad-hoc)
+brew "mtr"                # traceroute + ping integrado
+brew "nmap"               # network scanner
+brew "p7zip"              # 7zip (compressão)
+brew "socat"              # socket cat — debug de rede avançado
+brew "tcpdump"            # captura de pacotes
+brew "tcpflow"            # reconstrução de fluxo TCP
+
+
+# ── Container / cloud ─────────────────────────────────────────────────────
+
+brew "podman-compose"     # docker-compose para podman
+brew "mongodb-atlas-cli"  # MongoDB Atlas CLI
+brew "kubescape"          # k8s security scanner (sem alternativa mise estável)
+brew "prowler"            # cloud security scanner
+
+
+# ── CLI utilities (modern + classic) ──────────────────────────────────────
+
+brew "asciinema"          # gravar sessões terminal
+brew "bfg"                # BFG repo cleaner (limpar git history)
+brew "bitwarden-cli"      # cold storage de credenciais (1Password é primário)
+brew "bore-cli"           # tunneling reverso TCP
+brew "cpulimit"           # limitar CPU por processo
+brew "dateutils"          # utilities para manipular datas em CLI
+brew "detox"              # sanitize filenames
+brew "dos2unix"           # converter line endings
+brew "exercism"           # plataforma de prática de coding
+brew "graphviz"           # renderização de grafos (dot, fdp, etc)
+brew "gtop"               # system monitor TUI
+brew "himalaya"           # email TUI client
+brew "magic-wormhole"     # transferência de arquivos peer-to-peer
+brew "ponysay"            # fortune-cookie estilo, fun
+brew "summarize"          # text summarization (https://summarize.sh)
+brew "sysbench"           # benchmark sistema
+brew "timewarrior"        # time tracking CLI
+brew "tree"               # tree view de diretórios
+brew "watch"              # rodar comando periodicamente
+
+
 # ── Formulas dos taps externos ────────────────────────────────────────────
-# Mantém as ferramentas que motivam os taps acima. Adicionar/remover
-# conforme curadoria do brew leaves / brew list no Mac antigo.
+# Cada uma vinculada a um tap declarado acima.
 
 # Não há alternativa via mise; binário antigo mas estável.
 brew "sshpass"
 
-# Granted (CLI principal). gdeploy fica de fora por padrão — adicionar se
-# ainda usado: brew "common-fate/granted/gdeploy"
+# Granted (CLI principal). gdeploy fica de fora por padrão — adicionar
+# se ainda usado: brew "common-fate/granted/gdeploy"
 brew "common-fate/granted/granted"
 
 # Cloudquery CLI.
