@@ -47,6 +47,21 @@ set -g BREWFILE "$REPO_ROOT/ansible/roles/homebrew/files/Brewfile"
 set -g HOMEBREW_DEFAULTS "$REPO_ROOT/ansible/roles/homebrew/defaults/main.yml"
 
 
+# ── PATH self-config ─────────────────────────────────────────────────────
+# Garante que brew prefix está no PATH. Em SSH non-interactive (como
+# `ssh host "command"`), o PATH default em macOS/Linux pode não incluir
+# /opt/homebrew/bin (ARM Mac), /usr/local/bin (Intel Mac), ou
+# /home/linuxbrew/.linuxbrew/bin (Linuxbrew). Esse script chama brew/mas
+# internamente, então precisa que esses paths estejam visíveis.
+# Idempotente: só prepend se o path existe e ainda não está no PATH.
+
+for brew_prefix in /opt/homebrew /home/linuxbrew/.linuxbrew /usr/local
+    if test -d $brew_prefix/bin; and not contains $brew_prefix/bin $PATH
+        set -gx PATH $brew_prefix/bin $brew_prefix/sbin $PATH
+    end
+end
+
+
 # ── Cores e helpers de output ───────────────────────────────────────────
 
 set -g C_RESET (set_color normal)
