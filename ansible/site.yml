@@ -62,10 +62,17 @@
 #             tudo isso fica para iterações futuras. Skip automático em
 #             Linux via when:Darwin na role.
 #   - 0.11.0: + homebrew/tasks/packages.yml + files/Brewfile. Aplica
-#             pacotes declarativamente via 'brew bundle'. Brewfile inicia
-#             só com python3 — primeira "raiz" de dependência comum.
-#             Idempotente via parsing de "Installing"/"Upgrading"/"Tapping"
-#             no stdout. --no-lock evita Brewfile.lock.json no working dir.
+#             pacotes declarativamente via 'brew bundle --no-upgrade'.
+#             Brewfile inicial reflete curadoria de taps externos do Mac
+#             antigo: hudochenkov/sshpass (binary C estável, sem alternativa
+#             mise), common-fate/granted (releases hospedadas fora do
+#             GitHub, mise quebra), cloudquery/tap e turbot/tap (não
+#             testados em mise ainda; mantidos conservadores). Linguagem
+#             base: python@3.13. Built-ins do brew (homebrew/bundle e
+#             homebrew/services desde brew 4.5.0) NÃO entram no Brewfile —
+#             precisam ser untaped manualmente no Mac antigo durante
+#             migração. Idempotência via parsing de "Installing"/"Tapping"
+#             no stdout do brew bundle.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible

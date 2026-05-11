@@ -1,33 +1,54 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/homebrew/tasks/packages.yml — aplica o Brewfile
+# roles/homebrew/tasks/packages.yml — aplicar Brewfile (taps + formulas)
 # ────────────────────────────────────────────────────────────────────────────
 # Estratégia:
-#   Usa 'brew bundle' que é a forma declarativa nativa do Homebrew. Em re-runs
-#   onde tudo já está instalado, ele não faz nada (output: "Homebrew Bundle
-#   complete! N Brewfile dependencies now installed.").
-#
-# Idempotência:
-#   brew bundle sempre retorna rc=0 quando consegue garantir o estado, mesmo
-#   se já estava OK. Detectamos mudança via parsing do stdout — palavras-chave
-#   como "Installing", "Upgrading", "Tapping" indicam que algo aconteceu.
+#   1. Pré-condição: /opt/homebrew/bin/brew existe (garantido por install.yml).
+#   2. Rodar `brew bundle --no-upgrade --file=<role>/files/Brewfile`.
+#      - --no-upgrade: não tenta atualizar formulas existentes. Brew bundle
+#        sem essa flag tenta `brew upgrade` em tudo a cada run, virando
+#        rolling update — ruim pra reprodutibilidade. Com a flag, só
+#        instala o que falta. Updates ficam manuais (`brew upgrade X`).
+#      - --file: path absoluto pro Brewfile no checkout do repo. Como
+#        rodamos com connection: local, role_path resolve no filesystem
+#        local — não precisa copiar o Brewfile pra outro lugar.
+#   3. Detectar mudança via parsing do stdout:
+#      - "Installing X"  → formula nova instalada
+#      - "Tapping X"     → tap novo adicionado
+#      - "Using X"       → formula já estava lá (ok, sem mudança)
 #
 # Notas:
-#   - O Brewfile vive em files/Brewfile (path relativo a esta role).
-#   - Usamos --no-lock pra não sujar o working dir com Brewfile.lock.json
-#     gerado dinamicamente.
-#   - become: false (default) — brew NUNCA deve rodar como root.
+#   - become: false. brew bundle não precisa de root; quando uma formula
+#     individual precisa (ex: instalação de daemon), brew aciona sudo
+#     internamente (e NOPASSWD do bootstrap cobre).
+#   - failed_when usa rc — brew bundle retorna 0 em sucesso, !=0 em falha.
+#     Conservador, pois um único pacote pode falhar e o bundle inteiro
+#     ainda relatar erro útil no stderr.
 # ────────────────────────────────────────────────────────────────────────────
 
-- name: "Homebrew — aplicar Brewfile (brew bundle)"
-  ansible.builtin.command:
-    cmd: /opt/homebrew/bin/brew bundle --no-lock --file={{ role_path }}/files/Brewfile
-  register: brew_bundle
-  changed_when: >-
-    brew_bundle.stdout is search('Installing')
-    or brew_bundle.stdout is search('Upgrading')
-    or brew_bundle.stdout is search('Tapping')
+- name: "Homebrew — confirmar que o binary existe antes de aplicar Brewfile"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/brew
+  register: brew_binary_check
 
-- name: "Homebrew — exibir resumo do bundle"
+- name: "Homebrew — abortar se brew não está instalado"
+  ansible.builtin.fail:
+    msg: |
+      /opt/homebrew/bin/brew não encontrado. Algo deu errado na role
+      install.yml. Não vai dar pra aplicar o Brewfile.
+  when: not brew_binary_check.stat.exists
+
+- name: "Homebrew — aplicar Brewfile (taps + formulas)"
+  ansible.builtin.command:
+    cmd: >-
+      /opt/homebrew/bin/brew bundle
+      --no-upgrade
+      --file={{ role_path }}/files/Brewfile
+  register: brew_bundle_result
+  changed_when: >-
+    'Installing ' in brew_bundle_result.stdout
+    or 'Tapping ' in brew_bundle_result.stdout
+
+- name: "Homebrew — exibir resumo do brew bundle"
   ansible.builtin.debug:
-    msg: "{{ brew_bundle.stdout_lines }}"
+    msg: "{{ brew_bundle_result.stdout_lines }}"

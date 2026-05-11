@@ -1,26 +1,65 @@
-# ────────────────────────────────────────────────────────────────────────────
-# Brewfile — fonte de verdade dos pacotes instalados via Homebrew
-# ────────────────────────────────────────────────────────────────────────────
-# Aplicado pelo Ansible via:
-#   brew bundle --file=<este-arquivo>
+# ===========================================================================
+# Brewfile — Mac novo (epoch-chrono/dotfiles)
+# ===========================================================================
+# Aplicado via: brew bundle --no-upgrade --file=Brewfile
+# Documentação: https://docs.brew.sh/Brew-Bundle-and-Brewfile
 #
-# Documentação:
-#   https://github.com/Homebrew/homebrew-bundle
-#   man brew bundle
+# Estratégia de fontes (mise-first com fallback pragmático):
+#   1. mise-first: linguagens, runtimes, e CLIs com binários em GitHub
+#      Releases publicados com nomenclatura padrão (asdf/aqua compatível).
+#      Exemplos validados como mise-OK: k9s, popeye.
+#   2. brew (fallback): pre-reqs (linguagens base), apps GUI (casks),
+#      e tools onde o ecossistema do mise quebra para macOS arm64.
+#      Exemplos validados como mise-quebrado:
+#        - granted: binários em releases.commonfate.io, não no GitHub.
+#        - kafkactl: asset darwin_arm64 não publicado.
 #
-# Sintaxe:
-#   tap "user/repo"            # adicionar tap
-#   brew "formula"             # instalar formula (CLI tool)
-#   cask "name"                # instalar cask (GUI app)
-#   mas "Name", id: 12345      # instalar Mac App Store app (requer 'mas' CLI)
-#
-# Auditoria do estado atual via:
-#   brew bundle dump --file=- --describe   # gera Brewfile do que está instalado
-#   brew bundle check --file=<este-arquivo>  # valida que tudo deste arquivo está instalado
-# ────────────────────────────────────────────────────────────────────────────
+# Built-ins do brew (não precisam tap explícito):
+#   - homebrew/core e homebrew/cask: built-in desde sempre
+#   - homebrew/bundle e homebrew/services: built-in desde brew 4.5.0
+# ===========================================================================
 
-# ── Pré-requisitos / linguagens base ────────────────────────────────────────
-# Python 3: dependência comum de muitas formulas + uso direto pra scripts.
-# Não fixamos versão minor (python3 = current major) — deixa o brew gerenciar
-# upgrades de patch/minor.
-brew "python3"
+# ── Taps externos ─────────────────────────────────────────────────────────
+# brew bundle auto-tapa, mas declaramos explicitamente para documentação
+# e pra deixar a relação tap-formula visualmente óbvia.
+
+# sshpass binary. Não está em homebrew/core por questões de segurança
+# (passar senha em CLI). Tap mantido por hudochenkov; sem commits há 10
+# anos mas o binary é estável (sshpass é C clássico, raramente muda).
+tap "hudochenkov/sshpass"
+
+# Common Fate Granted — AWS access tooling. Binários hospedados em
+# releases.commonfate.io (não GitHub), por isso o plugin asdf-granted
+# falha. Tap é mantido oficialmente pela Common Fate.
+tap "common-fate/granted"
+
+# Cloudquery — cloud asset discovery / inventory. Não validado em mise
+# ainda; mantém aqui por enquanto pra não perder ao migrar.
+tap "cloudquery/tap"
+
+# Turbot Powerpipe — dashboards de segurança/compliance. Não validado em
+# mise ainda; mantém aqui por enquanto pra não perder ao migrar.
+tap "turbot/tap"
+
+# ── Linguagens base / pré-requisitos ──────────────────────────────────────
+# Python: usado como dep por muitas formulas e diretamente para scripts.
+# Versão fixada explicitamente pra estabilidade de virtualenvs e dos
+# scripts que dependem de um Python específico.
+brew "python@3.13"
+
+# ── Formulas dos taps externos ────────────────────────────────────────────
+# Mantém as ferramentas que motivam os taps acima. Adicionar/remover
+# conforme curadoria do brew leaves / brew list no Mac antigo.
+
+# Não há alternativa via mise; binário antigo mas estável.
+brew "sshpass"
+
+# Granted (CLI principal). gdeploy fica de fora por padrão — adicionar se
+# ainda usado: brew "common-fate/granted/gdeploy"
+brew "common-fate/granted/granted"
+
+# Cloudquery CLI.
+brew "cloudquery/tap/cloudquery"
+
+# Powerpipe CLI.
+brew "turbot/tap/powerpipe"
