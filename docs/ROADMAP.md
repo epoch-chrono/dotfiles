@@ -23,6 +23,20 @@ Versão do playbook: `0.17.0`.
 | `hello` | Sim | Marker file, sanity check |
 | `macos-base` | Sim | general, appearance (Purple), dock (48/90, hot corners off), trackpad, sharing (scutil+hostname), firewall (socketfilterfw), finder, keyboard |
 | `homebrew` | Sim | 6 fases: pré-check brew → mas-cli pre-flight → MAS cleanup → brew bundle → MAS install → MAS upgrade_all |
+| `chezmoi` | Sim | 5 fases: pré-check binary → init source → apply → mise trust → mise install. `when: Darwin` only (Linux NixOS futuro). |
+
+
+### Chezmoi source root
+
+O próprio repo é a source do chezmoi (paths `dot_*`, `executable_*`, etc. na raiz).
+Materializa via `chezmoi apply`:
+
+| Path no repo | Path em $HOME |
+|---|---|
+| `dot_config/mise/config.toml.tmpl` | `~/.config/mise/config.toml` (com email + context hardcoded) |
+| `dot_local/bin/executable_repo-sync` | `~/.local/bin/repo-sync` (executable preservado) |
+| `.chezmoi.yaml.tmpl` | Config do chezmoi (renderizado em runtime, não materializado) |
+| `.chezmoiignore` | Lista de exclusões (ansible/, bin/, docs/, README.md, etc.) |
 
 
 ### Utility scripts
@@ -64,46 +78,42 @@ Gerenciado via `community.general.mas` em vez de brew bundle:
 Ordem proposta. Cada uma é independente e pode ser pausada/retomada.
 
 
-### 1. Estrutura `chezmoi/` no repo
+### 1. Tools adicionais no `dot_config/mise/config.toml.tmpl`
 
-**O quê.** Materializar a pasta source do chezmoi com os primeiros dotfiles.
+**O quê.** O config atual tem só os 3 core languages (python@3.13.11, node@lts,
+go@latest). Adicionar tools restantes conforme o user definir, **ordenadas por
+dependência de backend** (core primeiro, depois backends derivados).
 
-**Conteúdo inicial proposto.**
+**Candidatos identificados em conversas anteriores.**
 
-```
-chezmoi/
-├── .chezmoi.toml.tmpl                    # config do chezmoi (modo 1Password, vars)
-├── .chezmoidata/
-│   └── system.yaml                       # vars compartilhadas (hostname, profile)
-├── dot_config/
-│   └── mise/
-│       └── config.toml.tmpl              # python@3.13.11, node@lts, go@latest, tools
-├── dot_local/
-│   └── bin/
-│       └── executable_repo-sync          # script `bin/repo-sync`, migrado
-└── run_onchange_after_50-mise-install.sh.tmpl  # hook: mise install quando config muda
-```
+- CLI dev: `k9s`, `popeye`, `kubectl`, `helm`, `kafkactl`, `granted`
+- Cross-language: `pre-commit`, `gitleaks`, `shellcheck` (já no repo `mise.toml`,
+  considerar mover pro user-level)
 
-**Decisões a tomar quando chegar a hora.**
-
-- Modo 1Password: começar com Opção C (`op item get` com nomes direto), migrar
-  pra Opção B (`.chezmoidata/secrets.yaml` com IDs nomeados) quando justificar
-- Estrutura inicial mínima: só `mise` + `repo-sync`. Fish/Helix/Git em fatias
-  separadas pra revisar com calma
+Cada tool requer decidir o **backend mise** apropriado (core/ubi/cargo/go-install/pipx).
 
 
-### 2. Role `chezmoi-bootstrap` no Ansible
+### 2. Primeiros dotfiles reais (fish, helix, git)
 
-**O quê.** Última peça do bootstrap: deixar o chezmoi inicializado e aplicado.
+**O quê.** Migrar configs de uso diário do user pro chezmoi. Cada um em fatia
+separada pra revisar mudanças com calma.
 
-**Tasks (~30 linhas YAML).**
+**Ordem proposta.**
 
-1. `stat ~/.local/share/chezmoi/` — verifica se já existe
-2. `chezmoi init https://github.com/epoch-chrono/dotfiles.git` — se primeira vez
-3. `chezmoi apply` — sempre (idempotente)
+1. `dot_config/fish/config.fish.tmpl` + `dot_config/fish/conf.d/` (PATH com GNU
+   tools, mise activate, abbreviations, etc.)
+2. `dot_config/helix/config.toml.tmpl` (theme, keymaps)
+3. `dot_gitconfig.tmpl` (email via 1Password, primeiro caso de uso de `op://`)
 
-**Ordem.** Última no `site.yml`, depois de `homebrew` (chezmoi precisa do binary
-instalado, que vem do brew bundle).
+
+### 3. 1Password integration
+
+**Quando.** No momento que aparecer o primeiro template com secret. Provável
+que seja no `dot_gitconfig.tmpl` (signing key, email).
+
+**Approach inicial:** Opção C (`op://<vault>/<item>/<field>` direto no template).
+Migrar pra Opção B (`.chezmoidata/secrets.yaml` com aliases) quando o número de
+referências ou frequência de renomeação justificar.
 
 
 ## Roadmap Nix (médio/longo prazo)
