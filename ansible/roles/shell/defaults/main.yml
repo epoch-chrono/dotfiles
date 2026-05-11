@@ -1,0 +1,9 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/shell/defaults/main.yml
+# ────────────────────────────────────────────────────────────────────────────
+
+# Path absoluto pro binary do fish. Hardcoded pra evitar problemas de PATH
+# em SSH non-interactive. Brew instala em /opt/homebrew/bin (Apple Silicon)
+# ou /usr/local/bin (Intel). Como target é Apple Silicon, default é ARM.
+fish_binary: "/opt/homebrew/bin/fish"

@@ -1,0 +1,97 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/shell/tasks/main.yml
+# ────────────────────────────────────────────────────────────────────────────
+# Configura fish como shell default do user atual.
+#
+# Ordem das fases:
+#   1. Pré-check: fish binary instalado (vem do Brewfile)
+#   2. /etc/shells: garantir que fish está listado (precisa pra chsh aceitar)
+#   3. dscl: mudar o UserShell do user atual pra fish
+#   4. Validação: confirmar o novo shell
+#
+# Notas:
+#   - Em macOS, `chsh -s <shell>` no terminal interativo dispara prompt de
+#     senha ou Touch ID. Pra evitar isso em automation, usamos `dscl`
+#     direto com `become: true` (NOPASSWD sudo cobre).
+#   - Mudança afeta APENAS futuras sessões de terminal. A sessão que
+#     estiver rodando o bootstrap continua no shell anterior.
+#   - Cross-platform: implementação atual é macOS-only. Linux usa chsh
+#     com /etc/passwd; quando virar fatia, fica no when: por OS.
+# ────────────────────────────────────────────────────────────────────────────
+
+
+# ── 1. Pré-check ──────────────────────────────────────────────────────────
+
+- name: "Shell — verificar que fish está instalado"
+  ansible.builtin.stat:
+    path: "{{ fish_binary }}"
+  register: fish_binary_check
+
+- name: "Shell — abortar se fish não está instalado"
+  ansible.builtin.fail:
+    msg: |
+      {{ fish_binary }} não encontrado. A role homebrew deveria ter
+      instalado via Brewfile. Re-roda o playbook a partir do início.
+  when: not fish_binary_check.stat.exists
+
+
+# ── 2. /etc/shells: garantir que fish está listado ────────────────────────
+# macOS só aceita mudança de shell pra paths listados em /etc/shells. Brew
+# NÃO adiciona fish lá automaticamente — precisamos fazer manualmente.
+
+- name: "Shell — verificar se fish está em /etc/shells"
+  ansible.builtin.command: grep -Fx "{{ fish_binary }}" /etc/shells
+  register: fish_in_shells
+  changed_when: false
+  failed_when: false
+
+- name: "Shell — adicionar fish a /etc/shells (requer sudo)"
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: "{{ fish_binary }}"
+    state: present
+  become: true
+  when: fish_in_shells.rc != 0
+
+
+# ── 3. dscl: mudar UserShell ──────────────────────────────────────────────
+# `chsh -s` em macOS interativo pede senha/Touch ID. `dscl` com sudo
+# (NOPASSWD via bootstrap) muda direto sem prompt.
+
+- name: "Shell — obter shell atual do user via dscl"
+  ansible.builtin.shell: |
+    set -o pipefail
+    dscl . -read /Users/{{ ansible_user_id }} UserShell | awk '{print $2}'
+  register: current_user_shell
+  changed_when: false
+  args:
+    executable: /bin/bash
+
+- name: "Shell — mudar default pra fish (requer sudo)"
+  ansible.builtin.command:
+    cmd: >-
+      dscl . -change /Users/{{ ansible_user_id }} UserShell
+      {{ current_user_shell.stdout }} {{ fish_binary }}
+  become: true
+  when: current_user_shell.stdout != fish_binary
+
+
+# ── 4. Validação ──────────────────────────────────────────────────────────
+
+- name: "Shell — confirmar shell aplicado"
+  ansible.builtin.shell: |
+    set -o pipefail
+    dscl . -read /Users/{{ ansible_user_id }} UserShell | awk '{print $2}'
+  register: final_user_shell
+  changed_when: false
+  args:
+    executable: /bin/bash
+
+- name: "Shell — exibir resumo"
+  ansible.builtin.debug:
+    msg:
+      - "Shell antes: {{ current_user_shell.stdout }}"
+      - "Shell agora: {{ final_user_shell.stdout }}"
+      - "Mudança afeta APENAS próximas sessões — a atual continua no shell anterior."
+      - "Pra trocar imediatamente nesta sessão: digite 'exec {{ fish_binary }}'."
