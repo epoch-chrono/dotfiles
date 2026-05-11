@@ -38,7 +38,43 @@
       install.yml. Não vai dar pra aplicar o Brewfile.
   when: not brew_binary_check.stat.exists
 
-- name: "Homebrew — aplicar Brewfile (taps + formulas)"
+
+# ── MAS cleanup ─────────────────────────────────────────────────────────
+# Remove apps Apple "lixo" auto-instalados antes do brew bundle aplicar a
+# lista de apps MAS declarados. Lista editável em defaults/main.yml.
+#
+# Pré-req: mas-cli (binary). Como `mas` está declarado no Brewfile mas
+# o bundle ainda não rodou neste play, garantimos ele explicitamente
+# antes do cleanup. `brew install mas` é idempotente (skip se já existe).
+
+- name: "Homebrew — verificar se mas-cli está instalado"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/mas
+  register: mas_cli_check
+
+- name: "Homebrew — instalar mas-cli (pre-req do MAS cleanup)"
+  ansible.builtin.command: /opt/homebrew/bin/brew install mas
+  when: not mas_cli_check.stat.exists
+  changed_when: true
+
+- name: "MAS — listar apps instalados (pra cleanup)"
+  ansible.builtin.command: /opt/homebrew/bin/mas list
+  register: mas_installed_list
+  changed_when: false
+
+- name: "MAS — remover apps Apple default (Garageband, iMovie, Keynote, Numbers, Pages)"
+  ansible.builtin.command: "/opt/homebrew/bin/mas uninstall {{ item.id }}"
+  become: true
+  loop: "{{ mas_apps_to_remove }}"
+  loop_control:
+    label: "{{ item.name }} (id: {{ item.id }})"
+  when: item.id in mas_installed_list.stdout
+  changed_when: true
+
+
+# ── Brew bundle apply ───────────────────────────────────────────────────
+
+- name: "Homebrew — aplicar Brewfile (taps + formulas + casks + mas)"
   ansible.builtin.command:
     cmd: >-
       /opt/homebrew/bin/brew bundle

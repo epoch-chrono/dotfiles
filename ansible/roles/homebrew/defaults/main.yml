@@ -1,0 +1,34 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/homebrew/defaults/main.yml — variáveis editáveis da role
+# ────────────────────────────────────────────────────────────────────────────
+
+# Lista de apps MAS (Mac App Store) a remover do sistema.
+#
+# Contexto: macOS auto-instala apps Apple comprados (mesmo grátis: iWork,
+# iLife) quando o usuário loga na Mac App Store com uma Apple ID que já
+# adquiriu esses apps em outra máquina. Aparecem em `mas list` mas o
+# usuário nunca pediu pra ter eles aqui.
+#
+# Este cleanup roda ANTES do `brew bundle` aplicar as entradas `mas` do
+# Brewfile, garantindo:
+#   - Estado final declarativo: só os apps MAS que o Brewfile declara.
+#   - Sem reinstall futuro: brew bundle não toca em apps fora do Brewfile.
+#
+# Idempotência: skip natural via `when: item.id in mas_installed.stdout`.
+# Apps já removidos não aparecem em `mas list`, task fica como `skipped`.
+#
+# Como adicionar/remover items desta lista:
+#   - Adicionar: pegar ID via `mas list` ou `mas search '<name>'`,
+#     adicionar ao YAML abaixo com nome descritivo.
+#   - Remover (manter o app instalado): apagar a entrada correspondente.
+#     No próximo run, o cleanup vai ignorar.
+#
+# Requer: NOPASSWD sudo configurado pelo bootstrap (mas uninstall precisa
+# root pra remover de /Applications/).
+mas_apps_to_remove:
+  - { id: "682658836", name: "GarageBand" }
+  - { id: "408981434", name: "iMovie" }
+  - { id: "409183694", name: "Keynote" }
+  - { id: "409203825", name: "Numbers" }
+  - { id: "409201541", name: "Pages" }
