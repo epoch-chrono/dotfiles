@@ -59,6 +59,8 @@
     id: "{{ item.id }}"
     state: absent
   become: true
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
   loop: "{{ mas_apps_to_remove }}"
   loop_control:
     label: "{{ item.name }} (id: {{ item.id }})"
@@ -98,6 +100,8 @@
   community.general.mas:
     id: "{{ item.id }}"
     state: present
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
   loop: "{{ mas_apps_to_install }}"
   loop_control:
     label: "{{ item.name }} (id: {{ item.id }})"
