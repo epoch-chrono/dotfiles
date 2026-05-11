@@ -23,7 +23,8 @@ Versão do playbook: `0.17.0`.
 | `hello` | Sim | Marker file, sanity check |
 | `macos-base` | Sim | general, appearance (Purple), dock (48/90, hot corners off), trackpad, sharing (scutil+hostname), firewall (socketfilterfw), finder, keyboard |
 | `homebrew` | Sim | 6 fases: pré-check brew → mas-cli pre-flight → MAS cleanup → brew bundle → MAS install → MAS upgrade_all |
-| `chezmoi` | Sim | 5 fases: pré-check binary → init source → apply → mise trust → mise install. `when: Darwin` only (Linux NixOS futuro). |
+| `chezmoi` | Sim | 5 fases: pré-check binary → init source → update (pull+apply) → mise trust → mise install. `when: Darwin` only. |
+| `shell` | Sim | 4 fases: pré-check fish → /etc/shells → dscl change UserShell → validar. Última do playbook. macOS only. |
 
 
 ### Chezmoi source root
@@ -252,6 +253,40 @@ Substituído por:
 
 Itens isolados que não cabem nas fatias acima.
 
+
+### Chezmoi (descobertos no primeiro bootstrap end-to-end)
+
+- **Source duplicado**: bootstrap.sh clona em `~/.local/share/dotfiles/` e
+  chezmoi clona em `~/.local/share/chezmoi/`. Atualmente resolvido via
+  `chezmoi update` (que faz git pull no source dir do chezmoi antes de
+  apply). Refactor possível: configurar chezmoi `sourceDir` apontando pro
+  bootstrap clone (single source of truth). Trade-off pendente: zero
+  acoplamento (atual) vs simplicidade arquitetural.
+
+- **Perm `0755` em `~/.config/`**: `chezmoi apply` setou perm permissiva
+  no diretório (`drwxr-xr-x`). Convenção comum pra `~/.config` é `0700`
+  ou `0750`. Investigar e configurar via `umask` ou chezmoi attribute.
+
+### Mise (descobertos no primeiro bootstrap end-to-end)
+
+- **`mise install` herda `./mise.toml` do CWD**: task Ansible roda no
+  diretório `~/.local/share/dotfiles/` (CWD do `connection: local`),
+  então mise vê tanto o config user-level (`~/.config/mise/config.toml`)
+  quanto o repo-level (`./mise.toml`). Resultado atual: ambos os configs
+  são instalados (7 tools). Pode ser feature (user ganha dev tools do
+  repo de graça) ou bug (comportamento implícito). Decidir: `chdir`
+  explícito na task ou documentar como intencional.
+
+- **Duplicação `chezmoi` brew vs mise**: chezmoi está no Brewfile
+  (`/opt/homebrew/bin/chezmoi`) E no `mise.toml` do repo
+  (`~/.local/share/mise/installs/chezmoi/...`). Roles hardcodam o path
+  do brew binary, então sem conflito imediato — mas duas fontes da verdade
+  pra mesma ferramenta. Decidir qual é primária e remover a outra.
+
+- **`mise WARN gpg not found`**: mise procura `gpg` pra verificar
+  attestations de releases. `gnupg` está no Brewfile (e instala como
+  `/opt/homebrew/bin/gpg`), mas mise não encontra no PATH durante
+  Ansible run. Investigar: PATH na task ou adicionar `gpg` explícito.
 
 ### Brewfile
 
