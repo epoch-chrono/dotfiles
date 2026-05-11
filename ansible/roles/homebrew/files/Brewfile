@@ -77,6 +77,28 @@ brew "elixir"
 brew "rust"
 
 
+# ── Provisioning managers (instalados via brew para simplificar bootstrap) ─
+# Tools de gerenciamento de pacotes/dotfiles. Todas seguem o mesmo padrão:
+# release estável, sem urgência de bleeding-edge. Brew tipicamente fica
+# 1 minor atrás do upstream — tradeoff aceitável pelo ganho de unidade
+# do lifecycle. Esse bloco substitui as roles dedicadas "mise" e
+# "chezmoi-init" que estavam no roadmap inicial.
+
+# Mise — version manager (Python, Node, Go, k9s, etc).
+# Pra uso diário; coexiste com brew (vence no PATH via shellenv depois).
+brew "mise"
+
+# Chezmoi — dotfile manager. Materializa ~/.config/* + templates + 1Password
+# integration. A pasta chezmoi/ do repo é gerenciada por ele.
+brew "chezmoi"
+
+# mas — Mac App Store CLI. brew bundle suporta entrada nativa
+# `mas "AppName", id: 1234567890` (capturada por brew bundle dump,
+# aplicada por brew bundle, removida por brew bundle cleanup). Unifica
+# o lifecycle de "apps Mac App Store" com o do brew.
+brew "mas"
+
+
 # ── Brew pre-reqs: build / image processing universal ─────────────────────
 # Não são linguagens, mas são "deps universais" — muitas formulas
 # dependem delas. Manter no brew evita duplicação e conflito de paths
@@ -92,6 +114,20 @@ brew "make"
 # automaticamente. Uso pessoal é casual (convert, resize) mas várias
 # formulas brew têm imagemagick como dep — manter aqui evita conflito.
 brew "imagemagick"
+
+
+# ── Provisioning / version management ─────────────────────────────────────
+# Ferramentas que orquestram o resto do stack. Ficam no brew porque:
+#   - mise: versionamento de runtimes (Go, Node, Python via mise, etc).
+#     Brew fica ~1 minor atrás do upstream, aceitável pra essa classe.
+#   - chezmoi: dotfiles manager. Materializa ~/.config/* e shell integration.
+#     Pós-brew, chezmoi assume todo o user environment.
+#   - mas: Mac App Store CLI. Permite declarar apps no Brewfile via
+#     diretiva `mas "Name", id: 1234567890` e instalá-los via brew bundle.
+
+brew "mise"
+brew "chezmoi"
+brew "mas"
 
 
 # ── System replacements: GNU / newer-than-system ──────────────────────────
