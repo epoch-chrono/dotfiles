@@ -1,31 +1,46 @@
-# ──────────────────────────────────────────────────
-# .chezmoiignore — conditional ignores by platform
-# ──────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────
+# .chezmoiignore — paths que o chezmoi NÃO deve materializar em $HOME
+# ──────────────────────────────────────────────────────────────────────────
+# Este é um template (Go template + chezmoi data). Linhas condicionais
+# usam {{ if ... }} ... {{ end }}. O resto é interpretado literal.
+#
+# Apenas paths sob a raiz do repo são considerados. Arquivos/dirs que NÃO
+# começam com `dot_`, `private_`, `executable_`, `run_*`, `.chezmoi*` são
+# ignorados por padrão (chezmoi só toca em arquivos que ele entende como
+# templates dotfile). Mas listar explicitamente aqui:
+#   1. Documenta a intenção (futuro leitor entende o layout)
+#   2. Garante que `chezmoi apply --verbose` não menciona esses paths
+# ──────────────────────────────────────────────────────────────────────────
 
-# Repo scaffolding (not dotfiles)
+
+# ── Repo scaffolding (não é dotfile do user) ──────────────────────────────
 README.md
 LICENSE
 Makefile
 mise.toml
 bootstrap.sh
-commitlint.config.js
-docs/
 .pre-commit-config.yaml
 .gitleaks.toml
 .editorconfig
+docs/
+ansible/
+bin/
 
-# macOS-only configs — ignore on Linux
+
+# ── macOS-only configs — ignorados no Linux ───────────────────────────────
 {{ if ne .chezmoi.os "darwin" }}
 dot_cursor/
 Library/
 {{ end }}
 
-# Linux-only configs — ignore on macOS
+
+# ── Linux-only configs — ignorados no macOS ───────────────────────────────
 {{ if ne .chezmoi.os "linux" }}
-# (reserved for future linux-specific configs)
+# (reservado pra futuros configs linux-specific)
 {{ end }}
 
-# NixOS: skip bootstrap scripts (nix handles deps)
+
+# ── NixOS: skip de scripts de bootstrap (nix gerencia deps) ───────────────
 {{ if .is_nixos }}
 run_once_before_00-install-deps.sh.tmpl
 {{ end }}
