@@ -1,0 +1,306 @@
+#!/usr/bin/env fish
+# ────────────────────────────────────────────────────────────────────────────
+# repo-sync — drift detector entre estado real da máquina e repo declarado
+# ────────────────────────────────────────────────────────────────────────────
+# Read-only por design. Reporta divergências em 3 dimensões:
+#
+#   1. Brew: diff entre `brew bundle dump` atual e o Brewfile do repo
+#   2. MAS:  diff entre `mas list` e mas_apps_to_install em defaults/main.yml
+#   3. Mise: skipped até chezmoi materializar ~/.config/mise/config.toml
+#
+# Exit code:
+#   0  → tudo em sync
+#   1  → drift detectado (revisar saída pra agir)
+#   2  → erro de pré-condição (binary faltando, repo path inválido)
+#
+# Uso:
+#   repo-sync              # roda todas as checagens
+#   repo-sync --help       # ajuda
+# ────────────────────────────────────────────────────────────────────────────
+
+
+# ── Paths ────────────────────────────────────────────────────────────────
+# Resolução do repo root: caminha do script em direção a um diretório com
+# .git/. Assim funciona tanto quando o script está em bin/ na raiz do repo
+# quanto quando vier de ~/.local/bin/repo-sync (chezmoi futuro) — nesse
+# caso o caminho será diferente e cairemos no path padrão por env var.
+
+function repo_root
+    if set -q REPO_SYNC_ROOT
+        echo $REPO_SYNC_ROOT
+        return
+    end
+
+    set -l script_path (status --current-filename)
+    set -l script_dir (dirname (realpath $script_path))
+    # Se está em bin/ na raiz do repo, sobe um nível
+    if test -d "$script_dir/../.git"
+        realpath "$script_dir/.."
+        return
+    end
+    # Fallback: assume convenção do user
+    echo "$HOME/Git/100-personal.d/01-dotfiles.d/dotfiles"
+end
+
+set -g REPO_ROOT (repo_root)
+set -g BREWFILE "$REPO_ROOT/ansible/roles/homebrew/files/Brewfile"
+set -g HOMEBREW_DEFAULTS "$REPO_ROOT/ansible/roles/homebrew/defaults/main.yml"
+
+
+# ── Cores e helpers de output ───────────────────────────────────────────
+
+set -g C_RESET (set_color normal)
+set -g C_RED (set_color red)
+set -g C_GREEN (set_color green)
+set -g C_YELLOW (set_color yellow)
+set -g C_BLUE (set_color blue)
+set -g C_DIM (set_color brblack)
+set -g C_BOLD (set_color --bold)
+
+function section
+    echo
+    echo "$C_BOLD━━ $argv[1] ━━$C_RESET"
+end
+
+function ok
+    echo "$C_GREEN✓$C_RESET $argv"
+end
+
+function drift
+    echo "$C_YELLOW▲$C_RESET $argv"
+end
+
+function err
+    echo "$C_RED✗$C_RESET $argv" >&2
+end
+
+function dim
+    echo "$C_DIM$argv$C_RESET"
+end
+
+
+# ── Parsing helpers ──────────────────────────────────────────────────────
+
+# Normaliza um Brewfile em entries comparáveis: "tipo nome".
+# Filtra apenas linhas tap/brew/cask/mas e descarta options/version.
+function normalize_brewfile
+    sed -E 's/^(tap|brew|cask|mas)[[:space:]]+"([^"]+)".*/\1 \2/' \
+        | grep -E '^(tap|brew|cask|mas) ' \
+        | sort -u
+end
+
+# Extrai IDs MAS declarados em defaults/main.yml (chave mas_apps_to_install).
+# Pega tudo entre "mas_apps_to_install:" e a próxima linha que começa em
+# coluna 0 (próxima chave top-level). Awk em sintaxe portável (BSD + GNU).
+function parse_mas_ids_from_defaults
+    set -l file $argv[1]
+    awk '
+        /^mas_apps_to_install:/ { in_block = 1; next }
+        in_block && /^[a-zA-Z]/ { in_block = 0 }
+        in_block && /id:.*"[0-9]+"/ {
+            s = $0
+            sub(/.*id:[[:space:]]*"/, "", s)
+            sub(/".*/, "", s)
+            print s
+        }
+    ' $file
+end
+
+
+# ── Section: Brew ────────────────────────────────────────────────────────
+
+function check_brew
+    section "Brew (taps + formulas + casks)"
+
+    if not type -q brew
+        err "brew não está instalado — skipping"
+        return 0
+    end
+
+    if not test -f $BREWFILE
+        err "Brewfile não encontrado: $BREWFILE"
+        return 2
+    end
+
+    set -l tmp_dump (mktemp)
+    brew bundle dump --file=$tmp_dump --force --no-vscode 2>/dev/null
+
+    set -l repo_entries (normalize_brewfile < $BREWFILE | psub)
+    set -l actual_entries (normalize_brewfile < $tmp_dump | psub)
+
+    # Entries no repo mas não instaladas (missing)
+    set -l missing (comm -23 $repo_entries $actual_entries)
+    # Entries instaladas mas não no repo (extra)
+    set -l extra (comm -13 $repo_entries $actual_entries)
+
+    rm -f $tmp_dump
+
+    set -l drift_count 0
+
+    if test (count $missing) -gt 0
+        drift "Declared in Brewfile mas não instaladas ($(count $missing)):"
+        for entry in $missing
+            echo "    $entry"
+        end
+        set drift_count (math $drift_count + (count $missing))
+    end
+
+    if test (count $extra) -gt 0
+        drift "Instaladas mas não declaradas no Brewfile ($(count $extra)):"
+        for entry in $extra
+            echo "    $entry"
+        end
+        set drift_count (math $drift_count + (count $extra))
+    end
+
+    if test $drift_count -eq 0
+        ok "Em sync ($(normalize_brewfile < $BREWFILE | wc -l | string trim) entries)"
+        return 0
+    end
+
+    dim "  Ajuste:"
+    dim "    - Pra adotar pacotes extras: adicionar ao Brewfile."
+    dim "    - Pra remover extras: brew uninstall <name>  ou  brew bundle cleanup --force."
+    dim "    - Pra instalar missing: re-rodar bootstrap ou brew bundle --file=$BREWFILE."
+    return 1
+end
+
+
+# ── Section: MAS ─────────────────────────────────────────────────────────
+
+function check_mas
+    section "MAS (Mac App Store)"
+
+    if not type -q mas
+        err "mas não está instalado — skipping"
+        return 0
+    end
+
+    if not test -f $HOMEBREW_DEFAULTS
+        err "homebrew defaults não encontrado: $HOMEBREW_DEFAULTS"
+        return 2
+    end
+
+    # IDs declarados no repo (mas_apps_to_install)
+    set -l declared_ids (parse_mas_ids_from_defaults $HOMEBREW_DEFAULTS | sort -u)
+
+    # IDs instalados no sistema
+    set -l installed_ids (mas list 2>/dev/null | awk '{print $1}' | sort -u)
+
+    # Drift
+    set -l missing (comm -23 (printf '%s\n' $declared_ids | psub) (printf '%s\n' $installed_ids | psub))
+    set -l extra (comm -13 (printf '%s\n' $declared_ids | psub) (printf '%s\n' $installed_ids | psub))
+
+    set -l drift_count 0
+
+    if test (count $missing) -gt 0
+        drift "Declarados em mas_apps_to_install mas não instalados ($(count $missing)):"
+        for id in $missing
+            set -l name (mas info $id 2>/dev/null | head -1 | string trim)
+            echo "    $id  $name"
+        end
+        set drift_count (math $drift_count + (count $missing))
+    end
+
+    if test (count $extra) -gt 0
+        drift "Instalados mas não declarados ($(count $extra)):"
+        for id in $extra
+            set -l name (mas list 2>/dev/null | grep "^$id " | string replace -r '^\S+\s+' '' | string trim)
+            echo "    $id  $name"
+        end
+        set drift_count (math $drift_count + (count $extra))
+    end
+
+    if test $drift_count -eq 0
+        ok "Em sync ($(count $declared_ids) apps declarados, $(count $installed_ids) instalados)"
+        return 0
+    end
+
+    dim "  Ajuste:"
+    dim "    - Adotar extras: adicionar ao mas_apps_to_install em $HOMEBREW_DEFAULTS"
+    dim "    - Remover extras: mas uninstall <id>  (requer sudo)"
+    dim "    - Instalar missing: re-rodar bootstrap"
+    return 1
+end
+
+
+# ── Section: Mise ────────────────────────────────────────────────────────
+
+function check_mise
+    section "Mise (tool versions)"
+
+    if not type -q mise
+        err "mise não está instalado — skipping"
+        return 0
+    end
+
+    set -l mise_config "$HOME/.config/mise/config.toml"
+    if not test -f $mise_config
+        dim "  ~/.config/mise/config.toml ainda não existe (será criado pelo chezmoi)."
+        dim "  Checagem ativa quando a fatia chezmoi/dot_config/mise/config.toml.tmpl entrar."
+        return 0
+    end
+
+    dim "  TODO: comparar mise ls com config.toml declarado."
+    return 0
+end
+
+
+# ── Main ─────────────────────────────────────────────────────────────────
+
+function show_help
+    echo "repo-sync — drift detector"
+    echo
+    echo "Compara o estado real da máquina com o que o repo declara."
+    echo "Read-only: nunca altera nada. Reporta divergências pra você agir."
+    echo
+    echo "Uso: repo-sync [opção]"
+    echo
+    echo "Opções:"
+    echo "  -h, --help    Mostra esta ajuda"
+    echo
+    echo "Exit codes:"
+    echo "  0    Em sync"
+    echo "  1    Drift detectado"
+    echo "  2    Erro de pré-condição (binary faltando, repo path inválido)"
+end
+
+function main
+    switch (count $argv)
+        case 0
+        case '*'
+            switch $argv[1]
+                case -h --help
+                    show_help
+                    return 0
+                case '*'
+                    err "Opção desconhecida: $argv[1]"
+                    show_help
+                    return 2
+            end
+    end
+
+    echo "$C_BLUE→$C_RESET repo: $REPO_ROOT"
+
+    set -l exit_code 0
+
+    check_brew
+    or set exit_code 1
+
+    check_mas
+    or set exit_code 1
+
+    check_mise
+    or set exit_code 1
+
+    echo
+    if test $exit_code -eq 0
+        ok "$C_BOLD"Tudo em sync"$C_RESET"
+    else
+        drift "$C_BOLD"Drift detectado. Revise acima e ajuste repo ou máquina conforme apropriado."$C_RESET"
+    end
+
+    return $exit_code
+end
+
+main $argv

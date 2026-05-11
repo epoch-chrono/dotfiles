@@ -25,6 +25,13 @@ Versão do playbook: `0.17.0`.
 | `homebrew` | Sim | 6 fases: pré-check brew → mas-cli pre-flight → MAS cleanup → brew bundle → MAS install → MAS upgrade_all |
 
 
+### Utility scripts
+
+| Script | Tipo | Função |
+|---|---|---|
+| `bin/repo-sync` | fish | Drift detector read-only entre estado real e repo. Cobre brew (taps+formulas+casks via `brew bundle dump`) e MAS (via `mas list` vs `mas_apps_to_install`). Stub pra mise até chezmoi entrar. Exit 0 sync, 1 drift, 2 erro de pré-condição. |
+
+
 ### Inventário Brewfile
 
 - 4 taps (hudochenkov/sshpass, fwdcloudsec/granted, cloudquery/tap, turbot/tap)
@@ -57,31 +64,7 @@ Gerenciado via `community.general.mas` em vez de brew bundle:
 Ordem proposta. Cada uma é independente e pode ser pausada/retomada.
 
 
-### 1. `bin/repo-sync` (drift detector)
-
-**O quê.** Script utility em fish que compara estado real da máquina com o repo
-declarado e reporta divergências. Read-only por design — não altera nada.
-
-**Onde.** `bin/repo-sync` na raiz do repo enquanto chezmoi não existe. Quando
-chezmoi entrar, migra pra `chezmoi/dot_local/bin/executable_repo-sync` (vira
-`~/.local/bin/repo-sync`).
-
-**Dimensões cobertas.**
-
-- Brew: diff entre `brew bundle dump` atual e `ansible/roles/homebrew/files/Brewfile`
-- MAS: diff entre `mas list` e `mas_apps_to_install` em `defaults/main.yml`
-- Mise: diff entre `mise ls` e `config.toml` declarado (só quando chezmoi tiver o config)
-
-**Saída.** Colorida, estruturada. Exit `0` se em sync, `1` se houver drift.
-
-**Casos de uso.**
-
-- Detectar packages instalados manualmente que deveriam ser adotados no repo
-- Detectar drift inverso (repo declara X mas X não está instalado)
-- Health check periódico antes de commit
-
-
-### 2. Estrutura `chezmoi/` no repo
+### 1. Estrutura `chezmoi/` no repo
 
 **O quê.** Materializar a pasta source do chezmoi com os primeiros dotfiles.
 
@@ -97,7 +80,7 @@ chezmoi/
 │       └── config.toml.tmpl              # python@3.13.11, node@lts, go@latest, tools
 ├── dot_local/
 │   └── bin/
-│       └── executable_repo-sync          # script da fatia 1, migrado
+│       └── executable_repo-sync          # script `bin/repo-sync`, migrado
 └── run_onchange_after_50-mise-install.sh.tmpl  # hook: mise install quando config muda
 ```
 
@@ -109,7 +92,7 @@ chezmoi/
   separadas pra revisar com calma
 
 
-### 3. Role `chezmoi-bootstrap` no Ansible
+### 2. Role `chezmoi-bootstrap` no Ansible
 
 **O quê.** Última peça do bootstrap: deixar o chezmoi inicializado e aplicado.
 
