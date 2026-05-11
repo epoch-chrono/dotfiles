@@ -1,0 +1,18 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/chezmoi/defaults/main.yml
+# ────────────────────────────────────────────────────────────────────────────
+
+# Repo de onde o chezmoi vai clonar a source de dotfiles. Usar HTTPS pra
+# não depender de SSH agent durante bootstrap. Como o repo é público, não
+# precisa de credenciais.
+chezmoi_repo: "https://github.com/epoch-chrono/dotfiles.git"
+
+# Path absoluto pro binary do chezmoi. Hardcoded pra evitar problemas de PATH
+# em SSH non-interactive. Brew instala em /opt/homebrew/bin (Apple Silicon)
+# ou /usr/local/bin (Intel). Como este projeto target é Apple Silicon, o
+# default é Apple Silicon.
+chezmoi_binary: "/opt/homebrew/bin/chezmoi"
+
+# Path do binary do mise — mesma justificativa do chezmoi_binary acima.
+mise_binary: "/opt/homebrew/bin/mise"

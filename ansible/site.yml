@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.17.1
+# Versão atual: 0.18.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -263,3 +263,13 @@
       when: ansible_facts.system == "Darwin"
       tags:
         - homebrew
+
+    # Chezmoi — init source repo + apply dotfiles em $HOME. Inclui também
+    # mise trust + install pós-apply (Opção 2: Ansible faz mise fora do hook
+    # chezmoi pra ter visibilidade no PLAY RECAP). Skip em Linux por enquanto
+    # (chezmoi binary vem do Brewfile, e Linux ainda não tem stack equivalente).
+    - role: chezmoi
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - chezmoi
+        - dotfiles

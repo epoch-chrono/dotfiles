@@ -1,18 +1,22 @@
-{{- /* ──────────────────────────────────────────────── */ -}}
-{{- /* chezmoi config — epoch-chrono/dotfiles          */ -}}
-{{- /* ──────────────────────────────────────────────── */ -}}
+{{- /* ────────────────────────────────────────────────────────────────── */ -}}
+{{- /* chezmoi config — epoch-chrono/dotfiles                           */ -}}
+{{- /* ────────────────────────────────────────────────────────────────── */ -}}
+{{- /*                                                                  */ -}}
+{{- /* Valores são hardcoded por enquanto. Único user é o owner do repo */ -}}
+{{- /* e os valores (email, context) já aparecem em centenas de commits */ -}}
+{{- /* — não há segredo a proteger.                                     */ -}}
+{{- /*                                                                  */ -}}
+{{- /* Refatorar para env vars ou per-host quando aparecer caso de uso  */ -}}
+{{- /* (work email diferente, múltiplos contextos, etc.). Razão pra não */ -}}
+{{- /* usar prompts agora: --promptString do chezmoi init é só pra      */ -}}
+{{- /* testing com execute-template, não pra setup automatizado via     */ -}}
+{{- /* Ansible. Ref: github.com/twpayne/chezmoi/discussions/3225        */ -}}
+{{- /*                                                                  */ -}}
+{{- /* ────────────────────────────────────────────────────────────────── */ -}}
 
-{{- $osid   := .chezmoi.os -}}
-{{- $arch   := .chezmoi.arch -}}
-{{- $isNix  := stat "/etc/NIXOS" | not | not -}}
-
-{{- /* Interactive prompts on first init */ -}}
-{{- $email  := promptStringOnce . "email" "Git email" -}}
-{{- $context := promptChoiceOnce . "context" "Context (personal/client)" (list "personal" "client") -}}
-{{- $client := "" -}}
-{{- if eq $context "client" -}}
-{{-   $client = promptStringOnce . "client_slug" "Client slug (e.g. epoch, apoiase)" -}}
-{{- end -}}
+{{- $osid  := .chezmoi.os -}}
+{{- $arch  := .chezmoi.arch -}}
+{{- $isNix := stat "/etc/NIXOS" | not | not -}}
 
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
@@ -22,9 +26,8 @@ data:
   is_mac: {{ eq $osid "darwin" }}
   is_linux: {{ eq $osid "linux" }}
   is_nixos: {{ $isNix }}
-  email: {{ $email | quote }}
-  context: {{ $context | quote }}
-  client_slug: {{ $client | quote }}
+  email: "vitor@epoch-chrono.com"
+  context: "personal"
 
 onepassword:
   prompt: true

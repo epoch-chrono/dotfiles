@@ -1,0 +1,99 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/chezmoi/tasks/main.yml
+# ────────────────────────────────────────────────────────────────────────────
+# Ordem das fases:
+#   1. Pré-check do chezmoi binary (vem do Brewfile)
+#   2. Chezmoi init (clone do source pra ~/.local/share/chezmoi/) — primeira vez
+#   3. Chezmoi apply (materializa dotfiles em $HOME) — sempre
+#   4. Mise trust (autoriza o config materializado pelo apply)
+#   5. Mise install (instala tools declarados em ~/.config/mise/config.toml)
+#
+# Notas arquiteturais:
+#   - Apesar do bootstrap.sh já clonar o repo em ~/.local/share/dotfiles/,
+#     o chezmoi tem source dir próprio (~/.local/share/chezmoi/). Duplicação
+#     de espaço (~poucos MB) mas zero acoplamento — chezmoi atualiza source
+#     via `chezmoi update` quando user pedir.
+#   - Mise trust + install rodam aqui (não em hook chezmoi run_onchange)
+#     pra ter visibilidade no PLAY RECAP e stderr completo em caso de falha.
+# ────────────────────────────────────────────────────────────────────────────
+
+
+# ── 1. Pré-check ──────────────────────────────────────────────────────────
+
+- name: "Chezmoi — verificar binary instalado"
+  ansible.builtin.stat:
+    path: "{{ chezmoi_binary }}"
+  register: chezmoi_binary_check
+
+- name: "Chezmoi — abortar se binary não encontrado"
+  ansible.builtin.fail:
+    msg: |
+      {{ chezmoi_binary }} não encontrado. A role homebrew deveria ter
+      instalado via Brewfile. Re-roda o playbook a partir do início.
+  when: not chezmoi_binary_check.stat.exists
+
+
+# ── 2. Chezmoi init ───────────────────────────────────────────────────────
+# Clone source no primeiro run. Idempotente via stat check.
+
+- name: "Chezmoi — verificar se source já foi inicializado"
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.local/share/chezmoi/.git"
+  register: chezmoi_source_check
+
+- name: "Chezmoi — init (clone source na primeira vez)"
+  ansible.builtin.command: "{{ chezmoi_binary }} init {{ chezmoi_repo }}"
+  when: not chezmoi_source_check.stat.exists
+  changed_when: true
+
+
+# ── 3. Chezmoi apply ──────────────────────────────────────────────────────
+# Materializa dotfiles em $HOME. Idempotente — sem changes se nada mudou.
+# --verbose pra ter output útil; sem mudanças, stdout é vazio.
+
+- name: "Chezmoi — apply (materializar dotfiles em $HOME)"
+  ansible.builtin.command: "{{ chezmoi_binary }} apply --verbose"
+  register: chezmoi_apply_result
+  changed_when: chezmoi_apply_result.stdout | length > 0
+
+- name: "Chezmoi — exibir output do apply (apenas se houve mudanças)"
+  ansible.builtin.debug:
+    msg: "{{ chezmoi_apply_result.stdout_lines }}"
+  when: chezmoi_apply_result.stdout_lines | length > 0
+
+
+# ── 4. Mise trust ─────────────────────────────────────────────────────────
+# mise pede confirmação interativa em config novo (proteção contra config
+# malicioso em projetos random). Em automation isso quebra (sem TTY).
+# `mise trust` whitelista o path; persiste em ~/.local/state/mise/.
+
+- name: "Mise — verificar binary instalado"
+  ansible.builtin.stat:
+    path: "{{ mise_binary }}"
+  register: mise_binary_check
+
+- name: "Mise — trust user config materializado pelo chezmoi"
+  ansible.builtin.command: "{{ mise_binary }} trust {{ ansible_env.HOME }}/.config/mise/config.toml"
+  changed_when: false
+  when: mise_binary_check.stat.exists
+
+
+# ── 5. Mise install ───────────────────────────────────────────────────────
+# Instala tools declaradas em ~/.config/mise/config.toml. Idempotente —
+# mise pula tools já instaladas na versão certa. Pode demorar na primeira
+# run (compila Python, baixa Node, Go).
+
+- name: "Mise — instalar tools declarados"
+  ansible.builtin.command: "{{ mise_binary }} install"
+  register: mise_install_result
+  changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — exibir output do install"
+  ansible.builtin.debug:
+    msg: |
+      {{ 'Output:' if (mise_install_result.stdout or mise_install_result.stderr) else 'Tudo já em sync — nenhum tool novo.' }}
+      stdout: {{ mise_install_result.stdout | default('(vazio)') }}
+      stderr: {{ mise_install_result.stderr | default('(vazio)') }}
+  when: mise_binary_check.stat.exists
