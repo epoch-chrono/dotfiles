@@ -163,6 +163,7 @@ brew "elvish"             # experimento futuro
 brew "duti"               # default URI handlers (associações de tipo)
 brew "maclaunch"          # gerenciar launch agents/daemons
 brew "pinentry-mac"       # GPG pinentry para macOS
+brew "displayplacer"      # CLI pra gerenciar layout/resolução de monitores
 
 
 # ── Network / security ────────────────────────────────────────────────────
@@ -268,6 +269,7 @@ cask "whatsapp"                # mensageria
 
 # ── Mac utilities ─────────────────────────────────────────────────────────
 cask "bartender"               # menubar manager
+cask "betterdisplay"           # resolution/display manager (replacement EasyRes)
 cask "bettertouchtool"         # gestures + window mgmt
 cask "caffeine"                # keep awake
 cask "contexts"                # window switcher

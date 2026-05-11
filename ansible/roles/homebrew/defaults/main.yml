@@ -61,5 +61,4 @@ mas_apps_to_install:
   - { id: "1591303229", name: "Vinegar" }
   - { id: "1520333300", name: "Wappalyzer" }
   # Standalone apps
-  - { id: "688211836",  name: "EasyRes" }
   - { id: "1447778660", name: "iStatistica Pro" }

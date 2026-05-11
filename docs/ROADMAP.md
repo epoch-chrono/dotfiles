@@ -35,8 +35,8 @@ Versão do playbook: `0.17.0`.
 ### Inventário Brewfile
 
 - 4 taps (hudochenkov/sshpass, fwdcloudsec/granted, cloudquery/tap, turbot/tap)
-- 70 brew formulas
-- 53 casks ativos + 1 comentado (maccleaner-pro, ver TODOs)
+- 71 brew formulas
+- 54 casks ativos + 1 comentado (maccleaner-pro, ver TODOs)
 - MAS apps NÃO ficam no Brewfile — movidos pra `homebrew/defaults/main.yml`
   (`brew bundle` chama mas-cli em contexto SSH non-interactive e falha)
 
@@ -46,7 +46,7 @@ Versão do playbook: `0.17.0`.
 Gerenciado via `community.general.mas` em vez de brew bundle:
 
 - `mas_apps_to_remove`: 5 Apple defaults (GarageBand, iMovie, Keynote, Numbers, Pages)
-- `mas_apps_to_install`: 17 apps (15 Safari extensions + EasyRes + iStatistica Pro)
+- `mas_apps_to_install`: 16 apps (15 Safari extensions + iStatistica Pro)
 - `upgrade_all: true` após install (modelo "update sempre" pra MAS)
 - Pré-req: Apple ID logada na MAS via GUI antes do bootstrap
 
@@ -209,6 +209,33 @@ match($0, /id:[[:space:]]*"([0-9]+)"/, m) { print m[1] }
 o user prepende `gnubin` dirs ao PATH pra que `awk` invoque `gawk`, `sed`
 invoque `gsed`, etc. — comportamento previsível e mais features no terminal
 interativo. Mas isso é config pessoal, fora do escopo de scripts versionados.
+
+
+### Preferência por brew sobre MAS quando disponível
+
+Quando um app MAS é descontinuado pelo vendor (deixa a Mac App Store) e
+existe alternativa moderna distribuída via Homebrew, **migrar pra brew**.
+
+**Motivação.**
+
+- **Resiliência a deprecation da Apple.** Vendors saem da MAS por várias razões
+  (Apple sandboxing requirements, taxas, modelo de distribuição). Apps via
+  brew dependem só do developer manter releases, sem intermediário Apple.
+- **Reprodutibilidade.** `mas install <id>` falha se o app foi removido da MAS,
+  mesmo que o ID ainda exista. Brew cask aponta pro DMG do upstream — funciona
+  enquanto o upstream existir.
+- **Idempotência preservada.** Repo continua declarativo; instalável em Mac fresh.
+
+**Caso concreto registrado.**
+
+EasyRes (`id: 688211836`) — descontinuado da MAS pelo developer (~2024).
+Macs que já tinham instalado continuam com a v1.1.4 funcional, mas instalação
+nova é impossível via `mas install`.
+
+Substituído por:
+
+- `cask "betterdisplay"` — replacement principal, GUI moderno gratuito
+- `brew "displayplacer"` — CLI complementar, script-friendly pra automações
 
 
 ## TODOs pontuais (backlog técnico)
