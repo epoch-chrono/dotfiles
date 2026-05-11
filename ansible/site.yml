@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.13.0
+# Versão atual: 0.13.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -129,6 +129,25 @@
 #             Resultado: 70 formulas no Brewfile total (3 novas).
 #             Proximo passo do roadmap eh role minima 'chezmoi-bootstrap'
 #             que apos brew bundle aplicar, roda chezmoi init + apply.
+#   - 0.13.1: fix Brewfile — remove bloco duplicado de mise/chezmoi/mas
+#             criado por race condition de commits paralelos (commit do
+#             Vitor 83c4e8e e meu 973c9fc ambos adicionaram a categoria,
+#             em paginas diferentes do arquivo). Mantida a versao mais
+#             concisa (do Vitor) sob secao "Provisioning / version
+#             management". Tambem removido "mas" da lista de tools do
+#             mise no header (vestigio da decisao revisada — mas voltou
+#             pro brew).
+#   - 0.13.1: fix Brewfile — secao "Provisioning managers" estava
+#             duplicada. O commit 0.13.0 introduziu DOIS blocos com
+#             os mesmos 3 brews (mise, chezmoi, mas): um chamado
+#             "Provisioning / version management" e outro "Provisioning
+#             managers (instalados via brew para simplificar bootstrap)".
+#             Inofensivo em termos de funcionamento (brew bundle dedup
+#             internamente — output ja mostra "Using mise" so uma vez),
+#             mas confuso e desperdicava espaco visual. Removida a
+#             primeira (menos detalhada), mantida a segunda (com
+#             comentarios por formula).
+
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
