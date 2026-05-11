@@ -48,9 +48,10 @@
 # anos mas o binary é C clássico, raramente muda. Sem alternativa mise.
 tap "hudochenkov/sshpass"
 
-# Common Fate Granted — AWS access tooling. Binários hospedados em
-# releases.commonfate.io (não GitHub), por isso o plugin asdf-granted
-# falha buscando no GitHub. Tap oficial da Common Fate.
+# Granted — AWS access tooling. Originalmente da Common Fate; em 2025
+# o tap oficial passou pra fwdcloudsec (Forward CloudSec). Binários
+# ainda hospedados em releases.commonfate.io (não GitHub) — por isso
+# o plugin asdf-granted falha. URL canônica: https://docs.granted.dev/
 tap "fwdcloudsec/granted"
 
 # Cloudquery — cloud asset discovery / inventory.
@@ -221,3 +222,133 @@ brew "cloudquery/tap/cloudquery"
 
 # Powerpipe CLI.
 brew "turbot/tap/powerpipe"
+
+
+# ===========================================================================
+# CASKS — Apps GUI (gerenciados via /Applications)
+# ===========================================================================
+# brew cask instala apps em /Applications. Updates via `brew upgrade --cask`
+# ou via Brewfile re-run (com --no-upgrade pra não trocar versão sem querer).
+
+
+# ── Senha / credenciais ───────────────────────────────────────────────────
+cask "1password"               # gerenciador principal de credenciais
+cask "1password-cli"           # pre-req pra integração com outros apps (ssh agent, etc)
+cask "bitwarden"               # cold storage pessoal + fonte de verdade da Apoia.se
+
+
+# ── AI tooling ────────────────────────────────────────────────────────────
+cask "claude"                  # Claude Desktop (Anthropic)
+cask "claude-code"             # Claude Code CLI distribuído via cask
+cask "claudebar"               # menubar pra monitoramento de tokens/usage (Claude, Antigravity, Gemini)
+
+
+# ── Browsers / VPN / network ──────────────────────────────────────────────
+cask "google-chrome"           # browser
+cask "adguard"                 # content blocker
+cask "nordvpn"                 # VPN pessoal
+cask "tunnelblick@beta"        # OpenVPN client (Apoia.se) — beta para features novas do OpenVPN
+cask "tailscale-app"           # mesh VPN
+cask "rustdesk"                # remote desktop
+cask "ngrok"                   # tunneling reverso HTTP/TCP
+cask "royal-tsx"               # gerenciador de RDP/SSH/etc (substitui MS RD)
+
+
+# ── Terminal / IDE ────────────────────────────────────────────────────────
+cask "iterm2"                  # terminal emulator
+cask "cursor"                  # IDE principal (registrado em userMemories)
+
+
+# ── Comunicação ───────────────────────────────────────────────────────────
+cask "slack"                   # work + comunidades
+cask "discord"                 # comunidades
+cask "telegram"                # mensageria
+cask "whatsapp"                # mensageria
+
+
+# ── Mac utilities ─────────────────────────────────────────────────────────
+cask "bartender"               # menubar manager
+cask "bettertouchtool"         # gestures + window mgmt
+cask "caffeine"                # keep awake
+cask "contexts"                # window switcher
+cask "popclip"                 # selection actions
+cask "raycast"                 # launcher
+cask "keymapp"                 # ZSA keyboards config
+cask "timemachineeditor"       # backup scheduling
+
+
+# ── Screenshot ────────────────────────────────────────────────────────────
+cask "shottr"                  # capture rápido
+cask "snagit"                  # capture + anotação avançada (Techsmith)
+
+
+# ── Disk / files / compression ────────────────────────────────────────────
+cask "daisydisk"               # disk usage analyzer
+cask "maccleaner-pro"          # uninstall + cleanup (não as features de "speed boost")
+cask "forklift"                # file manager dual-pane
+cask "keka"                    # compression
+cask "kekaexternalhelper"      # companion do Keka
+cask "macfuse"                 # pre-req: keybase + pCloud (a ser instalado fora)
+cask "rar"                     # RAR proprietário
+cask "qbittorrent"             # torrent
+
+
+# ── Security (Objective-See / Patrick Wardle) ─────────────────────────────
+cask "blockblock"              # monitor de persistence
+cask "lulu"                    # firewall outbound
+cask "knockknock"              # scan de persistence items
+cask "taskexplorer"            # process inspector
+
+
+# ── Productivity / docs ───────────────────────────────────────────────────
+cask "typora"                  # markdown editor
+cask "notion"                  # workspace / wiki
+cask "wpsoffice"               # office suite alternativo
+
+
+# ── DB clients ────────────────────────────────────────────────────────────
+cask "medis"                   # Redis GUI
+cask "mongodb-compass"         # MongoDB GUI oficial
+cask "nosqlbooster-for-mongodb" # MongoDB GUI third-party (queries avançadas)
+
+
+# ── Containers / dev ──────────────────────────────────────────────────────
+cask "podman-desktop"          # GUI pro podman
+cask "gitkraken-cli"           # AI commit message generator
+
+
+# ── System info / misc ────────────────────────────────────────────────────
+cask "crystalfetch"            # macOS-specific system info
+cask "keybase"                 # crypto + chat
+cask "vlc"                     # media player
+cask "utm"                     # VMs (QEMU frontend)
+
+
+# ===========================================================================
+# MAS — Apps da Mac App Store (gerenciados via `mas` CLI)
+# ===========================================================================
+# brew bundle aciona mas-cli automaticamente. Cada entrada: nome + id MAS.
+# IDs obtidos via `mas list` no Mac antigo.
+
+
+# ── Safari extensions ─────────────────────────────────────────────────────
+mas "1Password for Safari",      id: 1569813296
+mas "AllURLsOpener",             id: 1615363610
+mas "Baking Soda",               id: 1606897889
+mas "Consent-O-Matic",           id: 1601151613
+mas "Copytables",                id: 1472937623
+mas "Grammarly for Safari",      id: 1462114288
+mas "Noir",                      id: 1592917505
+mas "PrintFriendly",             id: 6751649326
+mas "Return Dislikes",           id: 6605923430
+mas "SingleFile",                id: 6444322545
+mas "Tabs Saver for Safari",     id: 1440006971
+mas "Tampermonkey",              id: 6738342400
+mas "Vidimote",                  id: 1585702412
+mas "Vinegar",                   id: 1591303229
+mas "Wappalyzer",                id: 1520333300
+
+
+# ── Mac apps (não-extensões) ──────────────────────────────────────────────
+mas "EasyRes",                   id:  688211836
+mas "iStatistica Pro",           id: 1447778660

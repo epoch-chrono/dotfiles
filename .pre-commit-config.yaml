@@ -69,14 +69,16 @@ repos:
     hooks:
       - id: chezmoi-template-lint
         name: "chezmoi template syntax"
-        entry: bash -c 'for f in "$@"; do chezmoi execute-template < "$f" > /dev/null 2>&1 || (echo "FAIL: $f" && exit 1); done'
+        entry: |-
+          bash -c 'for f in "$@"; do chezmoi execute-template < "$f" > /dev/null 2>&1 || (echo "FAIL: $f" && exit 1); done'
         language: system
         files: '\.tmpl$'
         pass_filenames: true
 
       - id: no-hardcoded-secrets
         name: "check for hardcoded secrets in templates"
-        entry: bash -c 'for f in "$@"; do if grep -qP "(ghp_|ntn_|ops_|sk-|AKIA)" "$f"; then echo "FAIL: possible secret in $f" && exit 1; fi; done'
+        entry: |-
+          bash -c 'for f in "$@"; do if grep -qP "(ghp_|ntn_|ops_|sk-|AKIA)" "$f"; then echo "FAIL: possible secret in $f" && exit 1; fi; done'
         language: system
         types: [file]
         pass_filenames: true

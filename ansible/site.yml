@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.13.4
+# Versão atual: 0.14.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -174,6 +174,34 @@
 #             mas confuso e desperdicava espaco visual. Removida a
 #             primeira (menos detalhada), mantida a segunda (com
 #             comentarios por formula).
+#   - 0.14.0: Brewfile expandido com Casks (54) + MAS (17). Total final
+#             do Brewfile: 145 entries (4 taps + 70 brews + 54 casks +
+#             17 MAS). Estrutura: secao "CASKS" e "MAS" no final do
+#             arquivo, ambos agrupados por categoria com comentarios
+#             inline.
+#             Curadoria de casks (lista original do Mac antigo: 56):
+#               - Removido: zoom (nao usa mais).
+#               - Substituido: tunnelblick → tunnelblick@beta (precisa
+#                 features novas do OpenVPN nao disponiveis na stable).
+#               - Mantidas redundancias intencionais: shottr+snagit
+#                 (contextos diferentes), mongodb-compass+nosqlbooster
+#                 (oficial+third-party), bitwarden+bitwarden-cli (fonte
+#                 da verdade da Apoia.se, alem do 1Password pessoal),
+#                 nordvpn+tunnelblick (pessoal vs Apoia.se).
+#             Pre-reqs notaveis dentro dos casks:
+#               - macfuse: pre-req do keybase e pCloud (pCloud fora do
+#                 brew/MAS, instalar manualmente).
+#               - 1password-cli: ja estava no Brewfile como cask pra
+#                 integracao com outros apps (ssh agent etc).
+#             MAS apps (17): majoria extensoes de Safari (1Password for
+#             Safari, AllURLsOpener, Baking Soda, Consent-O-Matic,
+#             Copytables, Grammarly, Noir, PrintFriendly, Return
+#             Dislikes, SingleFile, Tabs Saver, Tampermonkey, Vidimote,
+#             Vinegar, Wappalyzer). 2 apps standalone: EasyRes
+#             (resolucao de display), iStatistica Pro (system stats).
+#             Comentario do tap fwdcloudsec/granted atualizado pra
+#             refletir mudanca de owner (Common Fate → Forward CloudSec
+#             em 2025; URL canonica: docs.granted.dev).
 
 #
 # Executar:
