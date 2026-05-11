@@ -116,20 +116,6 @@ brew "make"
 brew "imagemagick"
 
 
-# ── Provisioning / version management ─────────────────────────────────────
-# Ferramentas que orquestram o resto do stack. Ficam no brew porque:
-#   - mise: versionamento de runtimes (Go, Node, Python via mise, etc).
-#     Brew fica ~1 minor atrás do upstream, aceitável pra essa classe.
-#   - chezmoi: dotfiles manager. Materializa ~/.config/* e shell integration.
-#     Pós-brew, chezmoi assume todo o user environment.
-#   - mas: Mac App Store CLI. Permite declarar apps no Brewfile via
-#     diretiva `mas "Name", id: 1234567890` e instalá-los via brew bundle.
-
-brew "mise"
-brew "chezmoi"
-brew "mas"
-
-
 # ── System replacements: GNU / newer-than-system ──────────────────────────
 # Substituem (ou complementam) versões antigas/BSD do sistema base macOS.
 # Necessário pra compatibilidade com scripts shell que assumem comportamento
