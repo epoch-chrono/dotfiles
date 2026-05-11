@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.14.0
+# Versão atual: 0.14.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -202,6 +202,18 @@
 #             Comentario do tap fwdcloudsec/granted atualizado pra
 #             refletir mudanca de owner (Common Fate → Forward CloudSec
 #             em 2025; URL canonica: docs.granted.dev).
+#   - 0.14.1: fix homebrew/Brewfile — maccleaner-pro temporariamente
+#             desabilitado (comentado). Causa: checksum mismatch upstream
+#             entre o cask homebrew (SHA-256 49e1f9e1...) e o arquivo
+#             servido pela Nektony (SHA-256 e2509507...). Publisher subiu
+#             nova versao sem atualizar homebrew-cask.
+#             Critico: brew bundle 5.1+ faz fetch parallel ANTES de
+#             instalar. Se qualquer fetch falha, aborta tudo — nenhum
+#             cask e instalado (mesmo os que baixaram OK). Resultado: 53
+#             casks ficaram fetched mas nao instalados ate o fix.
+#             Para re-habilitar: testar 'brew install --cask
+#             maccleaner-pro' isoladamente. Quando passar, descomentar a
+#             linha no Brewfile.
 
 #
 # Executar:

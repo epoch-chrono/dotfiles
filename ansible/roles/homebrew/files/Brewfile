@@ -284,7 +284,13 @@ cask "snagit"                  # capture + anotação avançada (Techsmith)
 
 # ── Disk / files / compression ────────────────────────────────────────────
 cask "daisydisk"               # disk usage analyzer
-cask "maccleaner-pro"          # uninstall + cleanup (não as features de "speed boost")
+# cask "maccleaner-pro"        # TEMPORARIAMENTE DESABILITADO (2026-05):
+                               # checksum mismatch upstream.
+                               # Cask espera SHA-256 49e1f9e1... mas servidor da
+                               # Nektony serve e2509507... — publisher subiu nova
+                               # versão sem atualizar homebrew-cask. Re-habilitar
+                               # quando: brew install --cask maccleaner-pro
+                               # rodar sem erro (testar caso a caso).
 cask "forklift"                # file manager dual-pane
 cask "keka"                    # compression
 cask "kekaexternalhelper"      # companion do Keka
