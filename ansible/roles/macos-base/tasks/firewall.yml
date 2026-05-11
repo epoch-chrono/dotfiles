@@ -12,10 +12,20 @@
 # Configurações aplicadas:
 #   - Global state: ON (firewall ligado)
 #   - Stealth mode: ON (não responde a ICMP echo / probes em portas fechadas)
-#   - Logging mode: ON, com opt = detail (logs em /var/log/appfirewall.log)
 #   - Block all: OFF (CRÍTICO — manter OFF, ver nota abaixo)
 #   - Allow signed (built-in Apple apps): ON
 #   - Allow signedapp (downloaded signed apps, ex: homebrew): ON
+#
+# NOTA SOBRE LOGGING (macOS Tahoe):
+#   As flags --getloggingmode, --setloggingmode, --getloggingopt e
+#   --setloggingopt FORAM REMOVIDAS em macOS 26 Tahoe. O man page atual
+#   não as menciona mais e o /usr/libexec/ApplicationFirewall/socketfilterfw
+#   responde com 'usage:' (rc não-zero) ao receber qualquer uma delas.
+#   Para auditar atividade do firewall em Tahoe, usar o unified logging
+#   subsystem 'com.apple.alf':
+#     sudo log config --mode "persist:info" --subsystem com.apple.alf
+#     log show --predicate 'subsystem == "com.apple.alf"' --info --last 1h
+#   Isso é fora do escopo desta role (gerenciamento do log subsystem).
 #
 # NOTA SOBRE 'block all':
 #   Block all incoming sobrescreve TODAS as exceções por app. Se ON, quebra
@@ -67,8 +77,6 @@
       /usr/libexec/ApplicationFirewall/socketfilterfw \
         --getglobalstate \
         --getstealthmode \
-        --getloggingmode \
-        --getloggingopt \
         --getblockall \
         --getallowsigned 2>&1
   register: firewall_before
@@ -91,10 +99,6 @@
       - "on"
       - --setstealthmode
       - "on"
-      - --setloggingmode
-      - "on"
-      - --setloggingopt
-      - detail
       - --setblockall
       - "off"
       - --setallowsigned
@@ -114,8 +118,6 @@
       /usr/libexec/ApplicationFirewall/socketfilterfw \
         --getglobalstate \
         --getstealthmode \
-        --getloggingmode \
-        --getloggingopt \
         --getblockall \
         --getallowsigned 2>&1
   register: firewall_after

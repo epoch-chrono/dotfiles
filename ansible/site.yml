@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.9.1
+# Versão atual: 0.9.2
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -49,6 +49,12 @@
 #            --get retorna rc 255 antes do daemon ficar pronto. Solução:
 #            aplicar todas as flags numa ÚNICA invocação do socketfilterfw
 #            (sintaxe documentada). Idempotência via diff antes/depois.
+#   - 0.9.2: fix firewall — Apple REMOVEU as flags de logging em macOS
+#            Tahoe (--getloggingmode, --setloggingmode, --getloggingopt,
+#            --setloggingopt). O man page atual não menciona, e
+#            socketfilterfw retorna 'usage:' (rc não-zero) ao recebê-las.
+#            Removidas do playbook. Logging agora deve ser gerenciado via
+#            unified logging subsystem com.apple.alf (fora do escopo).
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
