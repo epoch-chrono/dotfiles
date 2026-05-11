@@ -1,0 +1,33 @@
+---
+# ────────────────────────────────────────────────────────────────────────────
+# roles/homebrew/tasks/packages.yml — aplica o Brewfile
+# ────────────────────────────────────────────────────────────────────────────
+# Estratégia:
+#   Usa 'brew bundle' que é a forma declarativa nativa do Homebrew. Em re-runs
+#   onde tudo já está instalado, ele não faz nada (output: "Homebrew Bundle
+#   complete! N Brewfile dependencies now installed.").
+#
+# Idempotência:
+#   brew bundle sempre retorna rc=0 quando consegue garantir o estado, mesmo
+#   se já estava OK. Detectamos mudança via parsing do stdout — palavras-chave
+#   como "Installing", "Upgrading", "Tapping" indicam que algo aconteceu.
+#
+# Notas:
+#   - O Brewfile vive em files/Brewfile (path relativo a esta role).
+#   - Usamos --no-lock pra não sujar o working dir com Brewfile.lock.json
+#     gerado dinamicamente.
+#   - become: false (default) — brew NUNCA deve rodar como root.
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: "Homebrew — aplicar Brewfile (brew bundle)"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/brew bundle --no-lock --file={{ role_path }}/files/Brewfile
+  register: brew_bundle
+  changed_when: >-
+    brew_bundle.stdout is search('Installing')
+    or brew_bundle.stdout is search('Upgrading')
+    or brew_bundle.stdout is search('Tapping')
+
+- name: "Homebrew — exibir resumo do bundle"
+  ansible.builtin.debug:
+    msg: "{{ brew_bundle.stdout_lines }}"

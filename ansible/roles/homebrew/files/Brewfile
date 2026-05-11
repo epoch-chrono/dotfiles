@@ -1,0 +1,26 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Brewfile — fonte de verdade dos pacotes instalados via Homebrew
+# ────────────────────────────────────────────────────────────────────────────
+# Aplicado pelo Ansible via:
+#   brew bundle --file=<este-arquivo>
+#
+# Documentação:
+#   https://github.com/Homebrew/homebrew-bundle
+#   man brew bundle
+#
+# Sintaxe:
+#   tap "user/repo"            # adicionar tap
+#   brew "formula"             # instalar formula (CLI tool)
+#   cask "name"                # instalar cask (GUI app)
+#   mas "Name", id: 12345      # instalar Mac App Store app (requer 'mas' CLI)
+#
+# Auditoria do estado atual via:
+#   brew bundle dump --file=- --describe   # gera Brewfile do que está instalado
+#   brew bundle check --file=<este-arquivo>  # valida que tudo deste arquivo está instalado
+# ────────────────────────────────────────────────────────────────────────────
+
+# ── Pré-requisitos / linguagens base ────────────────────────────────────────
+# Python 3: dependência comum de muitas formulas + uso direto pra scripts.
+# Não fixamos versão minor (python3 = current major) — deixa o brew gerenciar
+# upgrades de patch/minor.
+brew "python3"

@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.10.0
+# Versão atual: 0.11.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -61,6 +61,11 @@
 #             bootstrap. Sem tap, sem packages, sem shell integration —
 #             tudo isso fica para iterações futuras. Skip automático em
 #             Linux via when:Darwin na role.
+#   - 0.11.0: + homebrew/tasks/packages.yml + files/Brewfile. Aplica
+#             pacotes declarativamente via 'brew bundle'. Brewfile inicia
+#             só com python3 — primeira "raiz" de dependência comum.
+#             Idempotente via parsing de "Installing"/"Upgrading"/"Tapping"
+#             no stdout. --no-lock evita Brewfile.lock.json no working dir.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
