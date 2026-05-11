@@ -21,25 +21,15 @@
 */}}
 
 # ──────────────────────────────────────────────────────────────────────────
-# Settings — comportamento do próprio mise
-# ──────────────────────────────────────────────────────────────────────────
-
-[settings]
-# Habilita backends/features experimentais (npm:, pipx:, cargo:, etc.).
-# Necessário pra muitos plugins fora do core. Mise sinaliza features
-# experimentais com este gate até promover a stable.
-experimental = true
-
-
-# ──────────────────────────────────────────────────────────────────────────
 # Settings — comportamento do mise (vem antes de [tools] por convenção)
 # ──────────────────────────────────────────────────────────────────────────
 
 [settings]
-# Habilita features experimentais: novos plugins/backends em beta, sintaxe
-# template recente, etc. Power-user friendly; padrão da maioria dos
-# repos mise públicos. Desabilitar se algo se comportar de forma
-# inesperada — fallback pro core estável.
+# Habilita backends/features experimentais (npm:, pipx:, cargo:, ubi:,
+# go-install:, etc.) e features em beta. Necessário pra plugins fora
+# do core sem precisar flag por comando. Padrão da maioria dos repos
+# mise públicos. Desabilitar se algo se comportar de forma inesperada
+# — fallback pro core estável.
 experimental = true
 
 
