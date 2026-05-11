@@ -1,0 +1,32 @@
+{{/*
+  ─────────────────────────────────────────────────────────────────────
+  dot_config/mise/config.toml.tmpl — user-level mise config
+  Materializa em ~/.config/mise/config.toml via `chezmoi apply`.
+
+  Distinto do mise.toml na raiz do repo (que declara tools pra dev no
+  PRÓPRIO repositório, ex.: chezmoi, pre-commit, gitleaks, shellcheck).
+  Este aqui é o config GLOBAL do user, com toolchains pra desenvolvimento
+  geral em qualquer projeto.
+
+  Mise resolve tools por escopo:
+    1. ./mise.toml ou ./.mise.toml do projeto (override local)
+    2. ~/.config/mise/config.toml (este aqui — global)
+
+  Tools são instaladas via hook `run_onchange_after_50-mise-install.sh.tmpl`
+  que detecta mudanças neste template e roda `mise install` automaticamente.
+
+  Ordem das declarações importa pra backends que dependem de outros:
+    - core (python/node/go) primeiro — base de muitos outros backends
+    - ubi/cargo/go-installs depois — podem precisar das linguagens core
+*/}}
+
+# ──────────────────────────────────────────────────────────────────────────
+# Tools — declarações ordenadas por dependência (core primeiro)
+# ──────────────────────────────────────────────────────────────────────────
+
+[tools]
+
+# ── Core languages (backend: core) ────────────────────────────────────────
+python = "3.13.11"
+node = "lts"
+go = "latest"
