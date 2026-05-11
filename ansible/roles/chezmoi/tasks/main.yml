@@ -5,15 +5,18 @@
 # Ordem das fases:
 #   1. Pré-check do chezmoi binary (vem do Brewfile)
 #   2. Chezmoi init (clone do source pra ~/.local/share/chezmoi/) — primeira vez
-#   3. Chezmoi apply (materializa dotfiles em $HOME) — sempre
+#   3. Chezmoi update (pull source + apply) — sempre
 #   4. Mise trust (autoriza o config materializado pelo apply)
 #   5. Mise install (instala tools declarados em ~/.config/mise/config.toml)
 #
 # Notas arquiteturais:
 #   - Apesar do bootstrap.sh já clonar o repo em ~/.local/share/dotfiles/,
 #     o chezmoi tem source dir próprio (~/.local/share/chezmoi/). Duplicação
-#     de espaço (~poucos MB) mas zero acoplamento — chezmoi atualiza source
-#     via `chezmoi update` quando user pedir.
+#     de espaço (~poucos MB) mas zero acoplamento.
+#   - Usamos `chezmoi update` (NÃO `chezmoi apply`) na fase 3 porque update
+#     faz `git pull` no source dir ANTES de aplicar. Sem o pull, mudanças
+#     commitadas no repo nunca chegariam ao chezmoi — o source do chezmoi
+#     ficaria preso na versão da primeira execução (`chezmoi init`).
 #   - Mise trust + install rodam aqui (não em hook chezmoi run_onchange)
 #     pra ter visibilidade no PLAY RECAP e stderr completo em caso de falha.
 # ────────────────────────────────────────────────────────────────────────────
@@ -48,19 +51,25 @@
   changed_when: true
 
 
-# ── 3. Chezmoi apply ──────────────────────────────────────────────────────
-# Materializa dotfiles em $HOME. Idempotente — sem changes se nada mudou.
-# --verbose pra ter output útil; sem mudanças, stdout é vazio.
+# ── 3. Chezmoi update ─────────────────────────────────────────────────────
+# `chezmoi update` faz `git pull` no source dir (~/.local/share/chezmoi/)
+# e depois aplica. Resolve o problema de source desatualizado: bootstrap.sh
+# atualiza ~/.local/share/dotfiles/ mas chezmoi tem source próprio. Sem
+# update, mudanças commitadas no repo só aparecem no chezmoi após manual
+# git pull no source dir dele.
+#
+# --verbose: imprime cada arquivo que mudou. stdout vazio = nada mudou.
+# Idempotente.
 
-- name: "Chezmoi — apply (materializar dotfiles em $HOME)"
-  ansible.builtin.command: "{{ chezmoi_binary }} apply --verbose"
-  register: chezmoi_apply_result
-  changed_when: chezmoi_apply_result.stdout | length > 0
+- name: "Chezmoi — update (pull source + materializar dotfiles em $HOME)"
+  ansible.builtin.command: "{{ chezmoi_binary }} update --verbose"
+  register: chezmoi_update_result
+  changed_when: chezmoi_update_result.stdout | length > 0
 
-- name: "Chezmoi — exibir output do apply (apenas se houve mudanças)"
+- name: "Chezmoi — exibir output do update (apenas se houve mudanças)"
   ansible.builtin.debug:
-    msg: "{{ chezmoi_apply_result.stdout_lines }}"
-  when: chezmoi_apply_result.stdout_lines | length > 0
+    msg: "{{ chezmoi_update_result.stdout_lines }}"
+  when: chezmoi_update_result.stdout_lines | length > 0
 
 
 # ── 4. Mise trust ─────────────────────────────────────────────────────────
