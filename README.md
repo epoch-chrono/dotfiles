@@ -141,6 +141,14 @@ chezmoi apply
 | [ShellCheck](https://www.shellcheck.net/) | Shell script linting |
 | [Conventional Commits](https://www.conventionalcommits.org/) | Commit message standard |
 
+## Documentation
+
+| Doc | Conteúdo |
+|---|---|
+| [docs/PLATFORMS.md](docs/PLATFORMS.md) | Plataformas suportadas, detecção, diferenças por OS |
+| [docs/SECRETS.md](docs/SECRETS.md) | Gerenciamento de secrets via 1Password CLI |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Estado atual, próximas fatias, plano Nix, TODOs |
+
 ## Commit convention
 
 ```
