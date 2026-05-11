@@ -24,7 +24,6 @@ bootstrap.sh
 .editorconfig
 docs/
 ansible/
-bin/
 
 
 # ── macOS-only configs — ignorados no Linux ───────────────────────────────
