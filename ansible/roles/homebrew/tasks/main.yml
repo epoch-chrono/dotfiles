@@ -23,10 +23,3 @@
   tags:
     - homebrew
     - packages
-
-- name: "Importar tasks de packages (Brewfile)"
-  ansible.builtin.import_tasks: packages.yml
-  when: ansible_os_family == "Darwin"
-  tags:
-    - homebrew
-    - packages

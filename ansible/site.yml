@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.11.0
+# Versão atual: 0.11.1
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -73,6 +73,11 @@
 #             precisam ser untaped manualmente no Mac antigo durante
 #             migração. Idempotência via parsing de "Installing"/"Tapping"
 #             no stdout do brew bundle.
+#   - 0.11.1: fix homebrew/main.yml — import_tasks de packages.yml estava
+#             duplicado (erro de str_replace no commit anterior). Resultado
+#             visível no output: brew bundle rodava 2 vezes por execução.
+#             Inofensivo (segunda vez vinha "Using everything"), mas
+#             confuso e desperdiça tempo. Removida a duplicata.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
