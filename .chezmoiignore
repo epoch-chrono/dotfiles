@@ -1,8 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────
 # .chezmoiignore — paths que o chezmoi NÃO deve materializar em $HOME
 # ──────────────────────────────────────────────────────────────────────────
-# Este é um template (Go template + chezmoi data). Linhas condicionais
-# usam {{ if ... }} ... {{ end }}. O resto é interpretado literal.
+# Este arquivo é processado pelo Go template engine ANTES do chezmoi
+# interpretar como ignore-list. Por isso, `#` aqui NÃO é comentário pro
+# parser de template — é caractere literal. Cuidado ao escrever
+# pseudo-código com sintaxe template entre `#`: vai disparar o parser.
+#
+# Linhas condicionais por OS/distro são escritas com blocos Go template
+# (if/else/end), conforme os blocos mais abaixo neste arquivo.
 #
 # Apenas paths sob a raiz do repo são considerados. Arquivos/dirs que NÃO
 # começam com `dot_`, `private_`, `executable_`, `run_*`, `.chezmoi*` são
