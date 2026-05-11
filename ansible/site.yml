@@ -126,6 +126,13 @@
 #                 apps da MAS via entrada \'mas "AppName", id: N\'.
 #                 brew bundle dump captura, brew bundle aplica.
 #             Total: 70 entradas (4 taps + 4 formulas-de-tap + 62 core).
+#   - 0.13.4: fix homebrew/Brewfile — remove duplicacao de mise/chezmoi/
+#             mas. Havia 2 secoes no Brewfile fazendo a mesma coisa
+#             (Gerenciadores de versao e dotfiles + Provisioning/version
+#             management). Mantida a primeira (logo apos os taps, lugar
+#             conceitualmente certo, com comentarios mais detalhados),
+#             removida a segunda. Issue causado por commits concorrentes
+#             do mesmo conteudo de sessoes diferentes.
 #   - 0.13.0: + mise, chezmoi e mas ao Brewfile numa nova categoria
 #             "Provisioning managers". Decisao arquitetural: instalar
 #             essas 3 tools via brew (mesmo que fiquem 1 minor atras do
