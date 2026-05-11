@@ -112,6 +112,20 @@
 #             cobre), screen (tmux), colordiff (delta via mise),
 #             reattach-to-user-namespace (desnecessario desde tmux 2.6),
 #             telnet (nc -zv cobre).
+#   - 0.13.0: + secao "Gerenciadores de versao e dotfiles" no Brewfile.
+#             Adiciona mise, chezmoi e mas como brew formulas. Decisao
+#             arquitetural: as 3 ferramentas que orquestram outras
+#             ferramentas ficam no brew (lifecycle unificado, sem roles
+#             dedicadas). Tradeoff: brew tende a 1 minor atras do
+#             upstream; aceitavel pra essa classe.
+#               - mise: substitui pyenv/nvm/rbenv/asdf. PATH precisa
+#                 vir antes do brew shellenv pra resolver primeiro.
+#               - chezmoi: dotfile manager declarativo (substitui stow).
+#                 1Password integration nativa.
+#               - mas: Mac App Store CLI. Permite Brewfile gerenciar
+#                 apps da MAS via entrada \'mas "AppName", id: N\'.
+#                 brew bundle dump captura, brew bundle aplica.
+#             Total: 70 entradas (4 taps + 4 formulas-de-tap + 62 core).
 #   - 0.13.0: + mise, chezmoi e mas ao Brewfile numa nova categoria
 #             "Provisioning managers". Decisao arquitetural: instalar
 #             essas 3 tools via brew (mesmo que fiquem 1 minor atras do

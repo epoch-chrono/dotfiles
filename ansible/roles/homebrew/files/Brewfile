@@ -60,6 +60,28 @@ tap "cloudquery/tap"
 tap "turbot/tap"
 
 
+# ── Gerenciadores de versão e dotfiles ────────────────────────────────────
+# Ferramentas que orquestram outras ferramentas. Ficam no brew (não no
+# mise auto-referencial) por simplicidade e lifecycle unificado:
+#   - Atualização: `brew upgrade <tool>` ou via Brewfile re-run.
+#   - Reprodutibilidade: parte do mesmo manifesto declarativo.
+#   - Tradeoff aceito: brew tende a ficar 1 minor atrás do upstream; pra
+#     ferramentas estáveis dessa categoria, irrelevante.
+
+# mise — runtime/tool version manager. Substitui asdf/nvm/pyenv/rbenv.
+# Path precisa vir antes do brew shellenv para "vencer" no resolve.
+brew "mise"
+
+# chezmoi — dotfile manager declarativo. Substitui stow/yadm/GNU stow.
+# Integração nativa com 1Password CLI, templates Go, run hooks, etc.
+brew "chezmoi"
+
+# mas — Mac App Store CLI. Permite gerenciar apps da Mac App Store via
+# Brewfile (entrada `mas "AppName", id: 1234567890`). brew bundle dump
+# captura apps instalados automaticamente, brew bundle aplica.
+brew "mas"
+
+
 # ── Brew pre-reqs: linguagens base ────────────────────────────────────────
 # Coexistem com mise. Mise gerencia versionamento para uso diário; brew
 # mantém versão "system" usada como dep por outras formulas. Mise deve
