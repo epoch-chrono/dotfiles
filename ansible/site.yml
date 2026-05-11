@@ -112,6 +112,23 @@
 #             cobre), screen (tmux), colordiff (delta via mise),
 #             reattach-to-user-namespace (desnecessario desde tmux 2.6),
 #             telnet (nc -zv cobre).
+#   - 0.13.0: + mise, chezmoi e mas ao Brewfile numa nova categoria
+#             "Provisioning managers". Decisao arquitetural: instalar
+#             essas 3 tools via brew (mesmo que fiquem 1 minor atras do
+#             upstream) simplifica o bootstrap — colapsa as roles
+#             dedicadas "mise" e "chezmoi-init" que estavam no roadmap.
+#             Lifecycle unificado:
+#               - mas no Brewfile: brew bundle suporta diretiva nativa
+#                 'mas "AppName", id: 1234567890', dump/cleanup capturam
+#                 apps Mac App Store automaticamente.
+#               - mise via brew: 1 minor de delay aceitavel pra ganho
+#                 de simplicidade. Coexiste com brew pre-reqs (vence no
+#                 PATH via shellenv).
+#               - chezmoi via brew: mesmo raciocinio. A pasta chezmoi/
+#                 do repo passa a ser gerenciada por ele.
+#             Resultado: 70 formulas no Brewfile total (3 novas).
+#             Proximo passo do roadmap eh role minima 'chezmoi-bootstrap'
+#             que apos brew bundle aplicar, roda chezmoi init + apply.
 #
 # Executar:
 #   cd ~/.local/share/dotfiles/ansible
