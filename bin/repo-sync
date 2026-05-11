@@ -82,10 +82,15 @@ end
 # ── Parsing helpers ──────────────────────────────────────────────────────
 
 # Normaliza um Brewfile em entries comparáveis: "tipo nome".
-# Filtra apenas linhas tap/brew/cask/mas e descarta options/version.
+# Filtra APENAS tap/brew/cask. MAS apps são intencionalmente ignorados:
+# eles são gerenciados em domínio separado (community.general.mas via
+# mas_apps_to_install em homebrew/defaults/main.yml) e checados pela
+# check_mas abaixo. Incluir 'mas' aqui causaria falso positivo: brew
+# bundle dump captura MAS apps instalados, mas nosso Brewfile não
+# declara MAS — o diff os mostraria como "instalados mas não declarados".
 function normalize_brewfile
-    sed -E 's/^(tap|brew|cask|mas)[[:space:]]+"([^"]+)".*/\1 \2/' \
-        | grep -E '^(tap|brew|cask|mas) ' \
+    sed -E 's/^(tap|brew|cask)[[:space:]]+"([^"]+)".*/\1 \2/' \
+        | grep -E '^(tap|brew|cask) ' \
         | sort -u
 end
 
