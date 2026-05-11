@@ -1,30 +1,23 @@
 ---
 # ────────────────────────────────────────────────────────────────────────────
-# roles/homebrew/tasks/packages.yml — aplicar Brewfile (taps + formulas)
+# roles/homebrew/tasks/packages.yml
 # ────────────────────────────────────────────────────────────────────────────
-# Estratégia:
-#   1. Pré-condição: /opt/homebrew/bin/brew existe (garantido por install.yml).
-#   2. Rodar `brew bundle --no-upgrade --file=<role>/files/Brewfile`.
-#      - --no-upgrade: não tenta atualizar formulas existentes. Brew bundle
-#        sem essa flag tenta `brew upgrade` em tudo a cada run, virando
-#        rolling update — ruim pra reprodutibilidade. Com a flag, só
-#        instala o que falta. Updates ficam manuais (`brew upgrade X`).
-#      - --file: path absoluto pro Brewfile no checkout do repo. Como
-#        rodamos com connection: local, role_path resolve no filesystem
-#        local — não precisa copiar o Brewfile pra outro lugar.
-#   3. Detectar mudança via parsing do stdout:
-#      - "Installing X"  → formula nova instalada
-#      - "Tapping X"     → tap novo adicionado
-#      - "Using X"       → formula já estava lá (ok, sem mudança)
-#
-# Notas:
-#   - become: false. brew bundle não precisa de root; quando uma formula
-#     individual precisa (ex: instalação de daemon), brew aciona sudo
-#     internamente (e NOPASSWD do bootstrap cobre).
-#   - failed_when usa rc — brew bundle retorna 0 em sucesso, !=0 em falha.
-#     Conservador, pois um único pacote pode falhar e o bundle inteiro
-#     ainda relatar erro útil no stderr.
+# Ordem das fases:
+#   1. Pré-check: /opt/homebrew/bin/brew existe (garantido por install.yml).
+#   2. mas-cli: garantir o binary instalado (pré-req das fases 3 e 5).
+#   3. MAS cleanup: remover apps Apple "lixo" (state: absent).
+#   4. Brew bundle: aplicar Brewfile (taps + formulas + casks).
+#      Importante: MAS apps NÃO estão mais no Brewfile — saíram pra cá
+#      porque brew bundle chama mas-cli em contexto SSH non-interactive
+#      e falha intermitentemente.
+#   5. MAS install: instalar apps MAS declarados (state: present) via
+#      community.general.mas. Failed_when permissivo: bootstrap segue
+#      mesmo se um app individual falhar (ex: Apple ID nunca clicou
+#      "Get" em algum app).
 # ────────────────────────────────────────────────────────────────────────────
+
+
+# ── 1. Pré-check ──────────────────────────────────────────────────────────
 
 - name: "Homebrew — confirmar que o binary existe antes de aplicar Brewfile"
   ansible.builtin.stat:
@@ -39,42 +32,42 @@
   when: not brew_binary_check.stat.exists
 
 
-# ── MAS cleanup ─────────────────────────────────────────────────────────
-# Remove apps Apple "lixo" auto-instalados antes do brew bundle aplicar a
-# lista de apps MAS declarados. Lista editável em defaults/main.yml.
-#
-# Pré-req: mas-cli (binary). Como `mas` está declarado no Brewfile mas
-# o bundle ainda não rodou neste play, garantimos ele explicitamente
-# antes do cleanup. `brew install mas` é idempotente (skip se já existe).
+# ── 2. mas-cli pre-flight ─────────────────────────────────────────────────
+# Pré-req do MAS cleanup (fase 3) e MAS install (fase 5). Idempotente —
+# `brew install mas` é no-op se já instalado.
 
 - name: "Homebrew — verificar se mas-cli está instalado"
   ansible.builtin.stat:
     path: /opt/homebrew/bin/mas
   register: mas_cli_check
 
-- name: "Homebrew — instalar mas-cli (pre-req do MAS cleanup)"
+- name: "Homebrew — instalar mas-cli (pre-req do MAS cleanup e install)"
   ansible.builtin.command: /opt/homebrew/bin/brew install mas
   when: not mas_cli_check.stat.exists
   changed_when: true
 
-- name: "MAS — listar apps instalados (pra cleanup)"
-  ansible.builtin.command: /opt/homebrew/bin/mas list
-  register: mas_installed_list
-  changed_when: false
 
-- name: "MAS — remover apps Apple default (Garageband, iMovie, Keynote, Numbers, Pages)"
-  ansible.builtin.command: "/opt/homebrew/bin/mas uninstall {{ item.id }}"
+# ── 3. MAS cleanup ────────────────────────────────────────────────────────
+# Remove apps Apple "lixo" auto-instalados antes do brew bundle aplicar.
+# Lista editável em defaults/main.yml.
+#
+# state: absent + become: true (uninstall requer root).
+# Idempotente: módulo verifica estado antes de agir; já-removido = no-op.
+
+- name: "MAS — remover apps Apple default (state: absent)"
+  community.general.mas:
+    id: "{{ item.id }}"
+    state: absent
   become: true
   loop: "{{ mas_apps_to_remove }}"
   loop_control:
     label: "{{ item.name }} (id: {{ item.id }})"
-  when: item.id in mas_installed_list.stdout
-  changed_when: true
 
 
-# ── Brew bundle apply ───────────────────────────────────────────────────
+# ── 4. Brew bundle apply ──────────────────────────────────────────────────
+# Aplica taps + formulas + casks. MAS apps NÃO estão no Brewfile.
 
-- name: "Homebrew — aplicar Brewfile (taps + formulas + casks + mas)"
+- name: "Homebrew — aplicar Brewfile (taps + formulas + casks)"
   ansible.builtin.command:
     cmd: >-
       /opt/homebrew/bin/brew bundle
@@ -88,3 +81,54 @@
 - name: "Homebrew — exibir resumo do brew bundle"
   ansible.builtin.debug:
     msg: "{{ brew_bundle_result.stdout_lines }}"
+
+
+# ── 5. MAS install ────────────────────────────────────────────────────────
+# Instala apps MAS declarados em mas_apps_to_install (defaults/main.yml).
+#
+# Resiliência:
+#   - failed_when: false → cada app é independente. Se um falha, os
+#     outros são tentados. Bootstrap não derruba.
+#   - Sumário no final lista quais OK e quais falharam, com motivo.
+#
+# Pré-req: Apple ID logada na MAS via GUI. Em macOS 12+ a Apple desativou
+# sign-in via CLI; usuário deve abrir App Store e logar antes do bootstrap.
+
+- name: "MAS — instalar apps declarados (state: present)"
+  community.general.mas:
+    id: "{{ item.id }}"
+    state: present
+  loop: "{{ mas_apps_to_install }}"
+  loop_control:
+    label: "{{ item.name }} (id: {{ item.id }})"
+  register: mas_install_result
+  failed_when: false
+
+- name: "MAS — sumário de instalação"
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.item.name }} ({{ item.item.id }}):
+      {{ 'OK' if not (item.failed | default(false)) else 'FAIL — ' + (item.msg | default('sem mensagem') | string) }}
+  loop: "{{ mas_install_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: "MAS — contar apps que falharam"
+  ansible.builtin.set_fact:
+    mas_failed_apps: >-
+      {{ mas_install_result.results
+         | selectattr('failed', 'defined')
+         | selectattr('failed')
+         | list }}
+
+- name: "MAS — avisar se houve falhas (não-bloqueante)"
+  ansible.builtin.debug:
+    msg: |
+      ⚠ {{ mas_failed_apps | length }} de {{ mas_apps_to_install | length }} apps MAS falharam.
+      Causas comuns:
+        - Apple ID nunca clicou "Get" no app via GUI da App Store.
+        - macOS 12+ desativou sign-in via CLI; precisa logar antes via GUI.
+      Pra resolver:
+        1. Abrir App Store, buscar cada app que falhou, clicar "Get".
+        2. Re-rodar bootstrap.
+  when: mas_failed_apps | length > 0

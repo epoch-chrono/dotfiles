@@ -3,32 +3,63 @@
 # roles/homebrew/defaults/main.yml — variáveis editáveis da role
 # ────────────────────────────────────────────────────────────────────────────
 
-# Lista de apps MAS (Mac App Store) a remover do sistema.
-#
+
+# ── MAS: apps a remover (Apple defaults) ──────────────────────────────────
 # Contexto: macOS auto-instala apps Apple comprados (mesmo grátis: iWork,
 # iLife) quando o usuário loga na Mac App Store com uma Apple ID que já
 # adquiriu esses apps em outra máquina. Aparecem em `mas list` mas o
 # usuário nunca pediu pra ter eles aqui.
 #
-# Este cleanup roda ANTES do `brew bundle` aplicar as entradas `mas` do
-# Brewfile, garantindo:
-#   - Estado final declarativo: só os apps MAS que o Brewfile declara.
-#   - Sem reinstall futuro: brew bundle não toca em apps fora do Brewfile.
+# Tasks correspondentes em packages.yml usam `community.general.mas` com
+# `state: absent` + `become: true` (uninstall requer root).
 #
-# Idempotência: skip natural via `when: item.id in mas_installed.stdout`.
-# Apps já removidos não aparecem em `mas list`, task fica como `skipped`.
+# Idempotência: state-based — se app não está instalado, no-op.
 #
 # Como adicionar/remover items desta lista:
 #   - Adicionar: pegar ID via `mas list` ou `mas search '<name>'`,
 #     adicionar ao YAML abaixo com nome descritivo.
 #   - Remover (manter o app instalado): apagar a entrada correspondente.
-#     No próximo run, o cleanup vai ignorar.
-#
-# Requer: NOPASSWD sudo configurado pelo bootstrap (mas uninstall precisa
-# root pra remover de /Applications/).
 mas_apps_to_remove:
   - { id: "682658836", name: "GarageBand" }
   - { id: "408981434", name: "iMovie" }
   - { id: "409183694", name: "Keynote" }
   - { id: "409203825", name: "Numbers" }
   - { id: "409201541", name: "Pages" }
+
+
+# ── MAS: apps a instalar ──────────────────────────────────────────────────
+# Apps da Mac App Store que devem estar instalados. Lista move-se pra cá
+# (em vez de no Brewfile) porque `brew bundle` chama mas-cli em contexto
+# SSH non-interactive durante o bootstrap e mas-cli falha de forma
+# intermitente nesse contexto. O módulo Ansible nativo lida melhor com
+# erros e dá feedback estruturado.
+#
+# Tasks correspondentes em packages.yml usam `community.general.mas` com
+# `state: present` + `failed_when: false` (não bloqueia bootstrap se um
+# app falhar individualmente).
+#
+# Pré-requisito: Apple ID já logada na Mac App Store via GUI. Validar com
+# `mas account`. Em macOS 12+ o sign-in via CLI foi desativado pela Apple.
+#
+# Como obter IDs: `mas list` na máquina onde os apps já estão instalados,
+# ou `mas search '<name>'` pra descobrir.
+mas_apps_to_install:
+  # Safari extensions
+  - { id: "1569813296", name: "1Password for Safari" }
+  - { id: "1615363610", name: "AllURLsOpener" }
+  - { id: "1606897889", name: "Baking Soda" }
+  - { id: "1601151613", name: "Consent-O-Matic" }
+  - { id: "1472937623", name: "Copytables" }
+  - { id: "1462114288", name: "Grammarly for Safari" }
+  - { id: "1592917505", name: "Noir" }
+  - { id: "6751649326", name: "PrintFriendly" }
+  - { id: "6605923430", name: "Return Dislikes" }
+  - { id: "6444322545", name: "SingleFile" }
+  - { id: "1440006971", name: "Tabs Saver for Safari" }
+  - { id: "6738342400", name: "Tampermonkey" }
+  - { id: "1585702412", name: "Vidimote" }
+  - { id: "1591303229", name: "Vinegar" }
+  - { id: "1520333300", name: "Wappalyzer" }
+  # Standalone apps
+  - { id: "688211836",  name: "EasyRes" }
+  - { id: "1447778660", name: "iStatistica Pro" }

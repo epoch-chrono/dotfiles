@@ -331,30 +331,16 @@ cask "utm"                     # VMs (QEMU frontend)
 
 
 # ===========================================================================
-# MAS — Apps da Mac App Store (gerenciados via `mas` CLI)
+# MAS — Apps da Mac App Store
 # ===========================================================================
-# brew bundle aciona mas-cli automaticamente. Cada entrada: nome + id MAS.
-# IDs obtidos via `mas list` no Mac antigo.
-
-
-# ── Safari extensions ─────────────────────────────────────────────────────
-mas "1Password for Safari",      id: 1569813296
-mas "AllURLsOpener",             id: 1615363610
-mas "Baking Soda",               id: 1606897889
-mas "Consent-O-Matic",           id: 1601151613
-mas "Copytables",                id: 1472937623
-mas "Grammarly for Safari",      id: 1462114288
-mas "Noir",                      id: 1592917505
-mas "PrintFriendly",             id: 6751649326
-mas "Return Dislikes",           id: 6605923430
-mas "SingleFile",                id: 6444322545
-mas "Tabs Saver for Safari",     id: 1440006971
-mas "Tampermonkey",              id: 6738342400
-mas "Vidimote",                  id: 1585702412
-mas "Vinegar",                   id: 1591303229
-mas "Wappalyzer",                id: 1520333300
-
-
-# ── Mac apps (não-extensões) ──────────────────────────────────────────────
-mas "EasyRes",                   id:  688211836
-mas "iStatistica Pro",           id: 1447778660
+# Apps MAS NÃO ficam aqui no Brewfile — gerenciados via task Ansible com
+# o módulo `community.general.mas`. Razões:
+#   1. `brew bundle` chama mas-cli em contexto SSH non-interactive durante
+#      o bootstrap, e mas-cli falha intermitentemente nesse contexto.
+#   2. O módulo Ansible suporta state: present/absent/latest, loop nativo
+#      por lista de IDs, check_mode, become: true explícito pra uninstall.
+#   3. Falhas individuais não derrubam o bootstrap inteiro (failed_when
+#      permissivo na task).
+#
+# Lista declarada em: ansible/roles/homebrew/defaults/main.yml
+# Task de install: ansible/roles/homebrew/tasks/packages.yml
