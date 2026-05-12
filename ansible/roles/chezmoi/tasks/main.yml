@@ -92,11 +92,40 @@
 # Instala tools declaradas em ~/.config/mise/config.toml. Idempotente —
 # mise pula tools já instaladas na versão certa. Pode demorar na primeira
 # run (compila Python, baixa Node, Go).
+#
+# GITHUB_TOKEN: propagamos a env var do shell que invocou bootstrap.sh
+# (se setada) pra que mise autentique contra GitHub API durante downloads.
+# Sem token: rate limit anônimo de 60 req/h por IP — quebra install de
+# ~90 tools no meio. Com token: 5000+ req/h.
+#
+# Mise resolution order (ver dot_config/mise/config.toml.tmpl):
+#   1. MISE_GITHUB_TOKEN env (não usamos — reservado pra override forçado)
+#   2. GITHUB_API_TOKEN env (não setamos aqui)
+#   3. GITHUB_TOKEN env (ESTA fase, propagada do shell pai)
+#   4. credential_command (op item get) — fallback pra runs sem env var
+#
+# Cold start (primeira execução, sem 1P signed in):
+#   export GITHUB_TOKEN=ghp_xxx antes de rodar bootstrap.sh
+#   mise pega via env, ignora credential_command (que falharia mesmo)
+#
+# Runs subsequentes (1P signed in, sem GITHUB_TOKEN env):
+#   GITHUB_TOKEN não setado → mise cai pro credential_command → op puxa
+#   token do 1P sem prompt (Touch ID OK no contexto autenticado)
+#
+# Se ambos falharem: mise tenta unauthenticated → 403 em vários tools.
 
 - name: "Mise — instalar tools declarados"
   ansible.builtin.command: "{{ mise_binary }} install"
+  environment:
+    GITHUB_TOKEN: "{{ lookup('env', 'GITHUB_TOKEN', default='') }}"
   register: mise_install_result
   changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — exibir status do token usado"
+  ansible.builtin.debug:
+    msg: |
+      GITHUB_TOKEN no env do shell: {{ 'sim (propagado pra mise via env)' if lookup('env', 'GITHUB_TOKEN', default='') else 'não — mise tentará credential_command (op)' }}
   when: mise_binary_check.stat.exists
 
 - name: "Mise — exibir output do install"

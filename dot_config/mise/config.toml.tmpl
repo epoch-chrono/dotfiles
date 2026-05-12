@@ -25,36 +25,45 @@ experimental = true
 
 
 [settings.github]
-# Resolve GitHub PAT via 1Password CLI quando mise precisar fazer chamadas
-# à GitHub API (listar releases, baixar artifacts de backends github:, ubi:,
-# aqua:, etc.). Sem token: requests anônimas batem rate limit (60/h por IP)
-# e quebram `mise install` no meio. Com token autenticado: 5000+ req/h.
+# Resolve GitHub PAT via 1Password CLI quando mise precisa autenticar contra
+# a GitHub API. Sem token: rate limit anônimo de 60 req/h (quebra install).
+# Com token: 5000+ req/h.
 #
-# Pré-requisitos no Mac:
-#   1. 1Password CLI (`op`) instalado e autenticado.
-#      Geralmente: app 1Password.app aberto e signed-in, com integração
-#      CLI habilitada em Settings → Developer → "Integrate with 1Password CLI".
-#      Touch ID resolve o prompt automaticamente.
-#   2. Item armazenado no vault dedicado:
-#        vault: 00-personal/01-chezmoi (UUID niarnlvrteesurkbocpta7it4e)
-#        item:  api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap
-#               (UUID 42o44tr7k2rxvmb2a44ee24xcy)
-#        field: credential (concealed → precisa --reveal)
+# Ordem de resolução (oficial do mise — primeiro que retornar valor vence):
+#   1. MISE_GITHUB_TOKEN env var
+#   2. GITHUB_API_TOKEN env var
+#   3. GITHUB_TOKEN env var      ← cobre cold start (ver ROADMAP.md)
+#   4. credential_command         ← esta config (fallback steady state)
+#   5. github_tokens.toml
+#   6. gh CLI hosts.yml
+#   7. git credential fill
 #
-# Como funciona em runtime:
-#   - Mise executa o comando abaixo com mise shims removidos do PATH
-#     (evita recursão se op ou qualquer dep vier via mise).
-#   - Captura stdout, usa como Bearer token nas chamadas à GitHub API.
-#   - Token cached per host per session — chamadas subsequentes na mesma
-#     sessão não disparam `op` de novo.
-#   - Se `op` falhar (não autenticado, item removido, etc.), mise reverte
-#     pra unauthenticated. Não quebra; só fica sujeito a rate limit baixo.
+# Esta config (credential_command) é o approach STEADY STATE — funciona
+# depois que o user fez o setup pós-bootstrap descrito em ROADMAP.md
+# (1Password.app signed-in + Settings → Developer → "Integrate with
+# 1Password CLI" habilitado).
 #
-# Segurança:
-#   - Token nunca toca disco. Vive só em memória da sessão.
-#   - UUIDs do 1P em repo público revelam metadata (existe um vault X e
-#     item Y), mas são opacos: sem Master Password + Touch ID, não dão
-#     acesso a nada.
+# Em COLD START (Mac novo, primeira execução do bootstrap), 1P.app não
+# está signed-in ainda e este comando vai falhar silenciosamente. Por
+# isso a Ansible role propaga GITHUB_TOKEN do shell pai pra mise via
+# env var (prioridade 3) — cobre essa lacuna. Ver:
+#   ansible/roles/chezmoi/tasks/main.yml (task "Mise — instalar tools")
+#   docs/ROADMAP.md (seção "Auth GitHub PAT — duas fases")
+#
+# Item esperado no 1P:
+#   vault: 00-personal/01-chezmoi (UUID niarnlvrteesurkbocpta7it4e)
+#   item:  api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap
+#          (UUID 42o44tr7k2rxvmb2a44ee24xcy)
+#   field: credential (concealed — precisa --reveal)
+#
+# Segurança: token nunca toca disco. Mise executa o comando com shims
+# removidos do PATH (evita recursão se op vier via mise). Resultado
+# cached per host per session.
+#
+# UUIDs hardcoded (em vez de nomes): nomes do vault e item têm `/`
+# que quebra parsing de secret references (op://VAULT/ITEM/FIELD).
+# UUIDs são opacos — em repo público, revelam metadata mas não dão
+# acesso a nada sem Master Password + Touch ID.
 credential_command = "op item get '42o44tr7k2rxvmb2a44ee24xcy' --vault 'niarnlvrteesurkbocpta7it4e' --fields credential --reveal"
 
 
