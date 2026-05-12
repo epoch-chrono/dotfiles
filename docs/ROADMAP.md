@@ -380,6 +380,60 @@ Itens isolados que não cabem nas fatias acima.
   no shell interativo pra ganhar `mise hook-env` features (env vars
   por projeto, hooks `cd`, etc.).
 
+- **Duplicação `chezmoi` brew vs mise**: chezmoi está no Brewfile
+  (`/opt/homebrew/bin/chezmoi`) E no `mise.toml` do repo
+  (`~/.local/share/mise/installs/chezmoi/...`). Roles hardcodam o path
+  do brew binary, então sem conflito imediato — mas duas fontes da verdade
+  pra mesma ferramenta. **Decisão pendente** após avaliar uso real:
+
+  **Análise de duplicações brew vs mise (após v0.26.0):**
+  Comparação automática: dos 78 brews + 96 tools no mise registry direto,
+  apenas **`chezmoi`** aparece em ambos. Nenhum outro duplicado significativo.
+
+  **Recomendação**: manter chezmoi no brew (necessário pra bootstrap antes
+  do mise existir) e **remover do mise**. Comentar no mise config como
+  "gerenciado via brew — não duplicar pra evitar PATH conflict". Upgrade
+  manual via `brew upgrade chezmoi` quando necessário.
+
+- **Brew "latest" vs mise reporta outdated**: brews sem versão pinada
+  (ex.: `brew "fd"`) instalam a versão atual do **brew-core**, que tem
+  delay de dias/semanas vs upstream (releases brew-core são revisadas
+  por maintainers antes de merge). Se mesma tool estiver no mise via
+  backend `aqua:`/`ubi:`/`go:`, mise pega direto do upstream — pode
+  reportar "versão mais nova disponível" que o brew.
+
+  **Não é conflito**: como NÃO há duplicação significativa (só chezmoi —
+  resolver acima), cada tool tem fonte única. Mise reportar "outdated"
+  pra tools do brew é só **informativo** — ele compara seu próprio
+  registry com o que ele acha instalado, sem distinguir gerenciador.
+
+  Pra silenciar warnings de mise sobre tools brew-managed: nada a fazer,
+  são WARN não ERROR. Pra atualizar brews ativamente: o playbook já
+  roda `brew bundle` (sem `--no-upgrade`) em cada bootstrap, mantendo
+  formulas atualizadas. Casks self-updating cobertos pela task
+  `brew upgrade --cask --greedy` (que já é UNIÃO de
+  `--greedy-auto-updates` + `--greedy-latest`).
+
+- **fnox como alternativa ao op-creds**: jdx (autor do mise) lançou
+  https://github.com/jdx/fnox — manager de secrets unificado.
+  Suporta múltiplos backends (1Password, AWS Secrets Manager, age, etc.)
+  com sintaxe declarativa similar ao mise. Avaliar como substituto/
+  complemento ao `op-creds` skill pessoal:
+
+  **Pros potenciais:**
+  - Sintaxe declarativa idiomática ao ecossistema mise/jdx
+  - Cache local opcional (offline workflow)
+  - Multi-backend (não amarra a 1Password)
+  - Integração nativa com mise (env vars resolvidos no hook-env)
+
+  **Cons / cautelas:**
+  - Projeto novo, API pode mudar
+  - Vendor lock-in moderado (ecossistema jdx)
+  - op-creds skill atual já está estável e testado
+
+  fnox está adicionado ao mise config (`fnox = "1.23.1"`) — comparar
+  workflow com op-creds e decidir.
+
 - **`mise install` herda `./mise.toml` do CWD**: task Ansible roda no
   diretório `~/.local/share/dotfiles/` (CWD do `connection: local`),
   então mise vê tanto o config user-level (`~/.config/mise/config.toml`)
@@ -387,12 +441,6 @@ Itens isolados que não cabem nas fatias acima.
   são instalados (7 tools). Pode ser feature (user ganha dev tools do
   repo de graça) ou bug (comportamento implícito). Decidir: `chdir`
   explícito na task ou documentar como intencional.
-
-- **Duplicação `chezmoi` brew vs mise**: chezmoi está no Brewfile
-  (`/opt/homebrew/bin/chezmoi`) E no `mise.toml` do repo
-  (`~/.local/share/mise/installs/chezmoi/...`). Roles hardcodam o path
-  do brew binary, então sem conflito imediato — mas duas fontes da verdade
-  pra mesma ferramenta. Decidir qual é primária e remover a outra.
 
 - **`mise WARN gpg not found`**: mise procura `gpg` pra verificar
   attestations de releases. `gnupg` está no Brewfile (e instala como

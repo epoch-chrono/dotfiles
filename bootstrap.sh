@@ -43,6 +43,12 @@
 #            - OP_SERVICE_ACCOUNT_TOKEN: token de service account 1Password
 #              que o Ansible usa pra resolver o PAT via 'op item get'
 #          Se ambas setadas: GITHUB_API_TOKEN ganha (sem chamada extra).
+#        - Auth GitLab: OPCIONAL. Mesmo problema de rate limit que GitHub
+#          (5/min anônimo por IP no gitlab.com). Se algum tool no mise
+#          usa backend "gitlab:owner/repo" (raro mas existe), setar
+#          GITLAB_TOKEN ou MISE_GITLAB_TOKEN no env eleva o rate limit.
+#          Para GitLab self-managed/Enterprise: MISE_GITLAB_ENTERPRISE_TOKEN.
+#          Não bloqueia bootstrap se ausente — mise faz requests anônimos.
 #        - Opt-out completo: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
 #          (pula 7 e 8; também desativa exigência de TARGET_HOSTNAME e
 #          das duas vars de auth)

@@ -110,8 +110,18 @@
 # `brew upgrade --cask --greedy` força reinstall desses casks pra puxar
 # o latest metadata + versão.
 #
+# Sobre as 3 flags --greedy* do brew upgrade --cask:
+#   --greedy                — outdated casks com auto_updates=true OU
+#                             version=:latest (UNIÃO de ambos — mais amplo)
+#   --greedy-auto-updates   — apenas casks com auto_updates=true
+#   --greedy-latest         — apenas casks com version=:latest
+# Usamos --greedy que é a UNIÃO: cobre ambos os casos sem precisar
+# segunda passada. Equivalente a "--greedy-auto-updates --greedy-latest"
+# juntos.
+#
 # brew bundle issue #897 (aberto) pede pra suportar `--greedy` direto
-# no Brewfile; até lá, fazemos via task separada.
+# no Brewfile via sintaxe per-cask (`cask "x", greedy: true`) ou DSL
+# global; até lá, fazemos via task separada.
 #
 # failed_when: false — alguns casks podem dar erro de checksum ou
 # changed-arch e isso não deve quebrar o bootstrap inteiro.
