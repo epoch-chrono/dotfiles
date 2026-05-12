@@ -16,84 +16,73 @@ Versão do playbook: `0.17.0`.
 - Idempotente: re-rodar não muda nada se nada divergiu
 
 
-### Auth GitHub PAT — duas fases por causa do cold start
+### Auth GitHub PAT
 
-Mise instala ~90 tools baixando releases do GitHub. Sem token: 60 req/h por
-IP, bate rate limit e quebra o install no meio. Com token: 5000+ req/h.
+Mise instala ~90 tools baixando releases do GitHub. Sem token: 60 req/h
+por IP, bate rate limit e quebra o install no meio. Com token: 5000+ req/h.
 
-A estratégia tem duas fases porque na primeira execução **nada está
-instalado ainda** — 1Password.app e `op` CLI vêm do Brewfile, e mesmo
-depois de instalados, 1P.app não está signed-in até o user fazer manual.
+#### Como o token entra no playbook
 
-#### Fase 1: Cold start (Mac novo, primeira execução)
+`bootstrap.sh` exige `GITHUB_API_TOKEN` env var (similar a `TARGET_HOSTNAME`)
+em todo run. Sem ela, o script falha antes de fazer side effects.
 
-Pré-passos manuais antes de rodar `bootstrap.sh`:
+A role `chezmoi` propaga essa env var via `environment:` na task
+`Mise — instalar tools` (como `GITHUB_API_TOKEN` E `GITHUB_TOKEN` —
+mise resolve por uma das duas).
 
-1. **Gerar um PAT temporário no GitHub** (one-time, manual)
-   - Acessar https://github.com/settings/tokens/new
-   - Description: `mise-bootstrap-temp`
-   - Sem scopes (rate limit elevado é suficiente; sem acesso a repos privados)
-   - Expiration: 7 dias (ou outro curto — vai ser substituído logo)
-   - Copiar o `ghp_...`
-
-2. **Exportar no shell antes do bootstrap:**
-
-   ```fish
-   set -gx GITHUB_TOKEN ghp_xxxxxxxxxxxxxxxxxx
-   ~/.local/share/dotfiles/bootstrap.sh
-   ```
-
-   Ou em bash/zsh: `export GITHUB_TOKEN=ghp_...`
-
-3. **`mise install` puxa via env** (prioridade > `credential_command`).
-   Cobre todos os ~90 tools sem 403s.
-
-#### Fase 2: Pós-bootstrap (one-time setup)
-
-Depois do bootstrap terminar com sucesso, 1Password.app está instalado mas
-não logged-in. Fazer manualmente:
-
-1. **Abrir 1Password.app** e fazer signin
-2. **Settings → Developer** → habilitar "Integrate with 1Password CLI"
-3. **Validar**: `op whoami` deve retornar a conta sem prompt
-4. **Mover o PAT pro 1P:**
-
-   ```fish
-   op item create --category 'API Credential' \
-     --vault '00-personal/01-chezmoi' \
-     --title 'api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap' \
-     credential="$GITHUB_TOKEN"
-
-   # Limpar do env (token agora vive no 1P)
-   set -e GITHUB_TOKEN
-   ```
-
-5. **Revogar o PAT temporário no GitHub** (caso tenha gerado um separado)
-   e gerar outro de longa duração armazenado direto no 1P.
-
-#### Fase 3: Execuções subsequentes (steady state)
-
-- `GITHUB_TOKEN` env var não setada → mise cai pro `credential_command`
-- `op item get` puxa token do 1P (auth via 1P.app + Touch ID, sem prompt
-  porque app está running e cached)
-- Mise cacheia token per-host per-session
-- Bootstrap roda end-to-end sem interação
-
-#### Item esperado no 1P
-
-```
-vault: 00-personal/01-chezmoi  (UUID: niarnlvrteesurkbocpta7it4e)
-item:  api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap
-       (UUID: 42o44tr7k2rxvmb2a44ee24xcy)
-field: credential (concealed → exigindo --reveal)
+```fish
+# Em todo run (cold start, steady state, recovery):
+set -gx GITHUB_API_TOKEN ghp_xxxxxxxxxxxx
+set -gx TARGET_HOSTNAME macv2-0x564a520a
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
 ```
 
-#### Fallback
+Em SSH remoto:
 
-Se nem env var nem `op` funcionarem, mise tenta unauthenticated. Não
-quebra catastroficamente — provavelmente atinge rate limit no meio de
-`mise install` e termina com vários tools faltando. Re-rodar bootstrap
-depois de exportar `GITHUB_TOKEN` resolve.
+```sh
+ssh mac-novo "bash -c \"
+  export TARGET_HOSTNAME=macv2-0x564a520a;
+  export GITHUB_API_TOKEN=ghp_xxxxxxxxxxxx;
+  git -C \$HOME/.local/share/dotfiles pull origin main &&
+  \$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)\""
+```
+
+#### Como gerar o PAT
+
+1. https://github.com/settings/tokens/new
+2. Description: `mise-github-api`
+3. Expiration: 1 ano (rotacionar anualmente)
+4. **Scopes: TUDO desmarcado** — least privilege. Pra repos públicos
+   (todos os tools que mise instala), autenticação anônima-com-identidade
+   já dá rate limit elevado. Zero blast radius extra.
+5. Generate token → copia `ghp_...`
+
+#### Onde guardar (one-time, pós-primeiro-bootstrap)
+
+```fish
+# 1P.app já instalado pela role homebrew. Faça signin manual + habilite
+# CLI integration em Settings → Developer.
+op item create --category 'API Credential' \
+  --vault '00-personal/01-chezmoi' \
+  --title 'api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap' \
+  credential="$GITHUB_API_TOKEN"
+
+# Daqui em diante, pra próximos runs:
+set -gx GITHUB_API_TOKEN (op item get '42o44tr7k2rxvmb2a44ee24xcy' \
+  --vault 'niarnlvrteesurkbocpta7it4e' \
+  --fields credential --reveal)
+```
+
+#### Fallback (defensive)
+
+`dot_config/mise/config.toml.tmpl` configura `[settings.github]
+credential_command = "op item get ..."`. Cobre runs **interativos
+fora do bootstrap** — quando o user roda `mise install nova-tool`
+em terminal e esqueceu de exportar `GITHUB_API_TOKEN`, mise tenta
+`op` antes de cair pra anônimo.
+
+Bootstrap NÃO depende desse fallback — depende da env var, validada
+no início.
 
 
 ### Roles implementadas

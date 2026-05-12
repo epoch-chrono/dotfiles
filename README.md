@@ -15,8 +15,39 @@ and `python3`. macOS ships with both.
 # 1. Define the hostname this machine should have (required)
 export TARGET_HOSTNAME=mymachine
 
-# 2. Run the bootstrap
+# 2. Provide a GitHub PAT (required — see below for how to create)
+export GITHUB_API_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+
+# 3. Run the bootstrap
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+```
+
+### GitHub PAT — how and why
+
+The playbook installs ~90 tools via `mise install`, most of which are
+downloaded from GitHub Releases. Anonymous requests are limited to **60
+req/h per IP**, which breaks the install mid-way. Authenticated requests
+get **5,000+ req/h**.
+
+**Create a PAT with zero scopes** (rate limit elevation only — no extra
+blast radius):
+
+1. Open https://github.com/settings/tokens/new
+2. **Description**: `mise-github-api`
+3. **Expiration**: 1 year (rotate annually)
+4. **Scopes**: leave **everything unchecked**. Public repos don't need
+   any scope; authentication alone elevates rate limits.
+5. Click "Generate token", copy `ghp_...`
+
+After the first bootstrap, store the PAT in 1Password (the playbook is
+already configured to read it via `op` as a fallback for interactive
+runs — see `dot_config/mise/config.toml.tmpl`):
+
+```sh
+op item create --category 'API Credential' \
+  --vault '00-personal/01-chezmoi' \
+  --title 'api-key/github.com/<email>/chezmoi-bootstrap' \
+  credential="$GITHUB_API_TOKEN"
 ```
 
 ### If `curl` is not available
@@ -31,13 +62,14 @@ sudo dnf install -y curl                                # Fedora/RHEL
 
 # Option B — use wget (often pre-installed on Ubuntu)
 export TARGET_HOSTNAME=mymachine
+export GITHUB_API_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 bash -c "$(wget -qO- https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
 
 # Option C — clone via git and run locally
 sudo apt-get install -y git
 git clone https://github.com/epoch-chrono/dotfiles.git ~/.local/share/dotfiles
 cd ~/.local/share/dotfiles
-TARGET_HOSTNAME=mymachine bash bootstrap.sh
+TARGET_HOSTNAME=mymachine GITHUB_API_TOKEN=ghp_xxx bash bootstrap.sh
 ```
 
 ### Environment variables
@@ -45,7 +77,9 @@ TARGET_HOSTNAME=mymachine bash bootstrap.sh
 | Variable | Required | Purpose |
 |---|---|---|
 | `TARGET_HOSTNAME` | yes (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | Hostname applied by the playbook (1-63 chars, `[a-zA-Z0-9-]+`) |
-| `BOOTSTRAP_RUN_PLAYBOOK` | no | Set to `0` to skip the Ansible playbook (only run prereqs steps) |
+| `GITHUB_API_TOKEN` | yes (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | PAT for GitHub API rate limit elevation during `mise install`. No scopes needed. See section above. |
+| `BOOTSTRAP_RUN_PLAYBOOK` | no | Set to `0` to skip the Ansible playbook (only run prereqs steps). Disables `TARGET_HOSTNAME` and `GITHUB_API_TOKEN` requirements. |
+| `BOOTSTRAP_NOPASSWD_SUDO` | no | Set to `0` to skip configuring NOPASSWD sudo |
 
 ## What's inside
 

@@ -25,30 +25,30 @@ experimental = true
 
 
 [settings.github]
-# Resolve GitHub PAT via 1Password CLI quando mise precisa autenticar contra
-# a GitHub API. Sem token: rate limit anônimo de 60 req/h (quebra install).
-# Com token: 5000+ req/h.
+# Resolve GitHub PAT pra autenticação contra GitHub API (mise baixa
+# releases de github:, ubi:, aqua:, etc.). Sem auth: 60 req/h por IP
+# anônimo → quebra install de ~90 tools. Com auth: 5000+ req/h.
 #
-# Ordem de resolução (oficial do mise — primeiro que retornar valor vence):
-#   1. MISE_GITHUB_TOKEN env var
-#   2. GITHUB_API_TOKEN env var
-#   3. GITHUB_TOKEN env var      ← cobre cold start (ver ROADMAP.md)
-#   4. credential_command         ← esta config (fallback steady state)
+# Estratégia neste setup:
+#
+#   PRIMARY: env var GITHUB_API_TOKEN, exigida pelo bootstrap.sh em todo
+#   run (similar a TARGET_HOSTNAME). Propagada pela Ansible role chezmoi
+#   pro env do mise install. Funciona em cold start (Mac novo, 1P.app
+#   ainda não instalado) e steady state.
+#
+#   FALLBACK: credential_command abaixo. Útil em runs interativos fora
+#   do bootstrap (ex.: `mise install ferramenta-nova` em terminal). Se
+#   GITHUB_API_TOKEN não estiver setada e 1P.app estiver signed-in, mise
+#   puxa do vault sem prompt. Se nem env nem op funcionarem: anônimo.
+#
+# Ordem oficial de resolução do mise (primeira que retorna valor vence):
+#   1. MISE_GITHUB_TOKEN env
+#   2. GITHUB_API_TOKEN env       ← PRIMARY desta config
+#   3. GITHUB_TOKEN env
+#   4. credential_command          ← FALLBACK desta config
 #   5. github_tokens.toml
 #   6. gh CLI hosts.yml
 #   7. git credential fill
-#
-# Esta config (credential_command) é o approach STEADY STATE — funciona
-# depois que o user fez o setup pós-bootstrap descrito em ROADMAP.md
-# (1Password.app signed-in + Settings → Developer → "Integrate with
-# 1Password CLI" habilitado).
-#
-# Em COLD START (Mac novo, primeira execução do bootstrap), 1P.app não
-# está signed-in ainda e este comando vai falhar silenciosamente. Por
-# isso a Ansible role propaga GITHUB_TOKEN do shell pai pra mise via
-# env var (prioridade 3) — cobre essa lacuna. Ver:
-#   ansible/roles/chezmoi/tasks/main.yml (task "Mise — instalar tools")
-#   docs/ROADMAP.md (seção "Auth GitHub PAT — duas fases")
 #
 # Item esperado no 1P:
 #   vault: 00-personal/01-chezmoi (UUID niarnlvrteesurkbocpta7it4e)
@@ -56,14 +56,14 @@ experimental = true
 #          (UUID 42o44tr7k2rxvmb2a44ee24xcy)
 #   field: credential (concealed — precisa --reveal)
 #
-# Segurança: token nunca toca disco. Mise executa o comando com shims
-# removidos do PATH (evita recursão se op vier via mise). Resultado
-# cached per host per session.
-#
-# UUIDs hardcoded (em vez de nomes): nomes do vault e item têm `/`
-# que quebra parsing de secret references (op://VAULT/ITEM/FIELD).
-# UUIDs são opacos — em repo público, revelam metadata mas não dão
-# acesso a nada sem Master Password + Touch ID.
+# Segurança:
+#   - Token nunca toca disco. Mise executa o comando com shims removidos
+#     do PATH (evita recursão se op vier via mise). Resultado cached per
+#     host per session.
+#   - UUIDs hardcoded em vez de nomes: nomes do vault e item têm `/` que
+#     quebraria parsing de secret references (op://VAULT/ITEM/FIELD).
+#     UUIDs são opacos — em repo público, revelam metadata mas não dão
+#     acesso a nada sem Master Password + Touch ID.
 credential_command = "op item get '42o44tr7k2rxvmb2a44ee24xcy' --vault 'niarnlvrteesurkbocpta7it4e' --fields credential --reveal"
 
 
