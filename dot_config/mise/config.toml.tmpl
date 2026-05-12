@@ -38,7 +38,7 @@ experimental = true
 
 # ── Core languages / runtimes ─────────────────────────────────────────────
 # Pinned por reprodutibilidade — versões impactantes que mudam APIs.
-python = "3.13.11"
+python = ["3.13.11", { version = "2.7.18", env = { PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA = "openssl@1.1" } }]
 node = "lts"
 java = "lts"
 go = "1.26.3"
