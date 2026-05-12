@@ -18,6 +18,45 @@
 # fora do core sem precisar flag por comando.
 experimental = true
 
+# Lockfile: mise.lock versionado no repo. Permite pin de versões mesmo
+# usando "latest" / "lts" no config — instala SEMPRE a mesma versão exata
+# até que tu rode `mise upgrade` deliberadamente. Reprodutibilidade entre
+# máquinas. Gerar/atualizar com: `touch ~/.config/mise/mise.lock && mise install`.
+lockfile = true
+
+# Quais plataformas o lockfile cobre. Default cobre todas as comuns
+# (linux x64/arm64, macos x64/arm64, windows). Como por enquanto só é
+# Mac M2, restringir mantém o lockfile menor e mise install mais rápido.
+# Adicionar plataformas quando precisar (ex.: ["macos-arm64", "linux-x64"]
+# se setar Linux dev container).
+lockfile_platforms = ["macos-arm64"]
+
+# Cache encrypted (session-scoped) do env+PATH calculados em disco.
+# Acelera muito invocações aninhadas (mise x -- mise env, etc.) e shells
+# interativos com `mise activate`. Invalidado automaticamente quando
+# config muda, tool muda, mise versão muda, ou TTL expira.
+env_cache = true
+
+# Supply-chain hygiene: ignora releases publicadas há menos de 7 dias —
+# janela pra comunidade detectar releases comprometidos (ataques tipo
+# event-stream/eslint-scope/colors.js). Afeta APENAS resolução de
+# "latest"/fuzzy versions. Versões pinadas explicitamente (ex.: "3.13.11")
+# NÃO são filtradas. Suporta sufixos: 7d, 30d, 6m, 1y, ou data ISO.
+minimum_release_age = "7d"
+
+# Não auto-instala tool quando comando não é encontrado. Default true tenta
+# instalar a versão "missing" se já tem outra versão da mesma tool. Pra um
+# setup declarativo (tudo no config.toml), desativar reduz "magic" no shell:
+# se um tool não existe, ele não vai aparecer "do nada" — força a entrada
+# explícita no config.
+not_found_auto_install = false
+
+# Privacy: opt-out da telemetria anônima do mise-versions.jdx.dev.
+# Default true envia (tool@version + OS/arch + IP hashed). Sem impacto
+# funcional desabilitar — apenas a tabela de popularidade no host pública
+# não conta nossos installs.
+use_versions_host_track = false
+
 # Quando descomentado, mise respeita arquivos idiomáticos por projeto
 # (.nvmrc, .node-version, package.json devEngines.runtime). Desabilitado
 # por enquanto pra não conflitar com setup atual; ativar quando quiser.
@@ -32,6 +71,18 @@ experimental = true
 # Estratégia atual: GITHUB_API_TOKEN passado via env var ao bootstrap
 # (ver bootstrap.sh + ansible/roles/chezmoi/tasks/main.yml). Mise pega
 # direto via env, sem precisar resolver de fonte externa.
+
+
+[settings.python]
+# Integração com projetos uv: ao entrar em diretório com uv.lock, mise
+# cria .venv (se não existe) e source na sessão automaticamente. Sem
+# isso, precisa source manual ou prefixar tudo com `uv run`.
+# Opções:
+#   false           — desabilita integração (default)
+#   "source"        — só source se .venv existe
+#   "create|source" — cria se necessário + source (recomendado)
+#   true            — legacy: create|source + export UV_PYTHON
+uv_venv_auto = "create|source"
 
 
 [tools]
