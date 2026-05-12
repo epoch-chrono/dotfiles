@@ -15,22 +15,31 @@ and `python3`. macOS ships with both.
 # 1. Define the hostname this machine should have (required)
 export TARGET_HOSTNAME=mymachine
 
-# 2. Provide a GitHub PAT (required — see below for how to create)
+# 2. Provide GitHub auth — pick ONE of:
+
+#    Option A — PAT direct (simpler for first-time/cold-start):
 export GITHUB_API_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+
+#    Option B — 1Password Service Account (resolves PAT in runtime):
+export OP_SERVICE_ACCOUNT_TOKEN=ops_xxxxxxxxxxxxxxxxxxxx
 
 # 3. Run the bootstrap
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
 ```
 
-### GitHub PAT — how and why
+### GitHub auth — how and why
 
 The playbook installs ~90 tools via `mise install`, most of which are
 downloaded from GitHub Releases. Anonymous requests are limited to **60
 req/h per IP**, which breaks the install mid-way. Authenticated requests
 get **5,000+ req/h**.
 
-**Create a PAT with zero scopes** (rate limit elevation only — no extra
-blast radius):
+Two ways to provide the token:
+
+#### Option A: `GITHUB_API_TOKEN` (direct PAT)
+
+Simpler. Best for cold start (Mac novo, 1Password.app not installed yet)
+or one-shot runs.
 
 1. Open https://github.com/settings/tokens/new
 2. **Description**: `mise-github-api`
@@ -38,10 +47,19 @@ blast radius):
 4. **Scopes**: leave **everything unchecked**. Public repos don't need
    any scope; authentication alone elevates rate limits.
 5. Click "Generate token", copy `ghp_...`
+6. `export GITHUB_API_TOKEN=ghp_...`
 
-After the first bootstrap, store the PAT in 1Password (the playbook is
-already configured to read it via `op` as a fallback for interactive
-runs — see `dot_config/mise/config.toml.tmpl`):
+#### Option B: `OP_SERVICE_ACCOUNT_TOKEN` (1Password Service Account)
+
+More elegant for recurring automation. Service account doesn't require
+1Password.app to be installed/signed-in (works in SSH non-interactive,
+CI, etc.). The Ansible playbook calls `op item get` with this token to
+resolve the PAT from the vault at runtime.
+
+Requires the PAT to be stored in 1Password first (one-time setup) and
+a service account with `read_items` permission on that vault.
+
+**1. Store the PAT in 1Password** (one-time, from an authenticated machine):
 
 ```sh
 op item create --category 'API Credential' \
@@ -49,6 +67,25 @@ op item create --category 'API Credential' \
   --title 'api-key/github.com/<email>/chezmoi-bootstrap' \
   credential="$GITHUB_API_TOKEN"
 ```
+
+**2. Create a service account** at https://my.1password.com → Developer
+→ Service Accounts:
+
+- Name: `chezmoi-bootstrap` (or similar)
+- Vault access: `00-personal/01-chezmoi` → `read_items` only
+- Expiration: 90 days (or to taste)
+- Copy the token (`ops_...`)
+
+**3. Export and run:**
+
+```sh
+export OP_SERVICE_ACCOUNT_TOKEN=ops_xxxxxxxxxxxxxxxxxxxx
+export TARGET_HOSTNAME=mymachine
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+```
+
+If both `GITHUB_API_TOKEN` and `OP_SERVICE_ACCOUNT_TOKEN` are set,
+`GITHUB_API_TOKEN` wins (avoids the extra `op` call).
 
 ### If `curl` is not available
 
@@ -77,8 +114,9 @@ TARGET_HOSTNAME=mymachine GITHUB_API_TOKEN=ghp_xxx bash bootstrap.sh
 | Variable | Required | Purpose |
 |---|---|---|
 | `TARGET_HOSTNAME` | yes (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | Hostname applied by the playbook (1-63 chars, `[a-zA-Z0-9-]+`) |
-| `GITHUB_API_TOKEN` | yes (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | PAT for GitHub API rate limit elevation during `mise install`. No scopes needed. See section above. |
-| `BOOTSTRAP_RUN_PLAYBOOK` | no | Set to `0` to skip the Ansible playbook (only run prereqs steps). Disables `TARGET_HOSTNAME` and `GITHUB_API_TOKEN` requirements. |
+| `GITHUB_API_TOKEN` | one of these required (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | PAT for GitHub API rate limit elevation during `mise install`. No scopes needed. |
+| `OP_SERVICE_ACCOUNT_TOKEN` | one of these required (unless `BOOTSTRAP_RUN_PLAYBOOK=0`) | 1Password Service Account token. Ansible uses it to resolve the PAT via `op item get` at runtime. Alternative to `GITHUB_API_TOKEN`. |
+| `BOOTSTRAP_RUN_PLAYBOOK` | no | Set to `0` to skip the Ansible playbook (only run prereqs). Disables all required vars. |
 | `BOOTSTRAP_NOPASSWD_SUDO` | no | Set to `0` to skip configuring NOPASSWD sudo |
 
 ## What's inside

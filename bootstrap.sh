@@ -35,13 +35,17 @@
 #        - TARGET_HOSTNAME é OBRIGATÓRIA quando o playbook roda. Validada antes
 #          de qualquer side effect — script aborta com mensagem clara se
 #          ausente.
-#        - GITHUB_API_TOKEN é OBRIGATÓRIA quando o playbook roda. Propagada
-#          via env do shell pra ansible-playbook (local connection herda env);
-#          a task `Mise — install` exporta como GITHUB_TOKEN no env do mise.
-#          Validada antes de qualquer side effect.
+#        - Auth GitHub: pelo menos UMA das duas é OBRIGATÓRIA quando o
+#          playbook roda. Propagadas via env do shell pra ansible-playbook
+#          (local connection herda env). A task `Mise — install` exporta
+#          o resultado como GITHUB_API_TOKEN + GITHUB_TOKEN no env do mise.
+#            - GITHUB_API_TOKEN: PAT direto (forma simples)
+#            - OP_SERVICE_ACCOUNT_TOKEN: token de service account 1Password
+#              que o Ansible usa pra resolver o PAT via 'op item get'
+#          Se ambas setadas: GITHUB_API_TOKEN ganha (sem chamada extra).
 #        - Opt-out completo: BOOTSTRAP_RUN_PLAYBOOK=0 bash bootstrap.sh
 #          (pula 7 e 8; também desativa exigência de TARGET_HOSTNAME e
-#          GITHUB_API_TOKEN)
+#          das duas vars de auth)
 #
 # Etapas futuras (a cargo do playbook Ansible, NÃO do bootstrap):
 #   - chezmoi init --apply (deploy de dotfiles via role do playbook)
@@ -55,9 +59,14 @@
 #            openSUSE, SLES (zypper)
 #            NixOS (modo verificação — prereqs em configuration.nix)
 #
-# Uso:
+# Uso (forma 1 — PAT direto):
 #   export TARGET_HOSTNAME=mymac
-#   export GITHUB_API_TOKEN=ghp_...   # ver instruções abaixo se não tiver
+#   export GITHUB_API_TOKEN=ghp_...   # https://github.com/settings/tokens/new
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
+#
+# Uso (forma 2 — 1Password Service Account):
+#   export TARGET_HOSTNAME=mymac
+#   export OP_SERVICE_ACCOUNT_TOKEN=ops_...
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
 #
 # Modo paranoico (inspeciona antes de executar):
@@ -106,54 +115,70 @@ EOF
     exit 1
 fi
 
-# GITHUB_API_TOKEN: obrigatória sempre que o playbook for executado. Mise
-# baixa ~90 tools de GitHub releases durante install — sem autenticação,
-# 60 req/h por IP bate rate limit no meio do install. Com PAT autenticado,
-# 5000+ req/h. Sem essa var setada, o playbook abortaria depois de tempo
-# significativo gasto em etapas anteriores, por isso falhamos cedo aqui.
+# GITHUB_API_TOKEN ou OP_SERVICE_ACCOUNT_TOKEN: pelo menos UM dos dois é
+# obrigatório sempre que o playbook for executado. Mise baixa ~90 tools
+# de GitHub releases durante install — sem autenticação, 60 req/h por IP
+# bate rate limit no meio. Com PAT autenticado, 5000+ req/h.
 #
-# Como gerar o PAT:
-#   https://github.com/settings/tokens/new
-#     Description: mise-github-api  (ou nome similar)
-#     Expiration: 1 ano
-#     Scopes: NENHUM marcado (autenticação anonimous-but-identified é
-#             suficiente pro rate limit elevado em repos públicos —
-#             zero blast radius adicional)
+# Duas formas de prover o token:
 #
-# Como armazenar (depois do primeiro bootstrap):
-#   op item create --category 'API Credential' \\
-#     --vault '00-personal/01-chezmoi' \\
-#     --title 'api-key/github.com/<email>/chezmoi-bootstrap' \\
-#     credential="\$GITHUB_API_TOKEN"
-if [ "${BOOTSTRAP_RUN_PLAYBOOK:-1}" = "1" ] && [ -z "${GITHUB_API_TOKEN:-}" ]; then
+#   Forma 1 — GITHUB_API_TOKEN direto:
+#     User exporta o PAT plain text. Bootstrap propaga pro Ansible →
+#     Mise. Mais simples; útil pra primeira execução em Mac novo onde
+#     1Password.app ainda não está instalado/signed-in.
+#
+#   Forma 2 — OP_SERVICE_ACCOUNT_TOKEN (1Password Service Account):
+#     User exporta token de service account. Ansible chama op (instalado
+#     pela role homebrew) com esse token pra resolver o PAT do vault em
+#     runtime. Não depende de 1P.app desktop. Útil pra automation
+#     recorrente — service account tem scope mínimo e pode ser rotado
+#     independente do PAT do GitHub.
+#
+# Se ambos setados: prefere GITHUB_API_TOKEN (mais direto, sem chamada
+# extra ao op). Como gerar/armazenar cada um: ver README.md e docs/ROADMAP.md.
+if [ "${BOOTSTRAP_RUN_PLAYBOOK:-1}" = "1" ] \
+    && [ -z "${GITHUB_API_TOKEN:-}" ] \
+    && [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
     cat >&2 <<EOF
-ERRO: a variável de ambiente GITHUB_API_TOKEN é obrigatória.
+ERRO: pelo menos UMA destas variáveis de ambiente é obrigatória:
+  - GITHUB_API_TOKEN (PAT direto)
+  - OP_SERVICE_ACCOUNT_TOKEN (1Password Service Account, resolve PAT via op)
 
-Usada pelo mise (durante a role 'chezmoi') pra autenticar contra a
-GitHub API ao baixar ~90 tools de releases. Sem ela:
+Uma delas é usada pelo mise (durante a role 'chezmoi') pra autenticar
+contra a GitHub API ao baixar ~90 tools de releases. Sem auth:
   - 60 req/h anônimo por IP
   - mise install falha por 403 no meio do download
   - bootstrap precisa ser reiniciado
 
-Como obter um PAT:
+═══ Forma 1: GITHUB_API_TOKEN direto ═══
+
+  Mais simples — copia/cola o PAT como env var.
+
   1. Acesse https://github.com/settings/tokens/new
   2. Description: mise-github-api
   3. Expiration: 1 ano
-  4. Scopes: deixe TUDO desmarcado (least privilege, não precisa de
-     nenhum scope pra repos públicos — só pra rate limit elevado)
+  4. Scopes: TUDO desmarcado (least privilege — não precisa de scope
+     pra repos públicos, só pra rate limit elevado)
   5. [Generate token] → copia ghp_...
+  6. export GITHUB_API_TOKEN=ghp_xxx
 
-Como passar:
+═══ Forma 2: OP_SERVICE_ACCOUNT_TOKEN ═══
+
+  Token de service account do 1Password com permissão read_items no
+  vault que armazena o PAT. Ansible resolve via 'op item get'.
+
+  1. https://my.1password.com → Developer → Service Accounts
+  2. [Create Service Account]
+  3. Name: chezmoi-bootstrap
+  4. Vault access: 00-personal/01-chezmoi → read_items
+  5. Expiration: 90 dias (ou ao gosto)
+  6. Copia o token (ops_...)
+  7. export OP_SERVICE_ACCOUNT_TOKEN=ops_xxx
+
+═══ Como passar (qualquer forma) ═══
+
   GITHUB_API_TOKEN=ghp_xxx TARGET_HOSTNAME=minhamaquina \\
     bash -c "\$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/main/bootstrap.sh)"
-
-Ou exportando antes:
-  export GITHUB_API_TOKEN=ghp_xxx
-  export TARGET_HOSTNAME=minhamaquina
-  bash -c "\$(curl -fsSL ...)"
-
-Após o primeiro bootstrap, armazene o token no 1Password e exporte
-via op em runs subsequentes (ver docs/ROADMAP.md).
 
 Se quiser pular o playbook (apenas refrescar prereqs):
   BOOTSTRAP_RUN_PLAYBOOK=0 bash -c "\$(curl -fsSL ...)"
@@ -196,8 +221,14 @@ echo "#  Repo:    ${REPO_URL}"
 echo "#  Destino: ${REPO_DIR}"
 echo "#  Venv:    ${VENV_DIR}"
 echo "#  Hostname desejado: ${TARGET_HOSTNAME:-(playbook desabilitado)}"
-# Mostra só se o token foi passado, NUNCA expõe o valor (vai pro log).
-echo "#  GITHUB_API_TOKEN:  ${GITHUB_API_TOKEN:+presente}${GITHUB_API_TOKEN:-(playbook desabilitado)}"
+# Mostra qual forma de auth foi escolhida sem expor o valor de nenhum.
+if [ -n "${GITHUB_API_TOKEN:-}" ]; then
+    echo "#  Auth GitHub:       GITHUB_API_TOKEN (PAT direto)"
+elif [ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
+    echo "#  Auth GitHub:       OP_SERVICE_ACCOUNT_TOKEN (via 1Password Service Account)"
+else
+    echo "#  Auth GitHub:       (playbook desabilitado)"
+fi
 echo "#============================================================#"
 
 # ── Funções de pré-requisitos por SO ────────────────────────────────────────

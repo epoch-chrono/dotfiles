@@ -16,3 +16,19 @@ chezmoi_binary: "/opt/homebrew/bin/chezmoi"
 
 # Path do binary do mise — mesma justificativa do chezmoi_binary acima.
 mise_binary: "/opt/homebrew/bin/mise"
+
+# Path do binary do op (1Password CLI). Usado pela task "Mise — resolver
+# GITHUB_API_TOKEN via op" quando OP_SERVICE_ACCOUNT_TOKEN é a forma de
+# auth escolhida pelo bootstrap.
+op_binary: "/opt/homebrew/bin/op"
+
+# UUIDs do item 1P que armazena o PAT do GitHub pro mise install. Usados
+# pela task "Mise — resolver GITHUB_API_TOKEN via op". UUIDs em vez de
+# nomes porque:
+#   - Estáveis (não mudam ao renomear vault/item)
+#   - O vault tem '/' no nome ('00-personal/01-chezmoi') que quebra
+#     parsing de paths em alguns flags do op
+#   - Em repo público, UUIDs revelam só metadata (existe vault X, item Y)
+#     mas em si não dão acesso sem auth completa
+github_pat_vault_uuid: "niarnlvrteesurkbocpta7it4e"  # vault: 00-personal/01-chezmoi
+github_pat_item_uuid: "42o44tr7k2rxvmb2a44ee24xcy"   # item: api-key/github.com/.../chezmoi-bootstrap

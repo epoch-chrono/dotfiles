@@ -93,34 +93,68 @@
 # mise pula tools já instaladas na versão certa. Pode demorar na primeira
 # run (compila Python, baixa Node, Go).
 #
-# GITHUB_API_TOKEN: bootstrap.sh exige a env var antes de chamar o playbook
-# (similar a TARGET_HOSTNAME). Aqui propagamos do shell pai pro env do
-# mise como GITHUB_TOKEN. Sem token: rate limit anônimo de 60 req/h por IP
-# quebra install de ~90 tools no meio. Com token: 5000+ req/h.
+# Auth GitHub: bootstrap.sh exige GITHUB_API_TOKEN OU OP_SERVICE_ACCOUNT_TOKEN.
+# Resolvemos qual usar aqui:
 #
-# Mise resolution order (ver dot_config/mise/config.toml.tmpl):
-#   1. MISE_GITHUB_TOKEN env (não usamos — reservado pra override)
-#   2. GITHUB_API_TOKEN env  ← propagamos esta diretamente
-#   3. GITHUB_TOKEN env      ← também propagamos (mise aceita ambas)
-#   4. credential_command    ← fallback opcional (op item get)
-#
-# A propagação simultânea de GITHUB_API_TOKEN e GITHUB_TOKEN é defensiva:
-# garante que mise pegue por uma das duas, sem depender da ordem específica
-# de resolução da versão do mise instalada. Custo zero (mesmo valor).
+#   - Se GITHUB_API_TOKEN setada: usa direto (sem chamada extra).
+#   - Se só OP_SERVICE_ACCOUNT_TOKEN: chama 'op item get' pra puxar PAT
+#     do 1Password. Op CLI vem do Brewfile (já instalado pela role
+#     anterior). Service account não requer 1P.app signed-in.
+#   - Se nenhuma: bootstrap.sh já abortou; nunca chegaríamos aqui.
+
+- name: "Mise — resolver GITHUB_API_TOKEN via op (se OP_SERVICE_ACCOUNT_TOKEN setado e GITHUB_API_TOKEN ausente)"
+  ansible.builtin.command:
+    cmd: >-
+      {{ op_binary | default('/opt/homebrew/bin/op') }}
+      item get '{{ github_pat_item_uuid }}'
+      --vault '{{ github_pat_vault_uuid }}'
+      --fields credential --reveal
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  register: github_pat_from_op
+  changed_when: false
+  no_log: true
+  when:
+    - mise_binary_check.stat.exists
+    - lookup('env', 'GITHUB_API_TOKEN', default='') | length == 0
+    - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN', default='') | length > 0
+
+- name: "Mise — exibir qual fonte de auth GitHub está em uso"
+  ansible.builtin.debug:
+    msg: >-
+      {% if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0 %}
+      Fonte: GITHUB_API_TOKEN env (PAT direto, propagado via Ansible)
+      {% elif lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN', default='') | length > 0 %}
+      Fonte: OP_SERVICE_ACCOUNT_TOKEN env → op item get → PAT resolvido em runtime
+      {% else %}
+      AVISO: nenhuma fonte de auth GitHub encontrada — mise install ficará anônimo (rate limit 60 req/h)
+      {% endif %}
+  when: mise_binary_check.stat.exists
 
 - name: "Mise — instalar tools declarados"
   ansible.builtin.command: "{{ mise_binary }} install"
   environment:
-    GITHUB_API_TOKEN: "{{ lookup('env', 'GITHUB_API_TOKEN', default='') }}"
-    GITHUB_TOKEN: "{{ lookup('env', 'GITHUB_API_TOKEN', default='') }}"
+    # Propaga ambas as env vars do mise pra mesmo valor (defensive — mise
+    # resolve por ordem MISE_GITHUB_TOKEN > GITHUB_API_TOKEN > GITHUB_TOKEN).
+    # Valor: env GITHUB_API_TOKEN se setado, senão resultado do op item get.
+    GITHUB_API_TOKEN: >-
+      {{ lookup('env', 'GITHUB_API_TOKEN', default='')
+         if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
+         else (github_pat_from_op.stdout | default('')) }}
+    GITHUB_TOKEN: >-
+      {{ lookup('env', 'GITHUB_API_TOKEN', default='')
+         if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
+         else (github_pat_from_op.stdout | default('')) }}
   register: mise_install_result
   changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""
   when: mise_binary_check.stat.exists
 
-- name: "Mise — exibir status do token usado"
+- name: "Mise — exibir output do install"
   ansible.builtin.debug:
     msg: |
-      GITHUB_API_TOKEN no env do shell: {{ 'sim (propagado pra mise via env)' if lookup('env', 'GITHUB_API_TOKEN', default='') else 'NÃO — mise tentará credential_command (op) ou ficará anônimo (rate limit)' }}
+      {{ 'Output:' if (mise_install_result.stdout or mise_install_result.stderr) else 'Tudo já em sync — nenhum tool novo.' }}
+      stdout: {{ mise_install_result.stdout | default('(vazio)') }}
+      stderr: {{ mise_install_result.stderr | default('(vazio)') }}
   when: mise_binary_check.stat.exists
 
 - name: "Mise — exibir output do install"
