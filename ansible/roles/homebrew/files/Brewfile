@@ -48,11 +48,15 @@
 # anos mas o binary é C clássico, raramente muda. Sem alternativa mise.
 tap "hudochenkov/sshpass"
 
-# Granted — AWS access tooling. Migrado pro mise (gerenciado em
-# dot_config/mise/config.toml.tmpl). Tap fwdcloudsec/granted REMOVIDO
-# do Brewfile. Histórico: o tap existia porque o plugin asdf-granted
-# antigo falhava ao baixar releases.commonfate.io; hoje o mise resolve
-# direto via `mise install granted`.
+# Granted — AWS access tooling. VOLTOU pro Brewfile depois de testar
+# `mise install granted`: o backend aqua (fwdcloudsec/granted no aqua
+# registry) só publica binários pra linux/windows, sem darwin/arm64.
+# Erro observado: `aqua:fwdcloudsec/granted@latest: unsupported env:
+# darwin/arm64 (supported: ["linux", "windows"])`. O tap oficial do
+# Common Fate (fwdcloudsec/granted) tem release pra macOS ARM64, então
+# é a única forma viável atualmente. Em config.toml.tmpl, granted está
+# comentado pra evitar conflito.
+tap "fwdcloudsec/granted"
 
 # Cloudquery — cloud asset discovery / inventory.
 tap "cloudquery/tap"
@@ -109,6 +113,15 @@ brew "rust"
 # mas é antigo. Brew make é mais novo e necessário para muitos Makefiles
 # modernos que assumem GNU make >= 4.x.
 brew "make"
+
+# Autotools — gerador de scripts de configure (configure.ac → configure).
+# Necessário pra tools que mise compila do source via autogen.sh (vimos
+# erro: "./autogen.sh: line 18: aclocal: command not found"). aclocal vem
+# de automake; m4 + autoconf são deps; libtool é comum em projetos que
+# usam libraries compartilhadas.
+brew "autoconf"
+brew "automake"
+brew "libtool"
 
 # ImageMagick. Conjunto enorme de deps nativas (libpng, libjpeg, libtiff,
 # libwebp, libheic, libavif, ghostscript, etc). Brew gerencia tudo
@@ -203,6 +216,7 @@ brew "magic-wormhole"     # transferência de arquivos peer-to-peer
 brew "ponysay"            # fortune-cookie estilo, fun
 brew "summarize"          # text summarization (https://summarize.sh)
 brew "sysbench"           # benchmark sistema
+brew "the_silver_searcher" # ag — grep recursivo rápido (asdf plugin é problemático)
 brew "timewarrior"        # time tracking CLI
 brew "tree"               # tree view de diretórios
 brew "watch"              # rodar comando periodicamente
@@ -225,9 +239,11 @@ brew "libpq"              # cliente PostgreSQL (psql, pg_dump, pg_restore)
 # Não há alternativa via mise; binário antigo mas estável.
 brew "sshpass"
 
-# Granted — migrado pro mise (config.toml.tmpl). Ver comentário do tap
-# acima pra contexto histórico. Remover este bloco quando confirmar
-# que `mise install granted` funciona sem regressões.
+# Granted — voltou pro brew porque aqua/mise não suporta darwin/arm64.
+# Ver comentário do tap fwdcloudsec/granted acima pra contexto completo.
+# gdeploy fica de fora por padrão — adicionar se ainda usado:
+# brew "fwdcloudsec/granted/gdeploy"
+brew "fwdcloudsec/granted/granted"
 
 # Cloudquery CLI.
 brew "cloudquery/tap/cloudquery"

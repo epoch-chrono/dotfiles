@@ -165,14 +165,17 @@ yq = "latest"
 zellij = "latest"
 zoxide = "latest"
 
-# ── Backend tooling -------────────────────────────────────────────────────
+# ── Backend tooling (asdf plugins explícitos) ─────────────────────────────
+# Tools que não têm entrada no mise registry direto e precisam do plugin
+# asdf especificado. Mise resolve via shim asdf compatibility. Cada linha
+# referencia o repo do plugin (owner/repo no GitHub).
 "asdf:ryodocx/kube-credential-cache" = "latest"
 "asdf:davidecavestro/asdf-osqueryi" = "latest"
 "asdf:junminahn/asdf-semtag" = "latest"
 "asdf:mathew-fleisch/asdf-semver" = "latest"
 "asdf:ivanvc/asdf-wrk" = "latest"
-# "asdf:yysushi/asdf-ag" = "latest"
-# "asdf:brentjanderson/asdf-semgrep" = "latest"
+# "asdf:yysushi/asdf-ag" = "latest"        # asdf plugin problemático; ag vem do brew (the_silver_searcher)
+# "asdf:brentjanderson/asdf-semgrep" = "latest"  # mantido comentado pra investigação futura
 
 ### On-demand tools — descomentar quando precisar
 
