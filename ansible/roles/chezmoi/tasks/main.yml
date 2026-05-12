@@ -58,11 +58,24 @@
 # update, mudanças commitadas no repo só aparecem no chezmoi após manual
 # git pull no source dir dele.
 #
-# --verbose: imprime cada arquivo que mudou. stdout vazio = nada mudou.
-# Idempotente.
+# Flags:
+#   --verbose: imprime cada arquivo que mudou. stdout vazio = nada mudou.
+#   --no-tty:  não tenta abrir /dev/tty. Em SSH non-interactive (rodando
+#              o bootstrap remoto via ssh "comando"), não há TTY e a
+#              tentativa quebra com "could not open a new TTY: open
+#              /dev/tty: device not configured".
+#   --force:   sobrescreve arquivos no destino mesmo que tenham sido
+#              modificados desde o último apply do chezmoi. Necessário
+#              porque (a) o user pode rm-rf manualmente arquivos
+#              gerenciados em algum cleanup e (b) chezmoi rastreia hash
+#              do que materializou — sem --force ele bloqueia esperando
+#              decisão interativa "overwrite? skip? merge?".
+#
+# Combinação --no-tty --force = idempotente e seguro pra automation.
+# Idempotente: sem mudanças, stdout vazio.
 
 - name: "Chezmoi — update (pull source + materializar dotfiles em $HOME)"
-  ansible.builtin.command: "{{ chezmoi_binary }} update --verbose"
+  ansible.builtin.command: "{{ chezmoi_binary }} update --verbose --no-tty --force"
   register: chezmoi_update_result
   changed_when: chezmoi_update_result.stdout | length > 0
 
