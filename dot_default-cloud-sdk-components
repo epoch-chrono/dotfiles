@@ -1,0 +1,12 @@
+# Componentes do gcloud-sdk auto-instalados após `mise install gcloud`.
+# Plugins internos do próprio gcloud — não há alternativa via backend mise.
+#
+# Materializado em $HOME pelo chezmoi ANTES da task `mise install` da role
+# chezmoi rodar, garantindo que o plugin asdf-gcloud encontre esse arquivo
+# durante o install do gcloud.
+#
+# Para ver o que cada componente faz: `gcloud components list`.
+
+gke-gcloud-auth-plugin
+beta
+alpha

@@ -158,6 +158,15 @@
       {{ lookup('env', 'GITHUB_API_TOKEN', default='')
          if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
          else (github_pat_from_op.stdout | default('')) }}
+    # GitLab tokens (opcionais): se o user setou no env do bootstrap,
+    # propagamos pro mise install. Mise resolve pela ordem oficial:
+    # MISE_GITLAB_ENTERPRISE_TOKEN > MISE_GITLAB_TOKEN > GITLAB_TOKEN.
+    # Útil pra tools com release-pattern via "gitlab:owner/repo" e pra
+    # elevar rate limit ao instalar tools hospedados em GitLab. Se
+    # ausentes, mise faz requests anônimos (rate limit baixo).
+    MISE_GITLAB_TOKEN: "{{ lookup('env', 'MISE_GITLAB_TOKEN', default='') }}"
+    GITLAB_TOKEN: "{{ lookup('env', 'GITLAB_TOKEN', default='') }}"
+    MISE_GITLAB_ENTERPRISE_TOKEN: "{{ lookup('env', 'MISE_GITLAB_ENTERPRISE_TOKEN', default='') }}"
   register: mise_install_result
   changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""
   when: mise_binary_check.stat.exists

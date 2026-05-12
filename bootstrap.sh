@@ -229,6 +229,12 @@ elif [ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
 else
     echo "#  Auth GitHub:       (playbook desabilitado)"
 fi
+# GitLab é opcional — só mostra se setado.
+if [ -n "${MISE_GITLAB_TOKEN:-}" ]; then
+    echo "#  Auth GitLab:       MISE_GITLAB_TOKEN (PAT)"
+elif [ -n "${GITLAB_TOKEN:-}" ]; then
+    echo "#  Auth GitLab:       GITLAB_TOKEN (PAT)"
+fi
 echo "#============================================================#"
 
 # ── Funções de pré-requisitos por SO ────────────────────────────────────────

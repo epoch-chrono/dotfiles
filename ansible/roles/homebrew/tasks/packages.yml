@@ -72,21 +72,65 @@
 
 # ── 4. Brew bundle apply ──────────────────────────────────────────────────
 # Aplica taps + formulas + casks. MAS apps NÃO estão no Brewfile.
+#
+# Removido --no-upgrade nesta versão: agora cada run do bootstrap mantém
+# as formulas atualizadas. Trade-off: bootstrap pode demorar um pouco
+# mais quando há upgrades pendentes; ganho: tools não ficam outdated
+# entre runs. Mise antes reclamava de versões mais novas porque brew
+# instalava na 1ª run e nunca mais atualizava.
+#
+# Casks com auto_updates=true (ex.: VSCode, Chrome) ainda são pulados
+# por brew bundle — esses são cobertos pela task `brew upgrade --cask
+# --greedy` abaixo.
 
 - name: "Homebrew — aplicar Brewfile (taps + formulas + casks)"
   ansible.builtin.command:
     cmd: >-
       /opt/homebrew/bin/brew bundle
-      --no-upgrade
       --file={{ role_path }}/files/Brewfile
   register: brew_bundle_result
   changed_when: >-
     'Installing ' in brew_bundle_result.stdout
     or 'Tapping ' in brew_bundle_result.stdout
+    or 'Upgrading ' in brew_bundle_result.stdout
 
 - name: "Homebrew — exibir resumo do brew bundle"
   ansible.builtin.debug:
     msg: "{{ brew_bundle_result.stdout_lines }}"
+
+
+# ── 4b. Brew upgrade --cask --greedy ──────────────────────────────────────
+# Brew bundle ignora upgrade de casks que têm `auto_updates true` (apps
+# que se atualizam sozinhos: VSCode, Chrome, Discord, etc.) ou
+# `version :latest`. Esses ficam "presos" na versão do primeiro install
+# do brew bundle — o app pode até auto-atualizar internamente, mas o
+# brew metadata fica desatualizado, e ferramentas que verificam via brew
+# (mise, scripts de inventory) reportam outdated.
+#
+# `brew upgrade --cask --greedy` força reinstall desses casks pra puxar
+# o latest metadata + versão.
+#
+# brew bundle issue #897 (aberto) pede pra suportar `--greedy` direto
+# no Brewfile; até lá, fazemos via task separada.
+#
+# failed_when: false — alguns casks podem dar erro de checksum ou
+# changed-arch e isso não deve quebrar o bootstrap inteiro.
+
+- name: "Homebrew — upgrade --cask --greedy (casks com auto_updates / :latest)"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/brew upgrade --cask --greedy
+  register: brew_cask_greedy_result
+  changed_when: >-
+    'Upgrading ' in brew_cask_greedy_result.stdout
+    or 'Pouring ' in brew_cask_greedy_result.stdout
+  failed_when: false
+
+- name: "Homebrew — exibir resumo do greedy cask upgrade"
+  ansible.builtin.debug:
+    msg: >-
+      {{ brew_cask_greedy_result.stdout_lines
+         if brew_cask_greedy_result.changed
+         else 'Nenhum cask precisava upgrade --greedy' }}
 
 
 # ── 5. MAS install ────────────────────────────────────────────────────────
