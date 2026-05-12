@@ -144,6 +144,54 @@
       {% endif %}
   when: mise_binary_check.stat.exists
 
+# ── Resolver GITLAB_TOKEN via op (OPCIONAL) ───────────────────────────────
+# GitLab token é opcional — só é usado se o config.toml declara tools via
+# backend `gitlab:owner/repo` (no momento, nenhum tool do user) OU se o
+# user quer elevar rate limit ao baixar releases do gitlab.com.
+#
+# Roda APENAS quando:
+#   - OP_SERVICE_ACCOUNT_TOKEN está setada (service account tem read_items
+#     no vault 00-personal/01-chezmoi)
+#   - Nenhuma das 3 env vars GitLab está setada (GITLAB_TOKEN /
+#     MISE_GITLAB_TOKEN / MISE_GITLAB_ENTERPRISE_TOKEN)
+#
+# failed_when: false — se o item não existir (user não criou PAT GitLab
+# ainda), apenas pula. GitLab é opcional, não bloqueia bootstrap.
+
+- name: "Mise — resolver GITLAB_TOKEN via op (opcional — só se OP_SERVICE_ACCOUNT_TOKEN setado e nenhuma var GitLab presente)"
+  ansible.builtin.command:
+    cmd: >-
+      {{ op_binary | default('/opt/homebrew/bin/op') }}
+      item get '{{ gitlab_pat_item_uuid }}'
+      --vault '{{ gitlab_pat_vault_uuid }}'
+      --fields credential --reveal
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  register: gitlab_pat_from_op
+  changed_when: false
+  no_log: true
+  failed_when: false   # item ausente OK — GitLab é opcional
+  when:
+    - mise_binary_check.stat.exists
+    - lookup('env', 'GITLAB_TOKEN', default='') | length == 0
+    - lookup('env', 'MISE_GITLAB_TOKEN', default='') | length == 0
+    - lookup('env', 'MISE_GITLAB_ENTERPRISE_TOKEN', default='') | length == 0
+    - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN', default='') | length > 0
+
+- name: "Mise — exibir status do GitLab token (opcional)"
+  ansible.builtin.debug:
+    msg: >-
+      {% if lookup('env', 'MISE_GITLAB_TOKEN', default='') | length > 0 %}
+      GitLab: MISE_GITLAB_TOKEN env (PAT direto)
+      {% elif lookup('env', 'GITLAB_TOKEN', default='') | length > 0 %}
+      GitLab: GITLAB_TOKEN env (PAT direto)
+      {% elif (gitlab_pat_from_op.rc | default(1)) == 0 and (gitlab_pat_from_op.stdout | default('') | length) > 0 %}
+      GitLab: resolvido via op item get (UUID {{ gitlab_pat_item_uuid }})
+      {% else %}
+      GitLab: nenhum token (OK se config.toml não usa backend gitlab:)
+      {% endif %}
+  when: mise_binary_check.stat.exists
+
 - name: "Mise — instalar tools declarados"
   ansible.builtin.command: "{{ mise_binary }} install"
   environment:
@@ -158,14 +206,18 @@
       {{ lookup('env', 'GITHUB_API_TOKEN', default='')
          if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
          else (github_pat_from_op.stdout | default('')) }}
-    # GitLab tokens (opcionais): se o user setou no env do bootstrap,
-    # propagamos pro mise install. Mise resolve pela ordem oficial:
+    # GitLab tokens (opcionais): se o user setou no env do bootstrap OU se
+    # foi resolvido via op (task acima), propagamos pro mise install. Mise
+    # resolve pela ordem oficial:
     # MISE_GITLAB_ENTERPRISE_TOKEN > MISE_GITLAB_TOKEN > GITLAB_TOKEN.
     # Útil pra tools com release-pattern via "gitlab:owner/repo" e pra
     # elevar rate limit ao instalar tools hospedados em GitLab. Se
     # ausentes, mise faz requests anônimos (rate limit baixo).
     MISE_GITLAB_TOKEN: "{{ lookup('env', 'MISE_GITLAB_TOKEN', default='') }}"
-    GITLAB_TOKEN: "{{ lookup('env', 'GITLAB_TOKEN', default='') }}"
+    GITLAB_TOKEN: >-
+      {{ lookup('env', 'GITLAB_TOKEN', default='')
+         if lookup('env', 'GITLAB_TOKEN', default='') | length > 0
+         else (gitlab_pat_from_op.stdout | default('') if (gitlab_pat_from_op.rc | default(1)) == 0 else '') }}
     MISE_GITLAB_ENTERPRISE_TOKEN: "{{ lookup('env', 'MISE_GITLAB_ENTERPRISE_TOKEN', default='') }}"
   register: mise_install_result
   changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""

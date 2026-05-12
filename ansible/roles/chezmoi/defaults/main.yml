@@ -31,4 +31,12 @@ op_binary: "/opt/homebrew/bin/op"
 #   - Em repo público, UUIDs revelam só metadata (existe vault X, item Y)
 #     mas em si não dão acesso sem auth completa
 github_pat_vault_uuid: "niarnlvrteesurkbocpta7it4e"  # vault: 00-personal/01-chezmoi
-github_pat_item_uuid: "42o44tr7k2rxvmb2a44ee24xcy"   # item: api-key/github.com/.../chezmoi-bootstrap
+github_pat_item_uuid: "x63sxispbdoahpxchnq3ji3scq"   # item: api-key/github.com/.../chezmoi-bootstrap
+
+# UUIDs do item 1P que armazena o PAT do GitLab (OPCIONAL — só é
+# consultado se o config.toml usa backend `gitlab:owner/repo` ou se o
+# user quer elevar rate limit do GitLab. PAT criado com scope mínimo
+# `read_api` — ver docs/ROADMAP.md "GitLab token / rate limit".
+# Mesmo vault do GitHub (00-personal/01-chezmoi).
+gitlab_pat_vault_uuid: "niarnlvrteesurkbocpta7it4e"  # vault: 00-personal/01-chezmoi
+gitlab_pat_item_uuid: "ics64ncwjljnlq4iheus7zp3k4"   # item: api-key/gitlab.com/.../chezmoi-bootstrap
