@@ -1,0 +1,36 @@
+# Go dev tools instalados em cada `mise install go@X` via plugin asdf-go.
+# Lista enxuta — só tools que se beneficiam de estar dentro do GOPATH/Go
+# version porque dependem da versão do compilador Go (LSP, debugger,
+# formatters, codegen). CLIs binários genéricos foram MIGRADOS pro
+# [tools] do mise config (backends aqua:/ubi:/go:) — ver
+# dot_config/mise/config.toml.tmpl.
+#
+# Migrados (não estão mais aqui — entrar via backend):
+#   kubecolor       → aqua:kubecolor/kubecolor
+#   grpcurl         → aqua:fullstorydev/grpcurl
+#   chamber, flog, goose, awsets, terraboard, telemetrygen,
+#   clockify-cli, slides, ccexplorer, kubectl-trace, opsgenie-lamp,
+#   aws-terraform-generator, boilr  → go: backend
+#
+# Removidos (deprecated / não-usados):
+#   tour, slack-term (descontinuado), warp, udemy-dl,
+#   chatgpt-cli (substituído por claude/cursor), gosh
+
+# LSP / formatting / linting
+golang.org/x/tools/gopls@latest
+golang.org/x/tools/cmd/goimports@latest
+honnef.co/go/tools/cmd/staticcheck@latest
+
+# Debugging
+github.com/go-delve/delve/cmd/dlv@latest
+
+# Codegen
+github.com/golang/mock/mockgen@latest
+google.golang.org/protobuf/cmd/protoc-gen-go@latest
+google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Documentação
+golang.org/x/tools/cmd/godoc@latest
+
+# Utility (atualizador de tools globais Go)
+github.com/Gelio/go-global-update@latest

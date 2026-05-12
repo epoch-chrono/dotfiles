@@ -1,0 +1,28 @@
+# Pacotes npm globais instalados em cada `mise install node@X`.
+# Lista enxuta — só items que PRECISAM estar globais ao lado do
+# commitizen (plugins do cz são procurados em $NPM_PREFIX/node_modules).
+#
+# Tudo o resto foi MIGRADO pro [tools] do mise config (backend npm:),
+# que usa aube automaticamente quando disponível — versionado no repo,
+# declarativo, idempotente. Ver dot_config/mise/config.toml.tmpl.
+#
+# Migrados (não estão mais aqui — entrar via npm: backend):
+#   commitizen      → npm:commitizen
+#   dockly          → npm:dockly
+#   create-slidev   → npm:create-slidev
+#   localtunnel     → npm:localtunnel
+#   aws-cost-cli    → npm:aws-cost-cli
+#   sql-formatter   → npm:sql-formatter
+#   artillery       → npm:artillery
+#   @clevercli/cli  → npm:@clevercli/cli
+#   git-tip         → npm:git-tip
+#
+# Removidos (per-project / deprecated):
+#   jest, ts-jest   → per-project (vai em package.json devDeps)
+#   asciicast2gif   → deprecated (asciinema-agg é a alternativa moderna)
+#   devmoji         → redundante com cz-emoji
+
+# Commitizen plugins — descoberta automática pelo commitizen via
+# $NPM_PREFIX/lib/node_modules, então precisam estar no global Node.
+cz-emoji
+cz-jira-smart-emoji
