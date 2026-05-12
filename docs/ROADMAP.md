@@ -338,6 +338,48 @@ Itens isolados que não cabem nas fatias acima.
 
 ### Mise (descobertos no primeiro bootstrap end-to-end)
 
+- **Mise shims no PATH do login shell** (importante pra IDEs): IDEs como
+  Cursor, Claude Code, VS Code, IntelliJ trabalham melhor com **shims**
+  do mise que com `mise activate` (que modifica PATH a cada prompt do
+  shell e só roda em shells interativos).
+
+  Spawn de subprocess em GUI apps NÃO herda PATH do shell interativo —
+  cursor lança `node`, `python`, `terraform`, etc. e não encontra os
+  binários instalados pelo mise. Sintoma típico: extensão da IDE
+  reclama de tool ausente mesmo após `mise install`.
+
+  Doc oficial: https://mise.jdx.dev/dev-tools/shims.html#adding-shims-to-path
+
+  Adicionar `~/.local/share/mise/shims` ao PATH em:
+
+    - macOS:
+        - Bash:  ~/.bash_profile
+        - Zsh:   ~/.zprofile (ou ~/.zshenv pra IDEs spawn de GUI)
+        - Fish:  ~/.config/fish/conf.d/00-mise-shims.fish
+                 (fish não distingue rc/profile, conf.d roda sempre,
+                 prefixo 00- garante ordem)
+
+    - macOS GUI apps (Spotlight/Dock launch, fora do terminal):
+        - launchctl setenv PATH ou LaunchAgent plist persistente,
+          OU configurar `terminal.integrated.env.osx` per-app
+          (Cursor/VS Code suporta).
+
+  Verificar default shell antes de decidir onde inserir:
+    dscl . -read /Users/$USER UserShell
+
+  Implementação: criar dotfile fish/config compatível no chezmoi
+  (provavelmente `dot_config/fish/conf.d/00-mise-shims.fish`) com:
+    set -gx PATH "$HOME/.local/share/mise/shims" $PATH
+
+  Cuidado: shims vs `mise activate` — usar UM ou OUTRO, não ambos.
+  Shims são mais lentos por invocação (mise resolve a versão correta
+  em cada call) mas funcionam em qualquer contexto. Activate é mais
+  rápido mas só funciona em shell interativo.
+
+  Recomendação: shims globais via PATH login + activate adicional
+  no shell interativo pra ganhar `mise hook-env` features (env vars
+  por projeto, hooks `cd`, etc.).
+
 - **`mise install` herda `./mise.toml` do CWD**: task Ansible roda no
   diretório `~/.local/share/dotfiles/` (CWD do `connection: local`),
   então mise vê tanto o config user-level (`~/.config/mise/config.toml`)
