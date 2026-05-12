@@ -1,20 +1,37 @@
 # Go dev tools instalados em cada `mise install go@X` via plugin asdf-go.
 # Lista enxuta — só tools que se beneficiam de estar dentro do GOPATH/Go
 # version porque dependem da versão do compilador Go (LSP, debugger,
-# formatters, codegen). CLIs binários genéricos foram MIGRADOS pro
-# [tools] do mise config (backends aqua:/ubi:/go:) — ver
-# dot_config/mise/config.toml.tmpl.
+# formatters, codegen).
 #
-# Migrados (não estão mais aqui — entrar via backend):
-#   kubecolor       → aqua:kubecolor/kubecolor
-#   grpcurl         → aqua:fullstorydev/grpcurl
-#   chamber, flog, goose, awsets, terraboard, telemetrygen,
-#   clockify-cli, slides, ccexplorer, kubectl-trace, opsgenie-lamp,
-#   aws-terraform-generator, boilr  → go: backend
+# Lista completa do Mac antigo tinha ~31 itens. Decidir caso a caso onde
+# entra cada um:
 #
-# Removidos (deprecated / não-usados):
-#   tour, slack-term (descontinuado), warp, udemy-dl,
-#   chatgpt-cli (substituído por claude/cursor), gosh
+#   - Aqui (.default-go-packages):  Go dev tools amarrados à versão Go
+#                                   (gopls, dlv, staticcheck, etc).
+#   - [tools] do mise config:       CLIs binários genéricos via
+#                                   go:owner/repo (compila do source)
+#                                   ou aqua:owner/repo (binário pré-
+#                                   compilado, mais rápido).
+#
+# Sugestões pra avaliar (estavam no Mac antigo, removidos daqui):
+#
+#   Candidatos a aqua: (binários disponíveis no aqua registry):
+#     kubecolor, grpcurl
+#
+#   Candidatos a go:owner/repo no [tools]:
+#     kubecolor (alt), grpcurl (alt), chamber, flog, goose, awsets,
+#     terraboard, telemetrygen, clockify-cli, slides, ccexplorer,
+#     kubectl-trace, opsgenie-lamp, aws-terraform-generator, boilr
+#
+#   Não migrados (deprecated / pouco usados):
+#     tour, slack-term (descontinuado 2023), warp,
+#     udemy-dl (repo abandonado, Udemy bloqueia),
+#     chatgpt-cli (substituído por claude/cursor),
+#     gosh (Go shell experimental)
+#
+# NOTA: arquivo duplicado .default-golang-packages é resíduo do plugin
+# asdf-golang antigo. Mise/asdf-go novo lê APENAS .default-go-packages
+# (sem "lang"). Não criar o duplicado.
 
 # LSP / formatting / linting
 golang.org/x/tools/gopls@latest
