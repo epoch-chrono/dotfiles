@@ -64,6 +64,13 @@ tap "cloudquery/tap"
 # Turbot Powerpipe — dashboards de segurança/compliance.
 tap "turbot/tap"
 
+# Tap rbenv/tap — fornece versões legadas de OpenSSL que brew core removeu.
+# Usado especificamente pra openssl@1.1 (EOL set/2023) que ainda é necessária
+# pra compilar Python 2.7, Ruby < 3.1, e outras tools antigas que não
+# suportam OpenSSL 3.x. Fórmula instalada via brew: rbenv/tap/openssl@1.1
+# (versão 1.1.1w-1, suporta darwin/arm64).
+tap "rbenv/tap"
+
 
 # ── Gerenciadores de versão e dotfiles ────────────────────────────────────
 # Ferramentas que orquestram outras ferramentas. Ficam no brew (não no
@@ -122,6 +129,25 @@ brew "make"
 brew "autoconf"
 brew "automake"
 brew "libtool"
+
+# OpenSSL 1.1 — DEPRECATED, EOL desde set/2023. Brew core removeu a fórmula.
+# Vem do tap rbenv/tap (mantido pra builds de Ruby/Python legados que não
+# compilam contra OpenSSL 3.x).
+#
+# Uso aqui: pré-requisito pra Python 2.7.18 declarado no mise config
+# (dot_config/mise/config.toml.tmpl) com env var:
+#   PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA = "openssl@1.1"
+#
+# Mise/python-build lê essa env var e usa OpenSSL 1.1 ao compilar Python
+# 2.7 do source. Sem isso, build falha em erros como:
+#   ssl module compilation failed
+#   Could not find OpenSSL library
+#
+# Python 2.7 está EOL desde 2020, mas legacy projects (scripts antigos,
+# tools que não migraram pra py3) ainda precisam. Quando não precisar
+# mais, remover este brew + remover Python 2.7 do mise config + remover
+# tap rbenv/tap acima.
+brew "rbenv/tap/openssl@1.1"
 
 # ImageMagick. Conjunto enorme de deps nativas (libpng, libjpeg, libtiff,
 # libwebp, libheic, libavif, ghostscript, etc). Brew gerencia tudo
