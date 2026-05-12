@@ -68,13 +68,36 @@ op item create --category 'API Credential' \
   credential="$GITHUB_API_TOKEN"
 ```
 
-**2. Create a service account** at https://my.1password.com → Developer
-→ Service Accounts:
+**2. Create a short-lived service account** with the 1Password CLI:
 
-- Name: `chezmoi-bootstrap` (or similar)
-- Vault access: `00-personal/01-chezmoi` → `read_items` only
-- Expiration: 90 days (or to taste)
-- Copy the token (`ops_...`)
+```fish
+# Fish syntax — date inline subcommand gives a unique suffix per call
+op service-account create chezmoi-bootstrap-(date +"%Y%m%d-%H%M") \
+  --expires-in 24h \
+  --vault 00-personal/01-chezmoi:read_items
+```
+
+```sh
+# bash/zsh equivalent
+op service-account create "chezmoi-bootstrap-$(date +%Y%m%d-%H%M)" \
+  --expires-in 24h \
+  --vault '00-personal/01-chezmoi:read_items'
+```
+
+Output gives a `ops_...` token. **Tip**: use `--expires-in 24h` (or
+shorter) for one-off bootstrap runs — the token auto-expires, so even
+if it leaks to shell history or process list, the blast radius is
+limited to a day. For recurring weekly automation, `--expires-in 7d`
+matched to the schedule.
+
+> **Note on the Individual plan**: `op service-account create` works,
+> but `op service-account list` / `op service-account delete` are not
+> available on the Individual plan. To revoke a service account before
+> expiration, use the web UI: https://my.1password.com → Developer →
+> Service Accounts. Using short `--expires-in` mitigates this.
+
+Alternative GUI route: https://my.1password.com → Developer → Service
+Accounts → Create. Same result.
 
 **3. Export and run:**
 
@@ -85,7 +108,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/epoch-chrono/dotfiles/ma
 ```
 
 If both `GITHUB_API_TOKEN` and `OP_SERVICE_ACCOUNT_TOKEN` are set,
-`GITHUB_API_TOKEN` wins (avoids the extra `op` call).
+`GITHUB_API_TOKEN` wins (avoids the extra `op` call) — so pick **one**,
+don't set both.
 
 ### If `curl` is not available
 
