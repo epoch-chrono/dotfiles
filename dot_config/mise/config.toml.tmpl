@@ -122,13 +122,11 @@ kustomize = "latest"
 mani = "latest"
 mkcert = "latest"
 mongosh = "latest"
-mysql = "latest"         # NOTA: mise instala MySQL completo (client + server). Sem opção client-only.
 opa = "latest"
 opencode = "latest"
 opentofu = "latest"
 operator-sdk = "latest"
 osqueryi = "latest"
-postgres = "latest"      # NOTA: mise instala PostgreSQL completo (client + server). Sem opção client-only.
 pre-commit = "latest"
 qdns = "latest"
 rbac-lookup = "latest"
@@ -169,6 +167,14 @@ zoxide = "latest"
 
 
 ### On-demand tools — descomentar quando precisar
+
+# DB engines completos (server + client). Decisão atual: client-only via
+# brew (mysql-client + libpq no Brewfile, ~50MB total) em vez de mise full
+# install (centenas de MB cada). Descomentar abaixo apenas se precisar
+# rodar server localmente (testes de integração, dev offline).
+# mysql = "latest"      # full install (server + client) via mise
+# postgres = "latest"   # full install (server + client) via mise
+
 # argo = "latest"
 # argocd = "latest"
 # awsls = "latest"

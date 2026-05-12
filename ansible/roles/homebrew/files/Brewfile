@@ -208,6 +208,17 @@ brew "tree"               # tree view de diretórios
 brew "watch"              # rodar comando periodicamente
 
 
+# ── DB clients CLI (client-only, sem servidor) ────────────────────────────
+# Alternativa intencional pro mise install mysql/postgres, que instalariam
+# o pacote completo (server + client). Aqui pegamos só os binários cliente
+# (psql, mysql, mysqldump, pg_dump, pg_restore, mongo, etc.) sem daemons
+# nem dependências de runtime de servidor — ~50 MB total vs centenas pelo
+# mise full install.
+
+brew "mysql-client"       # cliente MySQL (mysql, mysqldump, mysqladmin)
+brew "libpq"              # cliente PostgreSQL (psql, pg_dump, pg_restore)
+
+
 # ── Formulas dos taps externos ────────────────────────────────────────────
 # Cada uma vinculada a um tap declarado acima.
 
