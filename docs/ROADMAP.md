@@ -16,6 +16,35 @@ Versão do playbook: `0.17.0`.
 - Idempotente: re-rodar não muda nada se nada divergiu
 
 
+### Pré-requisitos de auth pré-bootstrap (recomendado mas opcional)
+
+Pra evitar rate limit do GitHub durante `mise install` (que baixa ~90 tools
+de GitHub releases), autenticar o 1Password CLI **antes** de rodar o
+bootstrap. Mise puxa o token via `op item get` quando precisa, cached
+per session.
+
+**Setup uma vez no Mac:**
+
+1. Abrir 1Password.app e fazer signin
+2. Settings → Developer → habilitar "Integrate with 1Password CLI"
+3. Confirmar com `op whoami` — deve retornar conta sem prompt
+
+**Item esperado no 1P:**
+
+```
+vault: 00-personal/01-chezmoi  (UUID: niarnlvrteesurkbocpta7it4e)
+item:  api-key/github.com/vitor@epoch-chrono.com/chezmoi-bootstrap
+       (UUID: 42o44tr7k2rxvmb2a44ee24xcy)
+field: credential
+```
+
+PAT mínimo (sem scopes): suficiente pra rate limit elevado, sem dar acesso
+a repos privados. Renovar a cada ~12 meses.
+
+**Fallback**: se `op` falhar ou item não existir, mise reverte pra
+unauthenticated. Não quebra o bootstrap, só atinge rate limit mais rápido.
+
+
 ### Roles implementadas
 
 | Role | Versão funcional | Cobertura |
