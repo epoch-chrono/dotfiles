@@ -4,42 +4,231 @@
   Materializa em ~/.config/mise/config.toml via `chezmoi apply`.
 
   Distinto do mise.toml na raiz do repo (que declara tools pra dev no
-  PRÓPRIO repositório, ex.: chezmoi, pre-commit, gitleaks, shellcheck).
-  Este aqui é o config GLOBAL do user, com toolchains pra desenvolvimento
-  geral em qualquer projeto.
+  PRÓPRIO repositório). Este é o config GLOBAL do user, com toolchains
+  pra desenvolvimento geral em qualquer projeto.
 
-  Mise resolve tools por escopo:
+  Resolução de tools por escopo (mise lê tudo que encontra):
     1. ./mise.toml ou ./.mise.toml do projeto (override local)
     2. ~/.config/mise/config.toml (este aqui — global)
-
-  Tools são instaladas via hook `run_onchange_after_50-mise-install.sh.tmpl`
-  que detecta mudanças neste template e roda `mise install` automaticamente.
-
-  Ordem das declarações importa pra backends que dependem de outros:
-    - core (python/node/go) primeiro — base de muitos outros backends
-    - ubi/cargo/go-installs depois — podem precisar das linguagens core
 */}}
-
-# ──────────────────────────────────────────────────────────────────────────
-# Settings — comportamento do mise (vem antes de [tools] por convenção)
-# ──────────────────────────────────────────────────────────────────────────
 
 [settings]
 # Habilita backends/features experimentais (npm:, pipx:, cargo:, ubi:,
-# go-install:, etc.) e features em beta. Necessário pra plugins fora
-# do core sem precisar flag por comando. Padrão da maioria dos repos
-# mise públicos. Desabilitar se algo se comportar de forma inesperada
-# — fallback pro core estável.
+# go-install:, aqua:, etc.) e features em beta. Necessário pra plugins
+# fora do core sem precisar flag por comando.
 experimental = true
 
+# Quando descomentado, mise respeita arquivos idiomáticos por projeto
+# (.nvmrc, .node-version, package.json devEngines.runtime). Desabilitado
+# por enquanto pra não conflitar com setup atual; ativar quando quiser.
+# idiomatic_version_file_enable_tools = ["node"]
 
-# ──────────────────────────────────────────────────────────────────────────
-# Tools — declarações ordenadas por dependência (core primeiro)
-# ──────────────────────────────────────────────────────────────────────────
 
 [tools]
 
-# ── Core languages (backend: core) ────────────────────────────────────────
+# ── Core languages / runtimes ─────────────────────────────────────────────
+# Pinned por reprodutibilidade — versões impactantes que mudam APIs.
 python = "3.13.11"
 node = "lts"
-go = "latest"
+java = "lts"
+go = "1.26.3"
+rust = "1.95.0"
+ruby = "3.4.9"
+elixir = "1.19.5-otp-28"
+erlang = "28.5"
+perl = "5.42.2"
+sqlite = "3.53.1"
+
+
+# ── Backends prerequisites ────────────────────────────────────────────────
+# Tools que o mise usa internamente como backend pra outros plugins.
+aqua = "latest"   # package-manager declarativo (mise usa como backend aqua:)
+uv = "latest"    # python package installer (mise usa como backend pipx:)
+aube = "latest"  # Node package manager (mise usa como backend npm:)
+
+# Backend usage examples (descomentar quando precisar):
+# "aqua:BurntSushi/ripgrep" = "latest"
+# "cargo:eza" = "latest"
+# "gem:rubocop" = "latest"
+# "github:BurntSushi/ripgrep" = "latest"
+# "gitlab:gitlab-org/gitlab-runner" = "latest"
+# "go:github.com/DarthSim/hivemind" = "latest"
+# "http:my-tool" = { version = "1.0.0", url = "https://example.com/releases/my-tool-v{{ "{{version}}" }}.tar.gz" }
+
+
+# ── Outros pre-requisites ─────────────────────────────────────────────────
+usage = "latest"  # spec-driven CLI framework; mise usa pra completions
+
+
+## Other tools — alfabético dentro deste bloco
+adr-tools = "latest"
+ag = "latest"
+assh = "latest"
+aws-nuke = "latest"      # CUIDADO: destrutivo por design. Sempre rodar com --dry-run primeiro.
+aws-vault = "latest"
+awscli = "latest"
+bat = "latest"
+bottom = "latest"
+cheat = "latest"
+checkov = "latest"
+choose = "latest"
+cloudflared = "latest"
+conftest = "latest"
+delta = "latest"
+direnv = "latest"
+dive = "latest"
+doctoolchain = "latest"
+dotenv-linter = "latest"
+driftctl = "latest"
+dust = "latest"
+eksctl = "latest"
+eza = "latest"
+fd = "latest"
+fillin = "latest"
+flyway = "latest"
+fx = "latest"
+fzf = "latest"
+gcloud = "latest"
+gemini = "latest"
+ghorg = "latest"
+git-chglog = "latest"
+gitconfig = "latest"
+github-cli = "latest"
+gitleaks = "latest"
+glab = "latest"
+glow = "latest"
+granted = "latest"
+has = "latest"
+helix = "latest"
+helm = "latest"
+helm-cr = "latest"
+helm-diff = "latest"
+hwatch = "latest"
+iamlive = "latest"
+infracost = "latest"
+jq = "latest"
+just = "latest"
+k9s = "latest"
+kind = "latest"
+krew = "latest"
+kube-credential-cache = "latest"
+kubecm = "latest"
+kubecolor = "latest"
+kubectl = "latest"
+kubectx = "latest"
+kubeshark = "latest"
+kubespy = "latest"
+kustomize = "latest"
+mani = "latest"
+mkcert = "latest"
+mongosh = "latest"
+mysql = "latest"         # NOTA: mise instala MySQL completo (client + server). Sem opção client-only.
+opa = "latest"
+opencode = "latest"
+opentofu = "latest"
+operator-sdk = "latest"
+osqueryi = "latest"
+postgres = "latest"      # NOTA: mise instala PostgreSQL completo (client + server). Sem opção client-only.
+pre-commit = "latest"
+qdns = "latest"
+rbac-lookup = "latest"
+rclone = "latest"
+regctl = "latest"
+ripgrep = "latest"
+sd = "latest"
+semgrep = "latest"
+semtag = "latest"
+semver = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+snyk = "latest"
+sops = "latest"
+sopstool = "latest"
+sshuttle = "latest"
+steampipe = "latest"
+svu = "latest"
+teleport-community = "latest"
+teller = "latest"
+terraform-docs = "latest"
+terramate = "latest"
+tf-summarize = "latest"
+tflint = "latest"
+tfupdate = "latest"
+tokei = "latest"
+trivy = "latest"
+trufflehog = "latest"
+velero = "latest"
+wrk = "latest"
+wtfutil = "latest"
+xh = "latest"
+yj = "latest"
+yor = "latest"
+yq = "latest"
+zellij = "latest"
+zoxide = "latest"
+
+
+### On-demand tools — descomentar quando precisar
+# argo = "latest"
+# argocd = "latest"
+# awsls = "latest"
+# bitwarden = "latest"
+# bun = "latest"
+# caddy = "latest"
+# cfssl = "latest"
+# cidr-merger = "latest"
+# consul = "latest"
+# cosign = "latest"
+# crane = "latest"
+# ctop = "latest"
+# dasel = "latest"
+# deck = "latest"
+# devspace = "latest"
+# docker-slim = "latest"
+# dockle = "latest"
+# duf = "latest"
+# ecspresso = "latest"
+# ghidra = "latest"
+# gitui = "latest"
+# glen = "latest"
+# grype = "latest"
+# hcloud = "latest"
+# istioctl = "latest"
+# k3d = "latest"
+# kafkactl = "latest"
+# kompose = "latest"
+# kube-score = "latest"
+# kubectl-convert = "latest"
+# kubent = "latest"
+# kubeseal = "latest"
+# kubesec = "latest"
+# kubie = "latest"
+# lima = "latest"
+# minikube = "latest"
+# packer = "latest"
+# peco = "latest"
+# pint = "latest"
+# pipx = "latest"       # use uv instead
+# pluto = "latest"
+# polaris = "latest"
+# popeye = "latest"
+# pulumi = "latest"
+# redis = "latest"
+# redis-cli = "latest"
+# rlwrap = "latest"
+# rstash = "latest"
+# saml2aws = "latest"
+# skaffold = "latest"
+# stern = "latest"
+# syncher = "latest"
+# tekton-cli = "latest"
+# telepresence = "latest"
+# terraformer = "latest"
+# terrascan = "latest"
+# tfsec = "latest"
+# vault = "latest"
+# vcluster = "latest"
+# viddy = "latest"
+# vim = "latest"
+# yadm = "latest"
+# yarn = "latest"

@@ -48,11 +48,11 @@
 # anos mas o binary é C clássico, raramente muda. Sem alternativa mise.
 tap "hudochenkov/sshpass"
 
-# Granted — AWS access tooling. Originalmente da Common Fate; em 2025
-# o tap oficial passou pra fwdcloudsec (Forward CloudSec). Binários
-# ainda hospedados em releases.commonfate.io (não GitHub) — por isso
-# o plugin asdf-granted falha. URL canônica: https://docs.granted.dev/
-tap "fwdcloudsec/granted"
+# Granted — AWS access tooling. Migrado pro mise (gerenciado em
+# dot_config/mise/config.toml.tmpl). Tap fwdcloudsec/granted REMOVIDO
+# do Brewfile. Histórico: o tap existia porque o plugin asdf-granted
+# antigo falhava ao baixar releases.commonfate.io; hoje o mise resolve
+# direto via `mise install granted`.
 
 # Cloudquery — cloud asset discovery / inventory.
 tap "cloudquery/tap"
@@ -214,9 +214,9 @@ brew "watch"              # rodar comando periodicamente
 # Não há alternativa via mise; binário antigo mas estável.
 brew "sshpass"
 
-# Granted (CLI principal). gdeploy fica de fora por padrão — adicionar
-# se ainda usado: brew "fwdcloudsec/granted/gdeploy"
-brew "fwdcloudsec/granted/granted"
+# Granted — migrado pro mise (config.toml.tmpl). Ver comentário do tap
+# acima pra contexto histórico. Remover este bloco quando confirmar
+# que `mise install granted` funciona sem regressões.
 
 # Cloudquery CLI.
 brew "cloudquery/tap/cloudquery"

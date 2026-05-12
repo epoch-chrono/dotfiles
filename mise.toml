@@ -1,8 +1,24 @@
-# mise.toml — tooling para dotfiles
-# Instalar tudo: mise install
+# ────────────────────────────────────────────────────────────────────────────
+# mise.toml — tooling REPO-LEVEL (dev no próprio repositório dotfiles)
+# ────────────────────────────────────────────────────────────────────────────
+# Este config é PRA QUEM TRABALHA NESTE REPO (contributors, manutenção).
+# Mise lê automaticamente quando você roda comandos dentro de
+# ~/.local/share/dotfiles/.
+#
+# Distinto do user-level (dot_config/mise/config.toml.tmpl): aquele
+# materializa em ~/.config/mise/config.toml e tem TODOS os dev tools do
+# user pra desenvolvimento geral. ESTE aqui só lista o que o repo
+# especificamente precisa que não esteja necessariamente no user-level.
+#
+# Pre-commit/gitleaks/shellcheck NÃO ficam aqui — estão no user-level,
+# que é instalado pelo bootstrap antes desta camada ser relevante.
+#
+# Instalar tudo deste arquivo: cd ~/.local/share/dotfiles && mise install
+# ────────────────────────────────────────────────────────────────────────────
 
 [tools]
+# Chezmoi também está no Brewfile (instalação primária no bootstrap),
+# declarado aqui pra que contribuidores rodando `mise install` dentro do
+# repo tenham a mesma versão sem precisar do brew. Resolução: brew vence
+# no PATH default; mise version fica disponível via `mise exec`.
 chezmoi = "latest"
-pre-commit = "latest"
-gitleaks = "latest"
-shellcheck = "latest"
