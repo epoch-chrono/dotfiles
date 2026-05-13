@@ -389,6 +389,24 @@ cask "nosqlbooster-for-mongodb" # MongoDB GUI third-party (queries avançadas)
 cask "session-manager-plugin"  # plugin SSM Session Manager pro AWS CLI
 
 
+# ── AI / coding agents ────────────────────────────────────────────────────
+# Tools de coding agents centralizadas no brew (centralizamos aqui em vez
+# de mise porque brew distribui binários signed/notarized direto da fonte,
+# sem precisar passar pelo backend npm: do mise — menos camadas e melhor
+# integração macOS/Tahoe). Updates via `brew upgrade --cask` (incluso na
+# task `brew upgrade --cask --greedy` do playbook).
+#
+# Note: cada agent tem subscrição/auth própria. cursor-cli requer Cursor
+# subscription; claude-code requer Anthropic account (Claude Pro/Max/
+# Console/etc); gemini-cli usa Google account ou GEMINI_API_KEY.
+brew "gemini-cli"              # https://github.com/google-gemini/gemini-cli (formula)
+cask "claude-code"             # stable channel (~1 semana atrás, skip regressions majores)
+cask "cursor-cli"              # command-line agent for Cursor
+
+# Alternativas de channel pro claude-code (não usadas — comentadas pra ref):
+# cask "claude-code@latest"    # latest channel (versão mais recente disponível)
+
+
 # ── Containers / dev ──────────────────────────────────────────────────────
 cask "podman-desktop"          # GUI pro podman
 cask "gitkraken-cli"           # AI commit message generator
