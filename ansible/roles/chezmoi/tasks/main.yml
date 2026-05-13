@@ -484,26 +484,47 @@
 
 - name: "Caveman — install/update via universal installer"
   ansible.builtin.shell:
-    # Flags pra unattended:
-    #   --non-interactive: flag OFICIAL confirmada via `bash install.sh --help`.
-    #     Help text: "Never prompt; use defaults. (Auto when stdin is not a
-    #     TTY.)" — note que "never-prompt" é DESCRIÇÃO do comportamento, não
-    #     nome de flag. Doc diz que auto-detect funciona quando stdin não é
-    #     TTY, mas em prática isso falha aqui porque install.sh internamente
-    #     faz `exec npx -y github:...` que re-spawna processo e perde o
-    #     stdin context. Flag explícita resolve.
-    #   --all: ativa hooks + init + mcp-shrink (full feature set). Sem isso,
-    #     installer entra em multi-select TUI pra escolher features.
-    #   --no-color: desabilita ANSI escapes — output mais limpo no ansible log.
-    # < /dev/null: defensivo — força stdin closed mesmo se algo no pipeline
-    # tenta ler input.
+    # ESTRATÉGIA — pre-install + caveman installer combinados:
     #
-    # Se ainda travar com essas flags: provavelmente é sub-comando interno
-    # (claude plugin install, gemini extensions install, etc) que prompta
-    # independente das flags do caveman. Debug: rodar manual com --dry-run
-    # pra ver sequência exata de comandos, ou tentar --minimal (skipa hooks
-    # + MCP + rules — menos sub-prompts possíveis).
-    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash -s -- --non-interactive --all --no-color < /dev/null"
+    # PROBLEMA: caveman installer chama internamente:
+    #   - claude plugin marketplace add / claude plugin install (sem prompt)
+    #   - gemini extensions install (PROMPT trava com "Do you want to continue?")
+    #   - outros via npx skills add (sem prompt)
+    #
+    # O prompt do gemini é hardcoded no `gemini extensions install` SEM forma
+    # do caveman propagar `--non-interactive`. Gemini tem flag oficial
+    # própria: `--consent` que faz "Acknowledge security risks and skip the
+    # confirmation prompt." (doc: geminicli.com/docs/extensions/reference/).
+    #
+    # FIX: pre-install do gemini extension com --consent ANTES do caveman
+    # installer. Caveman installer roda depois e detecta gemini ext já
+    # instalada, skipa esse step sem prompt. Outros agents (Claude Code,
+    # etc.) processados normalmente.
+    #
+    # Flags em cada comando:
+    #   gemini extensions install ... --consent: bypassa prompt do gemini
+    #   `2>&1 || true`: tolera erro se ext já instalada (idempotência)
+    #
+    #   bash -s -- --non-interactive --all --no-color:
+    #     --non-interactive: flag oficial do caveman (auto when not TTY)
+    #     --all: hooks + init + mcp-shrink (full feature set)
+    #     --no-color: ANSI escapes off
+    #   < /dev/null: defensivo
+    cmd: |
+      set -eu
+
+      # 1. Pre-install gemini extension com --consent (skip prompt nativo
+      #    do gemini). Tolerante a "already installed" via 2>&1 || true.
+      if command -v gemini >/dev/null 2>&1; then
+        gemini extensions install \
+          https://github.com/JuliusBrussee/caveman \
+          --consent < /dev/null 2>&1 || true
+      fi
+
+      # 2. Caveman universal installer. Vai detectar que gemini ext já
+      #    foi instalada (passo 1) e skipar — sem prompt.
+      curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh \
+        | bash -s -- --non-interactive --all --no-color < /dev/null
   environment:
     # PATH inclui mise shims (pra Node), brew bins (pra claude/agent/gemini)
     # e ansible_env.PATH (fallback). Sem isso, installer pode falhar em
