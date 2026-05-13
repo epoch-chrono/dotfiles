@@ -607,8 +607,96 @@
       ✓  Concluído.
          Output (last 5 lines):
          {{ caveman_install.stdout_lines[-5:] | default(['(sem output)']) | join('\n         ') }}
+
+      NOTA: O output do universal installer pode mostrar:
+        failed:
+          • caveman-shrink — claude mcp add failed
+          • gemini — gemini extensions install failed
+
+      Esses são FALSOS NEGATIVOS benignos. Acontecem porque o caveman installer
+      re-tenta comandos que o pre-install per agent já fez:
+        - caveman-shrink: claude mcp add (já registrado no pre-install)
+        - gemini:         gemini extensions install (já instalado com --consent)
+      Sub-comandos retornam 'already installed' que o caveman marca como
+      'failed' no resumo, mas funcionalmente está OK. Pra validar de fato,
+      ver a task 'Caveman — validação funcional' abaixo.
       {% else %}
       ⚠  Falhou (rc={{ caveman_install.rc | default('?') }}).
          stderr: {{ caveman_install.stderr | default('(sem stderr)') | truncate(200) }}
       {% endif %}
       {% endif %}
+
+
+# ── VALIDAÇÃO FUNCIONAL ───────────────────────────────────────────────────
+# Em vez de confiar no output verbose do caveman installer (que mostra
+# 'failed' pra comandos que retornaram 'already installed'), validar
+# funcionalmente: ver se cada componente existe no filesystem / responde a
+# query.
+#
+# 7 checks cobrem todas as instalações esperadas:
+#   1. ~/.claude/hooks/         — hooks instalados (claude-hooks)
+#   2. settings.json com caveman — hooks registrados em ~/.claude/settings.json
+#   3. claude plugin list       — plugin claude registrado
+#   4. claude mcp list          — MCP caveman-shrink registrado
+#   5. gemini extensions list   — extension caveman instalada
+#   6. ~/.agents/skills/caveman/ — universal skills (cobre cursor/crush/goose)
+#   7. ~/AGENTS.md              — caveman-init rule files no $HOME
+#
+# Se algum falhar, debug task abaixo lista quais. Bootstrap não bloqueia
+# (changed_when: false, failed_when: false).
+
+- name: "Caveman — validação funcional (7 checks)"
+  ansible.builtin.shell: |
+    set +e
+    pass=0; fail=0; total=0
+    results=""
+
+    check() {
+      total=$((total+1))
+      label="$1"
+      shift
+      if "$@" >/dev/null 2>&1; then
+        results="$results\n  ✓ $label"
+        pass=$((pass+1))
+      else
+        results="$results\n  ✗ $label"
+        fail=$((fail+1))
+      fi
+    }
+
+    # 1. Claude hooks files presentes
+    check "Claude hooks (~/.claude/hooks/)" test -d "$HOME/.claude/hooks"
+
+    # 2. Hooks registrados em settings.json
+    check "Hooks em settings.json" sh -c 'grep -q caveman "$HOME/.claude/settings.json" 2>/dev/null'
+
+    # 3. Plugin claude registrado
+    check "Plugin claude registrado" sh -c 'claude plugin list 2>/dev/null | grep -qi caveman'
+
+    # 4. MCP caveman-shrink registrado
+    check "MCP caveman-shrink registrado" sh -c 'claude mcp list 2>/dev/null | grep -q caveman-shrink'
+
+    # 5. Gemini extension instalada (se gemini estiver presente)
+    if command -v gemini >/dev/null 2>&1; then
+      check "Gemini extension caveman" sh -c 'gemini extensions list 2>/dev/null | grep -qi caveman'
+    fi
+
+    # 6. Universal skills (~/.agents/skills/caveman)
+    check "Universal skills (~/.agents/skills/caveman)" test -d "$HOME/.agents/skills/caveman"
+
+    # 7. Init rules
+    check "Init rules ($HOME/AGENTS.md)" test -f "$HOME/AGENTS.md"
+
+    printf "Validação funcional do caveman:%b\n\n%d/%d checks passaram (%d falharam).\n" "$results" "$pass" "$total" "$fail"
+    exit 0
+  environment:
+    PATH: "{{ ansible_user_dir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: caveman_validation
+  changed_when: false
+  failed_when: false
+  when: claude_binary_check.stat.exists
+
+- name: "Caveman — exibir validação funcional"
+  ansible.builtin.debug:
+    msg: "{{ caveman_validation.stdout_lines | default(['(skip)']) }}"
+  when: claude_binary_check.stat.exists
