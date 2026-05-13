@@ -450,3 +450,68 @@
       enxergam esse JDK.
       {% endif %}
   when: mise_binary_check.stat.exists
+
+
+# ── Caveman — coding agent output compression skill ────────────────────────
+# Caveman é uma skill/plugin que reduz tokens em respostas dos coding
+# agents instalados. Cobertura cross-agent: claude-code, cursor-cli,
+# gemini-cli (todos no Brewfile), e ainda Codex/Windsurf/Cline/Copilot/etc.
+# se vierem a ser instalados no futuro.
+#
+# INSTALL METHOD: universal installer oficial (curl|bash) — auto-detecta
+# agents instalados e configura skill/plugin pra cada. Agents ausentes
+# são pulados silenciosamente. Mesma filosofia da task Java macOS
+# integration acima — automatizar passo pós-install dentro do playbook.
+#
+# PRE-REQS:
+#   - Node ≥18 (vem do mise — Fase 1: node = "lts")
+#   - Pelo menos 1 coding agent (verificamos /opt/homebrew/bin/claude
+#     como proxy — está no Brewfile)
+#
+# IDEMPOTÊNCIA: installer eh declarado 'safe to re-run' (doc oficial).
+# Rodamos sempre — overhead é baixo (~5s, ~few MB rede) e garante
+# updates da skill quando lançam novas versões.
+#
+# CONFIG: não setamos CAVEMAN_DEFAULT_MODE aqui. Default do caveman
+# (mode 'full') fica ativo. Configuração de mode/customizações fica
+# pra fatia futura (via env var no config.fish OU
+# ~/.config/caveman/config.json).
+
+- name: "Caveman — verificar pré-req (pelo menos 1 coding agent instalado)"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/claude
+  register: claude_binary_check
+
+- name: "Caveman — install/update via universal installer"
+  ansible.builtin.shell:
+    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash"
+  environment:
+    # PATH inclui mise shims (pra Node), brew bins (pra claude/agent/gemini)
+    # e ansible_env.PATH (fallback). Sem isso, installer pode falhar em
+    # detectar agents.
+    PATH: "{{ ansible_user_dir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+    CI: "1"   # non-interactive — installer não prompta nada
+  register: caveman_install
+  # changed_when: false porque installer eh idempotente e sempre escreve
+  # algo no stdout (output verbose). Marcar como always-changed gera
+  # ruído desnecessário a cada run.
+  changed_when: false
+  failed_when: false   # tolerante — bootstrap não derrubado por falha aqui
+  when: claude_binary_check.stat.exists
+
+- name: "Caveman — exibir status"
+  ansible.builtin.debug:
+    msg: |
+      {% if not claude_binary_check.stat.exists %}
+      ⚠  Nenhum coding agent detectado (esperava /opt/homebrew/bin/claude).
+         Skip install do caveman — agents do Brewfile podem ter falhado.
+      {% elif (caveman_install.rc | default(1)) == 0 %}
+      ✓  Caveman install/update concluído.
+         Output (last 5 lines):
+         {{ caveman_install.stdout_lines[-5:] | default(['(sem output)']) | join('\n         ') }}
+      {% else %}
+      ⚠  Caveman install falhou (rc={{ caveman_install.rc | default('?') }}).
+         stderr: {{ caveman_install.stderr | default('(sem stderr)') | truncate(200) }}
+         Pra re-tentar manual:
+           curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
+      {% endif %}
