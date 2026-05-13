@@ -484,14 +484,25 @@
 
 - name: "Caveman — install/update via universal installer"
   ansible.builtin.shell:
-    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash"
+    # Flags pra unattended:
+    #   --non-interactive: garante zero prompts. Doc diz "Auto when stdin is
+    #     not a TTY" mas em prática o auto-detect falha dentro do Ansible
+    #     porque install.sh internamente faz `exec npx -y github:...`, que
+    #     re-spawna processo e perde o stdin context. Flag explícita resolve.
+    #   --all: ativa hooks + init + mcp-shrink (full feature set). Sem isso,
+    #     installer entra em multi-select TUI pra escolher features.
+    # < /dev/null: defensivo — força stdin closed mesmo se algo no pipeline
+    # tenta ler input.
+    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash -s -- --non-interactive --all < /dev/null"
   environment:
     # PATH inclui mise shims (pra Node), brew bins (pra claude/agent/gemini)
     # e ansible_env.PATH (fallback). Sem isso, installer pode falhar em
     # detectar agents.
     PATH: "{{ ansible_user_dir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
-    CI: "1"   # non-interactive — installer não prompta nada
   register: caveman_install
+  # Timeout em 300s (5min). Installer faz vários downloads (skills, plugins,
+  # extensions). Se passar de 5min, algo tá errado — não trava bootstrap.
+  timeout: 300
   # changed_when: false porque installer eh idempotente e sempre escreve
   # algo no stdout (output verbose). Marcar como always-changed gera
   # ruído desnecessário a cada run.
