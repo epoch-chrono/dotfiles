@@ -482,47 +482,96 @@
     path: /opt/homebrew/bin/claude
   register: claude_binary_check
 
-- name: "Caveman — install/update via universal installer"
-  ansible.builtin.shell:
-    # ESTRATÉGIA — pre-install + caveman installer combinados:
-    #
-    # PROBLEMA: caveman installer chama internamente:
-    #   - claude plugin marketplace add / claude plugin install (sem prompt)
-    #   - gemini extensions install (PROMPT trava com "Do you want to continue?")
-    #   - outros via npx skills add (sem prompt)
-    #
-    # O prompt do gemini é hardcoded no `gemini extensions install` SEM forma
-    # do caveman propagar `--non-interactive`. Gemini tem flag oficial
-    # própria: `--consent` que faz "Acknowledge security risks and skip the
-    # confirmation prompt." (doc: geminicli.com/docs/extensions/reference/).
-    #
-    # FIX: pre-install do gemini extension com --consent ANTES do caveman
-    # installer. Caveman installer roda depois e detecta gemini ext já
-    # instalada, skipa esse step sem prompt. Outros agents (Claude Code,
-    # etc.) processados normalmente.
-    #
-    # Flags em cada comando:
-    #   gemini extensions install ... --consent: bypassa prompt do gemini
-    #   `2>&1 || true`: tolera erro se ext já instalada (idempotência)
-    #
-    #   bash -s -- --non-interactive --all --no-color:
-    #     --non-interactive: flag oficial do caveman (auto when not TTY)
-    #     --all: hooks + init + mcp-shrink (full feature set)
-    #     --no-color: ANSI escapes off
-    #   < /dev/null: defensivo
-    cmd: |
-      set -eu
+# ── PRE-INSTALL PER AGENT ─────────────────────────────────────────────────
+# Em vez de delegar tudo ao caveman installer (que prompting/falha em
+# vários sub-comandos), instalamos manualmente pra cada agent presente.
+# Vantagens:
+#   - Cada comando com flags específicas (--consent pro gemini, --yes pro
+#     skills add, etc.)
+#   - Falhas isoladas (gemini falhar não afeta cursor)
+#   - Idempotência granular (cada agent tolera "already installed" via
+#     2>&1 || true)
+#   - Fácil adicionar novos agents no futuro — só uma entrada no loop
+#
+# Loop processa cada agent independentemente. `command -v` verifica
+# presença antes de tentar install. Output de cada iteração captura
+# stderr+stdout via 2>&1, tolera erro via || true.
 
-      # 1. Pre-install gemini extension com --consent (skip prompt nativo
-      #    do gemini). Tolerante a "already installed" via 2>&1 || true.
-      if command -v gemini >/dev/null 2>&1; then
+- name: "Caveman — pre-install per agent (idempotente, fault-tolerant)"
+  ansible.builtin.shell: |
+    if command -v {{ item.bin }} >/dev/null 2>&1; then
+      echo "→ {{ item.label }} detectado, instalando caveman skill..."
+      {{ item.cmd }}
+      echo "✓ {{ item.label }} processado"
+    else
+      echo "× {{ item.bin }} não encontrado — skip {{ item.label }}"
+    fi
+  loop:
+    # Claude Code: plugin marketplace + plugin install + MCP shrink
+    # marketplace add eh idempotente (no-op se ja adicionado)
+    # plugin install pode falhar com "already installed" — tolerado
+    # mcp add pode falhar com "already exists" — tolerado
+    - bin: claude
+      label: claude-code
+      cmd: |
+        claude plugin marketplace add JuliusBrussee/caveman 2>&1 || true
+        claude plugin install caveman@caveman 2>&1 || true
+        claude mcp add caveman-shrink -- npx -y caveman-shrink 2>&1 || true
+
+    # Gemini CLI: extension install --consent (bypassa prompt nativo do gemini)
+    # 'already installed' eh tratado como sucesso silencioso
+    - bin: gemini
+      label: gemini-cli
+      cmd: |
         gemini extensions install \
           https://github.com/JuliusBrussee/caveman \
           --consent < /dev/null 2>&1 || true
-      fi
 
-      # 2. Caveman universal installer. Vai detectar que gemini ext já
-      #    foi instalada (passo 1) e skipar — sem prompt.
+    # Cursor: via npx skills add (-a cursor)
+    # --yes pula prompts; --all instala TODAS as 7 skills (caveman, caveman-commit,
+    # caveman-compress, caveman-help, caveman-review, caveman-stats, cavecrew)
+    - bin: cursor-agent
+      label: cursor
+      cmd: |
+        npx -y skills add JuliusBrussee/caveman \
+          -a cursor --yes --all < /dev/null 2>&1 || true
+
+    # Crush: via npx skills add (-a crush)
+    - bin: crush
+      label: crush
+      cmd: |
+        npx -y skills add JuliusBrussee/caveman \
+          -a crush --yes --all < /dev/null 2>&1 || true
+
+    # Block Goose: via npx skills add (-a goose)
+    # Geralmente não está no Brewfile mas caveman detecta se user tem
+    - bin: goose
+      label: block-goose
+      cmd: |
+        npx -y skills add JuliusBrussee/caveman \
+          -a goose --yes --all < /dev/null 2>&1 || true
+  loop_control:
+    label: "{{ item.label }}"
+  environment:
+    PATH: "{{ ansible_user_dir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: caveman_preinstall
+  changed_when: false
+  failed_when: false
+  when: claude_binary_check.stat.exists
+
+# ── CAVEMAN INSTALLER — só pra hooks + statusline + caveman-init ──────────
+# Agora que cada agent foi instalado individualmente acima, rodamos o
+# caveman installer pra preencher o que NÃO foi feito manualmente:
+#   - Claude Code hooks (SessionStart, UserPromptSubmit, mode-tracker, stats)
+#   - Statusline badge ([CAVEMAN] ⛏ N)
+#   - caveman-init rule files no $HOME (.cursor/rules/caveman.mdc, etc.)
+#
+# Como agents já estão configurados (passo acima), o installer detecta e
+# pula essas seções. Apenas a parte de hooks + init permanece.
+
+- name: "Caveman — universal installer (hooks + statusline + init rules)"
+  ansible.builtin.shell:
+    cmd: |
       curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh \
         | bash -s -- --non-interactive --all --no-color < /dev/null
   environment:
@@ -547,13 +596,19 @@
       {% if not claude_binary_check.stat.exists %}
       ⚠  Nenhum coding agent detectado (esperava /opt/homebrew/bin/claude).
          Skip install do caveman — agents do Brewfile podem ter falhado.
-      {% elif (caveman_install.rc | default(1)) == 0 %}
-      ✓  Caveman install/update concluído.
+      {% else %}
+      ── Pre-install per agent ──
+      {% for r in caveman_preinstall.results | default([]) %}
+        {{ r.item.label }}: {{ 'OK' if r.rc | default(1) == 0 else 'FAIL' }}
+      {% endfor %}
+
+      ── Universal installer (hooks + statusline + init) ──
+      {% if (caveman_install.rc | default(1)) == 0 %}
+      ✓  Concluído.
          Output (last 5 lines):
          {{ caveman_install.stdout_lines[-5:] | default(['(sem output)']) | join('\n         ') }}
       {% else %}
-      ⚠  Caveman install falhou (rc={{ caveman_install.rc | default('?') }}).
+      ⚠  Falhou (rc={{ caveman_install.rc | default('?') }}).
          stderr: {{ caveman_install.stderr | default('(sem stderr)') | truncate(200) }}
-         Pra re-tentar manual:
-           curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
+      {% endif %}
       {% endif %}
