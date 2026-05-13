@@ -301,3 +301,59 @@
         stderr: {{ (mise_phase3.stderr | default('') | truncate(500)) }}
       {% endif %}
   when: mise_binary_check.stat.exists
+
+# ── Gcloud — install default components (pós mise install) ────────────────
+# O .default-cloud-sdk-components dotfile era convenção do plugin asdf-
+# gcloud legado. O plugin atual usado pelo mise registry direto (vfox-
+# gcloud) NÃO suporta esse arquivo. Conferir:
+#   https://github.com/mise-plugins/vfox-gcloud
+#
+# Em vez de mexer com gambiarra de plugin asdf, fazemos a instalação dos
+# componentes via task Ansible explícita, rodando após o mise install
+# completar. `mise exec gcloud --` garante que o gcloud da instalação do
+# mise é usado (não algum gcloud do system PATH, se houver).
+#
+# Componentes instalados:
+#   gke-gcloud-auth-plugin — auth provider pra clusters GKE (kubectl)
+#   alpha                  — comandos alpha (cobertura experimental)
+#   beta                   — comandos beta (cobertura pre-GA)
+#
+# Condições:
+#   - mise_binary existe
+#   - gcloud NÃO está em mise_missing (i.e., foi instalado com sucesso na
+#     Fase 3 do mise install)
+#   - failed_when: false — não bloqueia bootstrap se algo der errado
+#     (network transient durante download de components)
+
+- name: "Gcloud — verificar se gcloud foi instalado pelo mise"
+  ansible.builtin.set_fact:
+    gcloud_installed: >-
+      {{ (mise_missing.stdout | default('')) is not search('^gcloud\s', multiline=True) }}
+  when: mise_binary_check.stat.exists
+
+- name: "Gcloud — install components default (gke-gcloud-auth-plugin, alpha, beta)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} exec gcloud -- gcloud components install --quiet gke-gcloud-auth-plugin alpha beta"
+  register: gcloud_components_result
+  changed_when: "'Components installed' in (gcloud_components_result.stdout | default('')) or 'updated' in (gcloud_components_result.stdout | default('')).lower()"
+  failed_when: false
+  when:
+    - mise_binary_check.stat.exists
+    - gcloud_installed | default(false)
+
+- name: "Gcloud — exibir status dos components"
+  ansible.builtin.debug:
+    msg: |
+      {% if not (gcloud_installed | default(false)) %}
+      ⚠  Gcloud não foi instalado pelo mise — skip de components install.
+      {% elif (gcloud_components_result.rc | default(1)) == 0 %}
+      ✓  Gcloud components instalados/atualizados: gke-gcloud-auth-plugin, alpha, beta
+      {% else %}
+      ⚠  Gcloud components install retornou exit code não-zero.
+        stdout: {{ (gcloud_components_result.stdout | default('') | truncate(300)) }}
+        stderr: {{ (gcloud_components_result.stderr | default('') | truncate(300)) }}
+
+      Rodar manualmente:
+        mise exec gcloud -- gcloud components install --quiet gke-gcloud-auth-plugin alpha beta
+      {% endif %}
+  when: mise_binary_check.stat.exists

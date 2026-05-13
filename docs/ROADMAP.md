@@ -370,6 +370,32 @@ Itens isolados que não cabem nas fatias acima.
     precisar config equivalente em `~/.bash_profile` / `~/.zprofile`
     setando `~/.local/share/mise/shims` no PATH.
 
+  - **PATH order completo: GNU paths + LDFLAGS/CPPFLAGS**: quando instalar
+    pacotes GNU via brew no Mac (coreutils, findutils, gnu-sed, gnu-tar,
+    grep, gawk, ed, gpatch, gnu-which, gnu-indent, gsed, libtool, make,
+    etc.), o brew imprime mensagens "==> Caveats" com sugestões de:
+
+    - PATH prepend pra usar versões GNU como `sed`, `tar`, etc. (em vez
+      das BSD do macOS): `/opt/homebrew/opt/<pkg>/libexec/gnubin`
+    - LDFLAGS pra compiladores acharem libs: `-L/opt/homebrew/opt/<pkg>/lib`
+    - CPPFLAGS pra includes: `-I/opt/homebrew/opt/<pkg>/include`
+    - PKG_CONFIG_PATH pra pkg-config: `/opt/homebrew/opt/<pkg>/lib/pkgconfig`
+
+    Mac antigo do user tem ~14 GNU paths em ordem específica antes do
+    homebrew/bin geral.
+
+    **Approach proposto** (a executar quando atacar essa fatia):
+    1. Adicionar os GNU brews necessários ao Brewfile
+    2. Rodar `brew install --reinstall --force <pkg>` no terminal pra
+       cada um, capturando o output das "Caveats" sections
+    3. Consolidar PATH/LDFLAGS/CPPFLAGS/PKG_CONFIG_PATH em
+       `dot_config/fish/conf.d/01-gnu-paths.fish` (ou 02-, depois do
+       mise-shims)
+    4. Decidir quais GNUs realmente fazem diferença pro workflow
+       (coreutils + findutils + gnu-sed são quase sempre vale; ed,
+       gnu-indent provavelmente não)
+
+
   - **`mise activate` full em paralelo a shims**: nossa config atual
     descarta mise activate (vendor desligado via MISE_FISH_AUTO_ACTIVATE=0).
     Perdemos `mise hook-env` features (cd hooks, env vars por projeto via
@@ -411,11 +437,15 @@ Itens isolados que não cabem nas fatias acima.
   `brew upgrade --cask --greedy` (que já é UNIÃO de
   `--greedy-auto-updates` + `--greedy-latest`).
 
-- **fnox como alternativa ao op-creds**: jdx (autor do mise) lançou
-  https://github.com/jdx/fnox — manager de secrets unificado.
-  Suporta múltiplos backends (1Password, AWS Secrets Manager, age, etc.)
-  com sintaxe declarativa similar ao mise. Avaliar como substituto/
-  complemento ao `op-creds` skill pessoal:
+- **fnox para gerenciamento de secrets no terminal local**: jdx (autor
+  do mise) lançou https://github.com/jdx/fnox — manager de secrets
+  unificado com sintaxe declarativa similar ao mise. **Caso de uso: uso
+  no terminal local do Mac (env vars de dev, tokens, etc.)**, NÃO
+  relacionado ao op-creds skill (que é skill pra Claude usar no chat
+  pra fetch creds do 1P em scripts pedidos).
+
+  fnox suporta múltiplos backends (1Password, AWS Secrets Manager,
+  age, etc.). Avaliar workflow real:
 
   **Pros potenciais:**
   - Sintaxe declarativa idiomática ao ecossistema mise/jdx
@@ -426,10 +456,11 @@ Itens isolados que não cabem nas fatias acima.
   **Cons / cautelas:**
   - Projeto novo, API pode mudar
   - Vendor lock-in moderado (ecossistema jdx)
-  - op-creds skill atual já está estável e testado
+  - Já uso direnv + 1Password CLI direto no terminal, possivelmente
+    suficiente
 
-  fnox está adicionado ao mise config (`fnox = "1.23.1"`) — comparar
-  workflow com op-creds e decidir.
+  fnox está adicionado ao mise config (`fnox = "1.23.1"`) — testar
+  workflow real quando precisar de algo mais complexo que direnv.
 
 - **`mise install` herda `./mise.toml` do CWD**: task Ansible roda no
   diretório `~/.local/share/dotfiles/` (CWD do `connection: local`),
