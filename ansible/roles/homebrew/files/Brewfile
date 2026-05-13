@@ -164,6 +164,7 @@ brew "imagemagick"
 brew "binutils"           # GNU binutils (ld, as, ar, etc — não no /usr/bin)
 brew "diffutils"          # GNU diff (mais flexível que BSD diff)
 brew "file-formula"       # GNU file (newer than /usr/bin/file)
+brew "coreutils"          # GNU coreutils (ls, cp, mv, rm, etc. com prefixo "g" — gls, gcp, ...)
 brew "findutils"          # GNU find/locate/xargs (gfind, glocate, gxargs)
 brew "gawk"               # GNU awk (vs BSD awk do sistema)
 brew "git"                # newer than /usr/bin/git do Xcode CLT

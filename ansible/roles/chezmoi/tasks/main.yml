@@ -357,3 +357,86 @@
         mise exec gcloud -- gcloud components install --quiet gke-gcloud-auth-plugin alpha beta
       {% endif %}
   when: mise_binary_check.stat.exists
+
+# ── Java — macOS integration (symlink em /Library/Java/JavaVirtualMachines) ─
+# Mise sugere apos `mise use -g java@lts`:
+#
+#   sudo mkdir /Library/Java/JavaVirtualMachines/<version>.jdk
+#   sudo ln -s /Users/<user>/.local/share/mise/installs/java/<version>/Contents \
+#              /Library/Java/JavaVirtualMachines/<version>.jdk/Contents
+#
+# Pra que serve: apps macOS que pesquisam JDKs em /Library/Java/JavaVirtualMachines/
+# (IntelliJ, Android Studio, alguns instalers JVM via java_home) acharem
+# o java instalado pelo mise sem precisar configurar JAVA_HOME manualmente.
+#
+# Como a versao do java eh "lts" no config.toml.tmpl (resolvida dinamicamente
+# pelo mise), precisamos detectar a versao instalada em runtime e usar pra
+# construir os paths.
+#
+# Idempotencia: stat do symlink antes de criar — se ja existe e aponta
+# pro path correto, skip.
+
+- name: "Java — detectar versão instalada via mise"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} current java"
+  register: mise_java_current
+  changed_when: false
+  failed_when: false
+  when: mise_binary_check.stat.exists
+
+- name: "Java — set facts com paths (versão dinâmica)"
+  ansible.builtin.set_fact:
+    java_version: "{{ mise_java_current.stdout | trim }}"
+    java_mise_contents: "{{ ansible_user_dir }}/.local/share/mise/installs/java/{{ mise_java_current.stdout | trim }}/Contents"
+    java_system_jvm_dir: "/Library/Java/JavaVirtualMachines/{{ mise_java_current.stdout | trim }}.jdk"
+  when:
+    - mise_binary_check.stat.exists
+    - (mise_java_current.stdout | default('') | trim) | length > 0
+    - "'No version' not in (mise_java_current.stdout | default(''))"
+
+- name: "Java — verificar se symlink macOS já existe"
+  ansible.builtin.stat:
+    path: "{{ java_system_jvm_dir }}/Contents"
+  register: java_symlink_check
+  when:
+    - mise_binary_check.stat.exists
+    - java_system_jvm_dir is defined
+
+- name: "Java — criar diretório /Library/Java/JavaVirtualMachines/<version>.jdk (sudo)"
+  ansible.builtin.file:
+    path: "{{ java_system_jvm_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+  when:
+    - mise_binary_check.stat.exists
+    - java_system_jvm_dir is defined
+    - not (java_symlink_check.stat.exists | default(false))
+
+- name: "Java — criar symlink Contents -> mise install (sudo)"
+  ansible.builtin.file:
+    src: "{{ java_mise_contents }}"
+    dest: "{{ java_system_jvm_dir }}/Contents"
+    state: link
+    force: false
+  become: true
+  when:
+    - mise_binary_check.stat.exists
+    - java_system_jvm_dir is defined
+    - not (java_symlink_check.stat.exists | default(false))
+
+- name: "Java — exibir status integração macOS"
+  ansible.builtin.debug:
+    msg: |
+      {% if java_version is not defined %}
+      ⚠  Java não detectado via 'mise current java' — skip integração macOS.
+      {% elif (java_symlink_check.stat.exists | default(false)) %}
+      ✓  Java integração macOS já configurada:
+        {{ java_system_jvm_dir }}/Contents → {{ java_mise_contents }}
+      {% else %}
+      ✓  Java integração macOS criada (versão {{ java_version }}):
+        {{ java_system_jvm_dir }}/Contents → {{ java_mise_contents }}
+      Apps macOS (IntelliJ, Android Studio, /usr/libexec/java_home) agora
+      enxergam esse JDK.
+      {% endif %}
+  when: mise_binary_check.stat.exists
