@@ -21,4 +21,4 @@
 # declarado aqui pra que contribuidores rodando `mise install` dentro do
 # repo tenham a mesma versão sem precisar do brew. Resolução: brew vence
 # no PATH default; mise version fica disponível via `mise exec`.
-chezmoi = "latest"
+# chezmoi = "latest"  # redundante com chezmoi instalado via brew/apt
