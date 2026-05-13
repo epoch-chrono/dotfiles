@@ -373,6 +373,21 @@ cask "mongodb-compass"         # MongoDB GUI oficial
 cask "nosqlbooster-for-mongodb" # MongoDB GUI third-party (queries avançadas)
 
 
+# ── AWS / cloud tools ─────────────────────────────────────────────────────
+# AWS CLI core vem via mise (`awscli` no config.toml.tmpl). Plugins do AWS
+# CLI (que são binários separados invocados pelo aws CLI) vêm via brew
+# cask quando há cask oficial — manter package management unificado.
+#
+# session-manager-plugin: binário invocado por `aws ssm start-session` pra
+# conectar em EC2 via SSM (Sebastião bastion, instâncias privadas, etc).
+# Distribuído pela AWS como .pkg signed installer. Cask oficial do brew
+# faz o install do .pkg em /usr/local/sessionmanagerplugin/ + symlink em
+# /usr/local/bin/session-manager-plugin. Verificar com:
+#   session-manager-plugin --version
+#   aws ssm start-session --target i-XXXXX --profile YYY
+cask "session-manager-plugin"  # plugin SSM Session Manager pro AWS CLI
+
+
 # ── Containers / dev ──────────────────────────────────────────────────────
 cask "podman-desktop"          # GUI pro podman
 cask "gitkraken-cli"           # AI commit message generator
