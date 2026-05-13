@@ -33,6 +33,28 @@ idle-timeout = 250               # ms antes de eventos idle (autocomplete, etc.)
 completion-timeout = 5           # ms antes de mostrar completions
 shell = ["/opt/homebrew/bin/fish", "-c"]
 
+# Atomic save desligado.
+#
+# Por padrão, Helix faz atomic save: escreve num arquivo temporário e
+# usa rename(2) pra mover pro destino final. Isso TROCA O INODE do
+# arquivo, o que quebra tools que validam inode do tempfile pra detectar
+# editors que fazem swap:
+#
+#   crontab -e   → "crontab: temp file must be edited in place"
+#   visudo       → idem (descarta as edits)
+#   sudoedit     → idem
+#
+# Desligando, Helix passa a escrever in-place (como vim faz por default),
+# resolvendo todos esses casos de uma vez.
+#
+# Trade-off: perde proteção contra corrupção em crash/power-loss DURANTE
+# o save. Pra workstation pessoal, aceitável — chance de crash mid-save é
+# mínima. Pra servidor crítico ou disco instável, considerar wrapper
+# externo em vez disso.
+#
+# Requer Helix ≥ 25.x (PR #13656 / merged 2025).
+atomic-save = false
+
 
 [editor.cursor-shape]
 # Forma do cursor por modo (preferência visual nativa do helix,
