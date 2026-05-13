@@ -244,6 +244,61 @@
     path: /opt/homebrew/bin/cursor-agent
   register: cursor_agent_check
 
+- name: "Claude Code — verificar se claude foi instalado pelo cask"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/claude
+  register: claude_binary_check_hb
+
+# ── AI / coding agents — Gatekeeper workaround (xattr quarantine) ──────────
+# Casks da seção 'AI / coding agents' do Brewfile vêm com binários que
+# nem sempre passaram pela notarização da Apple. Resultado: macOS Tahoe
+# Gatekeeper bloqueia execução na 1a vez, mostrando popup 'could not
+# verify ... is free of malware' e exigindo que o user vá em System
+# Settings > Privacy & Security > Allow Anyway.
+#
+# CASOS CONFIRMADOS:
+#
+#   cursor-cli: bug oficial reportado pelo dev da Cursor
+#     (forum.cursor.com/t/155056). Binário merkle-tree-napi.darwin-arm64.
+#     node não passou pela notarização. Workaround oficial confirmado:
+#     xattr -rd com.apple.quarantine no Caskroom inteiro.
+#
+#   claude-code: binário principal É notarized (Anthropic PBC), mas em
+#     algumas versões o cask ainda traz quarantine flag (issue #29018,
+#     #19897 do anthropics/claude-code). Aplicar xattr preventivamente
+#     resolve o caso de upgrade pra novas versões que possam ter o flag.
+#     IMPORTANTE: este workaround NÃO resolve o problema de .node files
+#     extraídos em runtime (issue #14911) — esses têm paths dinâmicos
+#     em /var/folders/ e requerem fix upstream da Anthropic.
+#
+# Solução escolhida: xattr -rd com.apple.quarantine no Caskroom de cada
+# cask. Sem sudo (Caskroom é writable pelo user do brew).
+#
+# Idempotente: xattr -rd retorna 0 mesmo se já foi removido. Roda toda
+# vez pra cobrir upgrades (cada nova versão baixa arquivos com
+# quarantine flag fresh).
+#
+# NÃO APLICAMOS pra gemini-cli porque é formula (não cask) — não tem
+# path /opt/homebrew/Caskroom/ correspondente. Formulas tendem a ser
+# menos afetadas (binários compilados pelo brew localmente, sem
+# quarantine).
+
+- name: "AI agents — remover quarantine flag do cursor-cli Caskroom"
+  ansible.builtin.command:
+    cmd: xattr -rd com.apple.quarantine /opt/homebrew/Caskroom/cursor-cli
+  register: cursor_quarantine
+  changed_when: false   # idempotente — não conta como mudança
+  failed_when: false    # tolerante: se path não existe ou outro erro, segue
+  when: cursor_agent_check.stat.exists
+
+- name: "AI agents — remover quarantine flag do claude-code Caskroom"
+  ansible.builtin.command:
+    cmd: xattr -rd com.apple.quarantine /opt/homebrew/Caskroom/claude-code
+  register: claude_quarantine
+  changed_when: false
+  failed_when: false
+  when: claude_binary_check_hb.stat.exists
+
 - name: "Cursor CLI — garantir ~/.local/bin/ existe"
   ansible.builtin.file:
     path: "{{ ansible_user_dir }}/.local/bin"
