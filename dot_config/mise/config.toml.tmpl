@@ -107,24 +107,26 @@ MISE_RUBY_DEFAULT_PACKAGES_FILE   = ""
 [tools]
 # ── Core languages / runtimes ─────────────────────────────────────────────
 # Pinned por reprodutibilidade — versões impactantes que mudam APIs.
-python = ["3.13.11", { version = "2.7.18", env = { PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA = "openssl@1.1", LDFLAGS = "-L/opt/homebrew/opt/openssl@1.1/lib", CPPFLAGS = "-I/opt/homebrew/opt/openssl@1.1/include", PKG_CONFIG_PATH = "/opt/homebrew/opt/openssl@1.1/lib/pkgconfig" } }]
-node   = "lts"
-java   = "lts"
-go     = "1.26.3"
-rust   = "1.95.0"
-ruby   = "3.4.9"
-elixir = "1.19.5-otp-28"
-erlang = "28.5"
-perl   = "5.42.2"
+## Python - 2 major versions
+python = ["3.13.11", { version = "2.7.18", env = { PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA = "openssl@1.1", LDFLAGS = "-L/opt/homebrew/opt/openssl@1.1/lib", CPPFLAGS = "-I/opt/homebrew/opt/openssl@1.1/include", PKG_CONFIG_PATH = "/opt/homebrew/opt/openssl@1.1/lib/pkgconfig" } }]  # https://github.com/python/cpython
+## Other languages / runtimes
+node   = "lts"            # https://github.com/nodejs/node
+java   = "lts"            # https://github.com/openjdk/jdk
+go     = "1.26.3"         # https://github.com/golang/go
+rust   = "1.95.0"         # https://github.com/rust-lang/rust
+ruby   = "3.4.9"          # https://github.com/ruby/ruby
+elixir = "1.19.5-otp-28"  # https://github.com/elixir-lang/elixir
+erlang = "28.5"           # https://github.com/erlang/otp
+perl   = "5.42.2"         # https://github.com/Perl/perl5
 
 
 # ── Backends prerequisites ────────────────────────────────────────────────
 # Tools que o mise usa internamente como backend pra outros plugins.
-aqua = "2.58.1"   # package-manager declarativo (mise usa como backend aqua:)
-uv   = "0.11.14"  # python package installer (mise usa como backend pipx:)
-pipx = "1.12.0"   # python package installer (mise usa como backend pipx:) - backup plan
-aube = "1.11.0"   # Node package manager (mise usa como backend npm:)
-npm  = "11.14.1"  # Node package manager (mise usa como backend npm:) - backup plan
+aqua = "2.58.1"   # package-manager declarativo (mise usa como backend aqua:) # https://github.com/aquaproj/aqua
+uv   = "0.11.14"  # python package installer (mise usa como backend pipx:) # https://github.com/astral-sh/uv
+pipx = "1.12.0"   # python package installer (mise usa como backend pipx:) - backup plan # https://github.com/pypa/pipx
+aube = "1.11.0"   # Node package manager (mise usa como backend npm:) # https://github.com/aube-sh/aube
+npm  = "11.14.1"  # Node package manager (mise usa como backend npm:) - backup plan # https://github.com/npm/cli
 
 # Backend usage examples (descomentar quando precisar):
 # "github:BurntSushi/ripgrep" = "latest"
@@ -133,124 +135,125 @@ npm  = "11.14.1"  # Node package manager (mise usa como backend npm:) - backup p
 
 
 # ── Outros pre-requisites ─────────────────────────────────────────────────
-usage  = "3.3.0"   # spec-driven CLI framework; mise usa pra completions
-sqlite = "3.53.1"
+usage  = "3.3.0"   # spec-driven CLI framework; mise usa pra completions | https://github.com/jdx/usage
+sqlite = "3.53.1"  # https://github.com/sqlite/sqlite
 
 # ── AI tooling ─────────────────────────────────────────────────────────────
 ## CLI main tools
-claude-code = "2.1.140"
-gemini      = "0.41.2"
-crush       = "0.65.3"  # CLI — https://github.com/charmbracelet/crush
+claude-code = "2.1.140"  # https://github.com/anthropics/claude-code
+gemini      = "0.41.2"   # https://github.com/FluentlyAI/gemini
+crush       = "0.65.3"   # CLI — https://github.com/charmbracelet/crush
 
 ## CLI auxiliars tools
-"npm:@steipete/summarize" = "0.14.1"
+"npm:@steipete/summarize" = "0.14.1"  # https://github.com/steipete/summarize
+"cargo:rtk"               = "0.1.0"  # https://github.com/rtk-ai/rtk
 
 ## Other tools — alfabético dentro deste bloco
-adr-tools          = "3.0.0"
-assh               = "2.17.2"
-aws-nuke           = "3.64.2"    # CUIDADO: destrutivo por design. --dry-run primeiro.
-aws-vault          = "7.10.7"
-awscli             = "2.34.45"
-bat                = "0.26.1"
-bottom             = "0.12.3"
-cheat              = "5.1.0"
-checkov            = "3.2.528"
-chezmoi            = "2.70.3"
-choose             = "1.3.7"
-cloudflared        = "2026.3.0"
-conftest           = "0.68.2"
-delta              = "0.19.2"
-direnv             = "2.37.1"
-dive               = "0.13.1"
-dotenv-linter      = "4.0.0"
-driftctl           = "0.40.0"
-dust               = "1.2.4"
-eksctl             = "0.226.0"
-eza                = "0.23.4"
-fd                 = "10.4.2"
-fillin             = "0.3.3"
-flyway             = "12.6.1"
+adr-tools          = "3.0.0"     # https://github.com/npryce/adr-tools
+assh               = "2.17.2"    # https://github.com/moul/assh
+aws-nuke           = "3.64.2"    # CUIDADO: destrutivo por design. --dry-run primeiro. | https://github.com/rebuy-de/aws-nuke
+aws-vault          = "7.10.7"    # https://github.com/99designs/aws-vault
+awscli             = "2.34.45"   # https://github.com/aws/aws-cli
+bat                = "0.26.1"    # https://github.com/sharkdp/bat
+bottom             = "0.12.3"    # https://github.com/ClementTsang/bottom
+cheat              = "5.1.0"     # https://github.com/cheat/cheat
+checkov            = "3.2.528"   # https://github.com/bridgecrewio/checkov
+chezmoi            = "2.70.3"    # https://github.com/twpayne/chezmoi
+choose             = "1.3.7"     # https://github.com/theryangeary/choose
+cloudflared        = "2026.3.0"  # https://github.com/cloudflare/cloudflared
+conftest           = "0.68.2"    # https://github.com/open-policy-agent/conftest
+delta              = "0.19.2"    # https://github.com/dandavison/delta
+direnv             = "2.37.1"    # https://github.com/direnv/direnv
+dive               = "0.13.1"    # https://github.com/wagoodman/dive
+dotenv-linter      = "4.0.0"     # https://github.com/dotenv-linter/dotenv-linter
+driftctl           = "0.40.0"    # https://github.com/snyk/driftctl
+dust               = "1.2.4"     # https://github.com/bootandy/dust
+eksctl             = "0.226.0"   # https://github.com/eksctl-io/eksctl
+eza                = "0.23.4"    # https://github.com/eza-community/eza
+fd                 = "10.4.2"    # https://github.com/sharkdp/fd
+fillin             = "0.3.3"     # https://github.com/jdxcode/fillin
+flyway             = "12.6.1"    # https://github.com/flyway/flyway
 fnox               = "1.23.1"    # secret mgmt — https://fnox.jdx.dev/ | https://github.com/jdx/fnox
-fx                 = "39.2.0"
-fzf                = "0.72.0"
-gcloud             = "568.0.0"
-ghorg              = "1.11.10"
-git-chglog         = "0.15.4"
-gitconfig          = "1.2.0"
-github-cli         = "2.92.0"
-gitleaks           = "8.30.1"
-glab               = "1.96.0"
-glow               = "2.1.2"
-has                = "1.5.2"
-helix              = "25.07.1"
-helm               = "4.1.4"
-helm-cr            = "1.8.1"
-helm-diff          = "3.15.6"
-hwatch             = "0.4.2"
-iamlive            = "1.1.28"
-infracost          = "0.10.44"
-jq                 = "1.8.1"
-just               = "1.51.0"
-k9s                = "0.50.18"
-kind               = "0.31.0"
-krew               = "0.5.0"
-kubecm             = "0.35.1"
-kubecolor          = "0.6.0"
-kubectl            = "1.36.1"
-kubectx            = "0.11.0"
-kubeshark          = "53.2.5"
-kubespy            = "0.6.3"
-kustomize          = "5.8.1"
-mani               = "0.32.0"
-mkcert             = "1.4.4"
-mongosh            = "2.8.3"
-opa                = "1.16.2"
-opentofu           = "1.11.7"
-operator-sdk       = "1.42.2"
-pre-commit         = "4.6.0"
-qdns               = "0.19.12"
-rbac-lookup        = "0.10.3"
-rclone             = "1.74.1"
-regctl             = "0.11.4"
-ripgrep            = "15.1.0"
-sd                 = "1.1.0"
-shellcheck         = "0.11.0"
-shfmt              = "3.13.1"
-snyk               = "1.1304.2"
-sops               = "3.13.0"
-sopstool           = "1.2.1"
-sshuttle           = "1.3.2"
-starship           = "1.25.1"
-steampipe          = "2.4.2"
-teleport-community = "18.8.0"
-teller             = "2.0.7"
-terraform-docs     = "0.24.0"
-terramate          = "0.17.0"
-tf-summarize       = "0.3.20"
-tflint             = "0.62.0"
-tfupdate           = "0.9.4"
-tokei              = "14.0.0"
-trivy              = "0.70.0"
-trufflehog         = "3.95.3"
-velero             = "1.18.0"
-wtfutil            = "0.49.1"
-xh                 = "0.25.3"
-yj                 = "5.1.0"
-yor                = "0.1.200"
-yq                 = "4.53.2"
-zellij             = "0.44.2"
-zoxide             = "0.9.9"
+fx                 = "39.2.0"    # https://github.com/antonmedv/fx
+fzf                = "0.72.0"    # https://github.com/junegunn/fzf
+gcloud             = "568.0.0"   # https://github.com/GoogleCloudPlatform/cloud-sdk-docker
+ghorg              = "1.11.10"   # https://github.com/gabrie30/ghorg
+git-chglog         = "0.15.4"    # https://github.com/git-chglog/git-chglog
+gitconfig          = "1.2.0"     # https://github.com/twpayne/gitconfig
+github-cli         = "2.92.0"    # https://github.com/cli/cli
+gitleaks           = "8.30.1"    # https://github.com/gitleaks/gitleaks
+glab               = "1.96.0"    # https://github.com/profclems/glab
+glow               = "2.1.2"     # https://github.com/charmbracelet/glow
+has                = "1.5.2"     # https://github.com/hasura/has
+helix              = "25.07.1"   # https://github.com/helix-editor/helix
+helm               = "4.1.4"     # https://github.com/helm/helm
+helm-cr            = "1.8.1"     # https://github.com/helm/chart-releaser
+helm-diff          = "3.15.6"    # https://github.com/databus23/helm-diff
+hwatch             = "0.4.2"     # https://github.com/sgtpep/hwatch
+iamlive            = "1.1.28"    # https://github.com/iann0036/iamlive
+infracost          = "0.10.44"   # https://github.com/infracost/infracost
+jq                 = "1.8.1"     # https://github.com/jqlang/jq
+just               = "1.51.0"    # https://github.com/casey/just
+k9s                = "0.50.18"   # https://github.com/derailed/k9s
+kind               = "0.31.0"    # https://github.com/kubernetes-sigs/kind
+krew               = "0.5.0"     # https://github.com/kubernetes-sigs/krew
+kubecm             = "0.35.1"    # https://github.com/sunny0826/kubecm
+kubecolor          = "0.6.0"     # https://github.com/hidetatz/kubecolor
+kubectl            = "1.36.1"    # https://github.com/kubernetes/kubectl
+kubectx            = "0.11.0"    # https://github.com/ahmetb/kubectx
+kubeshark          = "53.2.5"    # https://github.com/kubeshark/kubeshark
+kubespy            = "0.6.3"     # https://github.com/pulumi/kubespy
+kustomize          = "5.8.1"     # https://github.com/kubernetes-sigs/kustomize
+mani               = "0.32.0"    # https://github.com/alajmo/mani
+mkcert             = "1.4.4"     # https://github.com/FiloSottile/mkcert
+mongosh            = "2.8.3"     # https://github.com/mongodb-js/mongosh
+opa                = "1.16.2"    # https://github.com/open-policy-agent/opa
+opentofu           = "1.11.7"    # https://github.com/opentofu/opentofu
+operator-sdk       = "1.42.2"    # https://github.com/operator-framework/operator-sdk
+pre-commit         = "4.6.0"     # https://github.com/pre-commit/pre-commit
+qdns               = "0.19.12"   # https://github.com/Jamesits/qdns
+rbac-lookup        = "0.10.3"    # https://github.com/FairwindsOps/rbac-lookup
+rclone             = "1.74.1"    # https://github.com/rclone/rclone
+regctl             = "0.11.4"    # https://github.com/regclient/regclient
+ripgrep            = "15.1.0"    # https://github.com/BurntSushi/ripgrep
+sd                 = "1.1.0"     # https://github.com/chmln/sd
+shellcheck         = "0.11.0"    # https://github.com/koalaman/shellcheck
+shfmt              = "3.13.1"    # https://github.com/mvdan/sh
+snyk               = "1.1304.2"  # https://github.com/snyk/cli
+sops               = "3.13.0"    # https://github.com/getsops/sops
+sopstool           = "1.2.1"     # https://github.com/cadenzijl/sopstool
+sshuttle           = "1.3.2"     # https://github.com/sshuttle/sshuttle
+starship           = "1.25.1"    # https://github.com/starship/starship
+steampipe          = "2.4.2"     # https://github.com/turbot/steampipe
+teleport-community = "18.8.0"    # https://github.com/gravitational/teleport
+teller             = "2.0.7"     # https://github.com/tellerops/teller
+terraform-docs     = "0.24.0"    # https://github.com/terraform-docs/terraform-docs
+terramate          = "0.17.0"    # https://github.com/terramate-io/terramate
+tf-summarize       = "0.3.20"    # https://github.com/dineshba/tf-summarize
+tflint             = "0.62.0"    # https://github.com/terraform-linters/tflint
+tfupdate           = "0.9.4"     # https://github.com/minamijoyo/tfupdate
+tokei              = "14.0.0"    # https://github.com/XAMPPRocky/tokei
+trivy              = "0.70.0"    # https://github.com/aquasecurity/trivy
+trufflehog         = "3.95.3"    # https://github.com/trufflesecurity/trufflehog
+velero             = "1.18.0"    # https://github.com/vmware-tanzu/velero
+wtfutil            = "0.49.1"    # https://github.com/wtfutil/wtfutil
+xh                 = "0.25.3"    # https://github.com/ducaale/xh
+yj                 = "5.1.0"     # https://github.com/sclevine/yj
+yor                = "0.1.200"   # https://github.com/bridgecrewio/yor
+yq                 = "4.53.2"    # https://github.com/mikefarah/yq
+zellij             = "0.44.2"    # https://github.com/zellij-org/zellij
+zoxide             = "0.9.9"     # https://github.com/ajeetdsouza/zoxide
 
 # ── Backend tooling (asdf plugins explícitos) ─────────────────────────────
 # Tools que não têm entrada no mise registry direto e precisam do plugin
 # asdf especificado. Mise resolve via shim asdf compatibility. Cada linha
 # referencia o repo do plugin (owner/repo no GitHub).
 # "asdf:brentjanderson/asdf-semgrep" = "latest"  # mantido comentado pra investigação futura
-"asdf:davidecavestro/asdf-osqueryi"  = "5.23.0"
-"asdf:ivanvc/asdf-wrk"               = "4.2.0"
-"asdf:junminahn/asdf-semtag"         = "0.2.0"
-"asdf:mathew-fleisch/asdf-semver"    = "3.4.0"
-"asdf:ryodocx/kube-credential-cache" = "0.5.1"
+"asdf:davidecavestro/asdf-osqueryi"  = "5.23.0"  # https://github.com/osquery/osquery
+"asdf:ivanvc/asdf-wrk"               = "4.2.0"   # https://github.com/wg/wrk
+"asdf:junminahn/asdf-semtag"         = "0.2.0"   # https://github.com/pnikosis/semtag
+"asdf:mathew-fleisch/asdf-semver"    = "3.4.0"   # https://github.com/fsaintjacques/semver-tool
+"asdf:ryodocx/kube-credential-cache" = "0.5.1"   # https://github.com/kubernetes/cloud-provider-vsphere/tree/master/cmd/kube-credential-cache
 
 # ── Backend tooling (github packages) ─────────────────────────────────────
 # Tools instaladas direto de GitHub releases (backend github:).
@@ -258,48 +261,63 @@ zoxide             = "0.9.9"
 
 # ── Backend tooling (go packages) ─────────────────────────────────────────
 ## old ~/.default-go-packages
+### https://github.com/camptocamp/terraboard
 "go:github.com/camptocamp/terraboard"                                           = "0.0.0-20240724163516-6f6b6b60f5f0"
+### https://github.com/cduggn/ccexplorer
 "go:github.com/cduggn/ccexplorer/cmd/ccexplorer"                                = "0.8.4"
+### https://github.com/Gelio/go-global-update
 "go:github.com/Gelio/go-global-update"                                          = "0.2.5"
+### https://github.com/go-delve/delve
 "go:github.com/go-delve/delve/cmd/dlv"                                          = "1.26.3"
+### https://github.com/golang/mock
 "go:github.com/golang/mock/mockgen"                                             = "1.6.0"
+### https://github.com/mingrammer/flog
 "go:github.com/mingrammer/flog"                                                 = "0.4.4"
+### https://github.com/open-telemetry/opentelemetry-collector-contrib
 "go:github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen" = "0.152.0"
+### https://github.com/pressly/goose
 "go:github.com/pressly/goose/v3/cmd/goose"                                      = "3.27.1"
+### https://github.com/segmentio/chamber
 "go:github.com/segmentio/chamber/v2"                                            = "2.14.1"
+### https://go.googlesource.com/tools/
 "go:golang.org/x/tools/cmd/godoc"                                               = "0.1.0-deprecated"
+### https://go.googlesource.com/tools/
 "go:golang.org/x/tools/cmd/goimports"                                           = "0.45.0"
+### https://go.googlesource.com/tools/
 "go:golang.org/x/tools/gopls"                                                   = "0.21.1"
+### https://github.com/grpc/grpc-go
 "go:google.golang.org/grpc/cmd/protoc-gen-go-grpc"                              = "1.6.2"
+### https://github.com/protocolbuffers/protobuf-go
 "go:google.golang.org/protobuf/cmd/protoc-gen-go"                               = "1.36.11"
+### https://github.com/dominikh/go-tools
 "go:honnef.co/go/tools/cmd/staticcheck"                                         = "0.7.0"
 
 # ── Backend tooling (aube/npm packages) ───────────────────────────────────
 ## old ~/.default-npm-packages
-"npm:@clevercli/cli"      = "0.0.16"
-"npm:aws-cost-cli"        = "0.2.7"
-"npm:commitizen"          = "4.3.1"
-"npm:cz-emoji"            = "1.3.2-canary.2"
-"npm:cz-jira-smart-emoji" = "1.0.8"
-"npm:git-tip"             = "1.2.2"
-"npm:inkdrop-visualizer"  = "1.1.49"
-"npm:markdownlint"        = "0.40.0"
-"npm:vercel"              = "53.1.1"
+"npm:@clevercli/cli"      = "0.0.16"          # https://github.com/clevercli/clevercli
+"npm:aws-cost-cli"        = "0.2.7"           # https://github.com/k1LoW/aws-cost-cli
+"npm:commitizen"          = "4.3.1"           # https://github.com/commitizen/cz-cli
+"npm:cz-emoji"            = "1.3.2-canary.2"  # https://github.com/cz-conventional-changelog/cz-emoji
+"npm:cz-jira-smart-emoji" = "1.0.8"           # https://github.com/Gnouc/cz-jira-smart-emoji
+"npm:git-tip"             = "1.2.2"           # https://github.com/tblabur/git-tip
+"npm:inkdrop-visualizer"  = "1.1.49"          # https://github.com/inkdropapp/inkdrop-visualizer
+"npm:markdownlint"        = "0.40.0"          # https://github.com/DavidAnson/markdownlint
+"npm:vercel"              = "53.1.1"          # https://github.com/vercel/vercel
 
 # ── Backend tooling (uv/pipx/python packages) ─────────────────────────────
 ## old ~/.default-python-packages
-"pipx:ansible-lint"      = "26.4.0"
-"pipx:ansible-navigator" = "26.4.0"
-"pipx:ansible"           = "13.6.0"
-"pipx:cookiecutter"      = "2.7.1"
-"pipx:diagrams"          = "0.25.1"
-"pipx:jtbl"              = "1.6.0"
-"pipx:litecli"           = "1.17.1"
-"pipx:mycli"             = "1.71.0"
-"pipx:pgcli"             = "4.4.0"
-"pipx:yubikey-manager"   = "5.9.1"
-"pipx:playwright"        = "1.59.0"
-"pipx:podman-compose"    = "1.5.0"
+"pipx:ansible-lint"      = "26.4.0"  # https://github.com/ansible/ansible-lint
+"pipx:ansible-navigator" = "26.4.0"  # https://github.com/ansible/ansible-navigator
+"pipx:ansible"           = "13.6.0"  # https://github.com/ansible/ansible
+"pipx:cookiecutter"      = "2.7.1"   # https://github.com/cookiecutter/cookiecutter
+"pipx:diagrams"          = "0.25.1"  # https://github.com/mingrammer/diagrams
+"pipx:jtbl"              = "1.6.0"   # https://github.com/kellyjonbrazil/jtbl
+"pipx:litecli"           = "1.17.1"  # https://github.com/dbcli/litecli
+"pipx:mycli"             = "1.71.0"  # https://github.com/dbcli/mycli
+"pipx:pgcli"             = "4.4.0"   # https://github.com/dbcli/pgcli
+"pipx:yubikey-manager"   = "5.9.1"   # https://github.com/Yubico/yubikey-manager
+"pipx:playwright"        = "1.59.0"  # https://github.com/microsoft/playwright-python
+"pipx:podman-compose"    = "1.5.0"   # https://github.com/containers/podman-compose
 
 ### On-demand tools — descomentar quando precisar
 
@@ -309,68 +327,68 @@ zoxide             = "0.9.9"
 # rodar server localmente (testes de integração, dev offline).
 # mysql           = "latest"  # full install (server + client) via mise
 # postgres        = "latest"  # full install (server + client) via mise
-# argo            = "latest"
-# argocd          = "latest"
-# awsls           = "latest"
-# bitwarden       = "latest"
-# bun             = "latest"
-# caddy           = "latest"
-# cfssl           = "latest"
-# cidr-merger     = "latest"
-# consul          = "latest"
-# cosign          = "latest"
-# crane           = "latest"
-# ctop            = "latest"
-# dasel           = "latest"
-# deck            = "latest"
-# devspace        = "latest"
-# docker-slim     = "latest"
-# dockle          = "latest"
-# doctoolchain    = "latest"  # descontinuado?
-# duf             = "latest"
-# ecspresso       = "latest"
-# ghidra          = "latest"
-# gitui           = "latest"
-# glen            = "latest"
-# granted         = "latest"  # instalar via brew, mise não trás versão mac
-# grype           = "latest"
-# hcloud          = "latest"
-# istioctl        = "latest"
-# k3d             = "latest"
-# kafkactl        = "latest"
-# kompose         = "latest"
-# kube-score      = "latest"
-# kubectl-convert = "latest"
-# kubent          = "latest"
-# kubeseal        = "latest"
-# kubesec         = "latest"
-# kubie           = "latest"
-# lima            = "latest"
-# minikube        = "latest"
-# packer          = "latest"
-# peco            = "latest"
-# pint            = "latest"
-# pluto           = "latest"
-# polaris         = "latest"
-# popeye          = "latest"
-# pulumi          = "latest"
-# redis           = "latest"
-# redis-cli       = "latest"
-# rlwrap          = "latest"
-# rstash          = "latest"
-# saml2aws        = "latest"
-# skaffold        = "latest"
-# stern           = "latest"
-# svu             = "latest"  # erro de certificado?
-# syncher         = "latest"
-# tekton-cli      = "latest"
-# telepresence    = "latest"
-# terraformer     = "latest"
-# terrascan       = "latest"
-# tfsec           = "latest"
-# vault           = "latest"
-# vcluster        = "latest"
-# viddy           = "latest"
-# vim             = "latest"
-# yadm            = "latest"
-# yarn            = "latest"
+# argo            = "latest"  # https://github.com/argoproj/argo-workflows
+# argocd          = "latest"  # https://github.com/argoproj/argo-cd
+# awsls           = "latest"  # https://github.com/jckuester/awsls
+# bitwarden       = "latest"  # https://github.com/bitwarden/cli
+# bun             = "latest"  # https://github.com/oven-sh/bun
+# caddy           = "latest"  # https://github.com/caddyserver/caddy
+# cfssl           = "latest"  # https://github.com/cloudflare/cfssl
+# cidr-merger     = "latest"  # https://github.com/kumina/cidr-merger
+# consul          = "latest"  # https://github.com/hashicorp/consul
+# cosign          = "latest"  # https://github.com/sigstore/cosign
+# crane           = "latest"  # https://github.com/google/go-containerregistry
+# ctop            = "latest"  # https://github.com/bcicen/ctop
+# dasel           = "latest"  # https://github.com/TomWright/dasel
+# deck            = "latest"  # https://github.com/kong/deck
+# devspace        = "latest"  # https://github.com/loft-sh/devspace
+# docker-slim     = "latest"  # https://github.com/docker-slim/docker-slim
+# dockle          = "latest"  # https://github.com/goodwithtech/dockle
+# doctoolchain    = "latest"  # descontinuado? | https://github.com/doctoolchain/doctoolchain
+# duf             = "latest"  # https://github.com/muesli/duf
+# ecspresso       = "latest"  # https://github.com/kayac/ecspresso
+# ghidra          = "latest"  # https://github.com/NationalSecurityAgency/ghidra
+# gitui           = "latest"  # https://github.com/extrawurst/gitui
+# glen            = "latest"  # https://github.com/robherley/glen
+# granted         = "latest"  # instalar via brew, mise não trás versão mac | https://github.com/fwdcloudsec/granted
+# grype           = "latest"  # https://github.com/anchore/grype
+# hcloud          = "latest"  # https://github.com/hetznercloud/cli
+# istioctl        = "latest"  # https://github.com/istio/istio
+# k3d             = "latest"  # https://github.com/k3d-io/k3d
+# kafkactl        = "latest"  # https://github.com/deviceinsight/kafkactl
+# kompose         = "latest"  # https://github.com/kubernetes/kompose
+# kube-score      = "latest"  # https://github.com/zegl/kube-score
+# kubectl-convert = "latest"  # https://github.com/kubernetes/kubectl
+# kubent          = "latest"  # https://github.com/doitintl/kube-no-trouble
+# kubeseal        = "latest"  # https://github.com/bitnami-labs/sealed-secrets
+# kubesec         = "latest"  # https://github.com/controlplaneio/kubesec
+# kubie           = "latest"  # https://github.com/sbstp/kubie
+# lima            = "latest"  # https://github.com/lima-vm/lima
+# minikube        = "latest"  # https://github.com/kubernetes/minikube
+# packer          = "latest"  # https://github.com/hashicorp/packer
+# peco            = "latest"  # https://github.com/peco/peco
+# pint            = "latest"  # https://github.com/cloudnative-pg/pint
+# pluto           = "latest"  # https://github.com/FairwindsOps/pluto
+# polaris         = "latest"  # https://github.com/FairwindsOps/polaris
+# popeye          = "latest"  # https://github.com/derailed/popeye
+# pulumi          = "latest"  # https://github.com/pulumi/pulumi
+# redis           = "latest"  # https://github.com/redis/redis
+# redis-cli       = "latest"  # https://github.com/redis/redis
+# rlwrap          = "latest"  # https://github.com/hanslub42/rlwrap
+# rstash          = "latest"  # https://github.com/jirutka/rstash
+# saml2aws        = "latest"  # https://github.com/Versent/saml2aws
+# skaffold        = "latest"  # https://github.com/GoogleContainerTools/skaffold
+# stern           = "latest"  # https://github.com/stern/stern
+# svu             = "latest"  # erro de certificado? | https://github.com/caarlos0/svu
+# syncher         = "latest"  # https://github.com/codemicro/syncher
+# tekton-cli      = "latest"  # https://github.com/tektoncd/cli
+# telepresence    = "latest"  # https://github.com/telepresenceio/telepresence
+# terraformer     = "latest"  # https://github.com/GoogleCloudPlatform/terraformer
+# terrascan       = "latest"  # https://github.com/tenable/terrascan
+# tfsec           = "latest"  # https://github.com/aquasecurity/tfsec
+# vault           = "latest"  # https://github.com/hashicorp/vault
+# vcluster        = "latest"  # https://github.com/loft-sh/vcluster
+# viddy           = "latest"  # https://github.com/sachaos/viddy
+# vim             = "latest"  # https://github.com/vim/vim
+# yadm            = "latest"  # https://github.com/TheLocehiliosan/yadm
+# yarn            = "latest"  # https://github.com/yarnpkg/yarn
