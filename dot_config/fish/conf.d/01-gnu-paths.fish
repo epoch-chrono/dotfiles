@@ -8,39 +8,42 @@
 # CONTEXTO
 # --------
 # macOS vem com utilities BSD (sed, tar, awk, find, grep, etc.) — minimalistas
-# e às vezes incompatíveis com scripts/exemplos que assumem GNU. Diferenças
-# típicas que mordem:
-#
-#   sed:    -i sem argumento (BSD pede backup ext), regex POSIX vs ERE
-#   tar:    --xattrs/--acls (GNU only), --transform (GNU only)
-#   grep:   -P (PCRE) só no GNU
-#   awk:    BSD awk não suporta -f profile / GNU extensions
-#   find:   sintaxe -printf "%T@" só GNU
-#
-# Brew instala as versões GNU com prefixo "g" (gsed, gtar, gawk, gfind, etc.)
-# Caveat sugere adicionar opt/<pkg>/libexec/gnubin ao PATH pra usar SEM o
-# prefixo — substituindo as BSD.
+# e às vezes incompatíveis com scripts/exemplos que assumem GNU. Brew instala
+# as versões GNU com prefixo "g" (gsed, gtar, gawk, gfind, etc.) e fornece
+# uma versão "sem g" em opt/<pkg>/libexec/gnubin pra adicionar ao PATH.
 #
 #
 # ORDEM TARGETED — replica do mac antigo do user
 # -----------------------------------------------
-# Mac antigo do user tem PATH na ordem:
-#   ~/.local/bin → ~/bin → mise/shims → /opt/homebrew/bin → /opt/homebrew/sbin
-#     → [11 GNU paths] → /usr/local/bin → /usr/bin → ...
+# Posição relativa: ~/.local/bin → ~/bin → mise/shims → /opt/homebrew/bin →
+# /opt/homebrew/sbin → [11 GNU paths] → /usr/local/bin → /usr/bin → ...
 #
-# Ou seja, GNU paths ficam DEPOIS de brew bin/sbin (que vêm do brew shellenv
-# rodado cedo no fish startup) e ANTES dos system dirs.
+# Logo, GNU paths ficam DEPOIS de brew bin/sbin (que vêm via fish_user_paths
+# universal, gerenciados pelo 00-mise-shims.fish) e ANTES de /usr/local/bin.
 #
-# Tentar usar `fish_add_path --prepend` colocaria GNU paths NO INÍCIO do PATH,
-# antes inclusive de mise/shims e user dirs — incorreto.
 #
-# Solução: manipular o array $PATH diretamente, inserindo os GNU paths LOGO
-# APÓS /opt/homebrew/sbin (último brew bin), preservando o resto.
+# PROBLEMA DE STATE PRÉVIO — fish_user_paths universal var
+# ---------------------------------------------------------
+# fish_user_paths é UNIVERSAL (persiste em ~/.config/fish/fish_variables)
+# e é PREPENDED ao $PATH na inicialização do fish — ANTES dos conf.d
+# rodarem.
+#
+# Se sessões anteriores adicionaram GNU paths ao fish_user_paths via
+# fish_add_path (incluindo dotfile setups antigos do user), eles aparecem
+# no $PATH em ordem ERRADA já no primeiro byte do conf.d. Como este script
+# checa `not contains -- $_p $PATH` antes de adicionar, ele skipa porque
+# eles JÁ ESTÃO no $PATH (em posição errada).
+#
+# SOLUÇÃO em 3 passos:
+#   1. Remover GNU paths do fish_user_paths universal var
+#   2. Remover GNU paths do $PATH session atual
+#   3. Reinserir GNU paths no $PATH na posição correta (após /sbin)
+#
+# Reset do universal var é cirúrgico — não afeta outros paths.
 
 
-# Lista NA ORDEM FINAL desejada (top = mais prioritário entre os GNU paths).
-# Mesma ordem que o mac antigo do user, sem postgresql@18 (que é específico
-# de instalação manual dele, não generalizável).
+# Lista canônica de GNU brews + paths (ordem final desejada no PATH,
+# top = primeiro). Mesma ordem do mac antigo do user.
 set -l _gnu_paths \
     /opt/homebrew/opt/make/libexec/gnubin \
     /opt/homebrew/opt/libtool/libexec/gnubin \
@@ -54,18 +57,40 @@ set -l _gnu_paths \
     /opt/homebrew/opt/findutils/libexec/gnubin \
     /opt/homebrew/opt/coreutils/libexec/gnubin
 
-# Filtrar: só adiciona paths que existem no filesystem E ainda não estão no
-# PATH (pra idempotência — se conf.d roda duas vezes não duplica).
+
+# 1. Limpa GNU paths do fish_user_paths universal. Loop while resolve
+#    duplicatas (raro mas possível). Necessário pra evitar que próximas
+#    sessões venham com GNU paths em posição errada novamente.
+for _gnu in $_gnu_paths
+    while set -l _idx (contains -i -- $_gnu $fish_user_paths)
+        set --erase --universal fish_user_paths[$_idx]
+    end
+end
+
+
+# 2. Limpa GNU paths do $PATH session atual. Reconstroi $PATH sem nenhum
+#    GNU path — depois reinsere na posição correta (passo 3).
+set -l _path_clean
+for _p in $PATH
+    if not contains -- $_p $_gnu_paths
+        set -a _path_clean $_p
+    end
+end
+set -gx PATH $_path_clean
+
+
+# 3. Filtrar GNU paths que existem no filesystem (skip brews não instalados)
 set -l _new_paths
 for _p in $_gnu_paths
-    if test -d $_p; and not contains -- $_p $PATH
+    if test -d $_p
         set -a _new_paths $_p
     end
 end
 
-# Encontrar índice de /opt/homebrew/sbin (anchor pós-brew). Se ausente, fall-
-# back pra /opt/homebrew/bin. Se nenhum dos dois existe, fall-back final
-# pro fim do PATH (append).
+
+# 4. Inserir após /opt/homebrew/sbin (anchor pós-brew). Fall-backs:
+#      a. /opt/homebrew/bin (se sbin ausente)
+#      b. append no fim do PATH (se nenhum brew bin presente — defensivo)
 if test (count $_new_paths) -gt 0
     set -l _anchor_idx (contains -i -- /opt/homebrew/sbin $PATH)
     if test -z "$_anchor_idx"
@@ -82,8 +107,12 @@ if test (count $_new_paths) -gt 0
     end
 end
 
-# Limpeza de variáveis locais
+
+# Cleanup de variáveis locais
 set -e _gnu_paths
 set -e _new_paths
+set -e _path_clean
 set -e _p
+set -e _gnu
+set -e _idx
 set -e _anchor_idx

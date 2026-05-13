@@ -76,28 +76,34 @@ if command -q mise
 end
 
 
-# 3. Garantir /opt/homebrew/sbin no PATH (defensivo).
-#    Brew shellenv via vendor_conf.d/brew.fish tipicamente adiciona AMBOS
-#    /opt/homebrew/bin e /opt/homebrew/sbin via `fish_add_path -gP`. Em
-#    alguns setups (intervenção manual, fish_user_paths corrompido,
-#    upgrade do brew), só /bin sobra. Insere /sbin logo após /bin se
-#    ausente.
-set -l _bin_idx (contains -i -- /opt/homebrew/bin $PATH)
-if test -n "$_bin_idx"; and not contains -- /opt/homebrew/sbin $PATH
-    set -gx PATH $PATH[1..$_bin_idx] /opt/homebrew/sbin $PATH[(math $_bin_idx + 1)..-1]
-end
+# 3-4. Forçar ordem do PATH em fish_user_paths universal var.
+#
+# PROBLEMA: fish_user_paths é universal (persiste entre sessões em
+# ~/.config/fish/fish_variables) e é PREPENDED ao $PATH antes dos conf.d
+# rodarem. Se entries históricas estão em ordem errada (resíduo de
+# instalações, intervenções manuais, brew upgrades), o PATH inicial fica
+# errado e `fish_add_path --prepend` sem --move não corrige (é idempo-
+# tente, só skipa se entry existe).
+#
+# SOLUÇÃO: `--move` flag força a reordenação. Cada `fish_add_path
+# --prepend --move <path>` remove de qualquer posição anterior e adiciona
+# na frente. Como cada call empurra a anterior, a ordem aplicada é
+# INVERSA da ordem final desejada — fazemos da MAIS-AO-FUNDO pra
+# MAIS-NA-FRENTE.
+#
+# Ordem final no fish_user_paths (que vira início do $PATH):
+#   1º: ~/.local/bin             (preferido — mise binary mora aqui)
+#   2º: ~/bin                    (scripts pessoais; pula se dir não existe)
+#   3º: ~/.local/share/mise/shims (1 entry resolve qualquer tool do mise)
+#   4º: /opt/homebrew/bin        (brew formulas)
+#   5º: /opt/homebrew/sbin       (brew daemons/services)
+#
+# `test -d` evita adicionar dirs inexistentes (ex.: ~/bin se nunca foi
+# criado).
 
-
-# 4. User-managed dirs NA FRENTE dos shims.
-#    `fish_add_path --prepend` é IDEMPOTENTE: se entry já existe em
-#    fish_user_paths (universal var) em posição errada, ele NÃO move por
-#    default. Solução: `--move` flag força reordenação.
-#    Resultado final no PATH:
-#      1º: ~/.local/bin   (preferido — onde mise binary fica)
-#      2º: ~/bin          (scripts pessoais; só adicionado se dir existe)
-#      3º: shims (do mise activate --shims acima)
-#      4º: /opt/homebrew/bin (do brew shellenv)
-#      5º: /opt/homebrew/sbin (do passo 3)
-#      ...
-fish_add_path --prepend --move $HOME/bin
-fish_add_path --prepend --move $HOME/.local/bin
+# Ordem REVERSA do final desejado (último --move fica 1º):
+test -d /opt/homebrew/sbin                  ; and fish_add_path --prepend --move /opt/homebrew/sbin
+test -d /opt/homebrew/bin                   ; and fish_add_path --prepend --move /opt/homebrew/bin
+test -d $HOME/.local/share/mise/shims       ; and fish_add_path --prepend --move $HOME/.local/share/mise/shims
+test -d $HOME/bin                           ; and fish_add_path --prepend --move $HOME/bin
+test -d $HOME/.local/bin                    ; and fish_add_path --prepend --move $HOME/.local/bin
