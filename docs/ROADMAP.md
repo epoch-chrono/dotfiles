@@ -338,10 +338,18 @@ Itens isolados que não cabem nas fatias acima.
 
 ### Mise (descobertos no primeiro bootstrap end-to-end)
 
-- **Mise shims no PATH do login shell** (importante pra IDEs): IDEs como
-  Cursor, Claude Code, VS Code, IntelliJ trabalham melhor com **shims**
-  do mise que com `mise activate` (que modifica PATH a cada prompt do
-  shell e só roda em shells interativos).
+- **✅ RESOLVIDO em v0.29.0**: shims no PATH via `~/.config/fish/conf.d/00-mise-shims.fish`.
+  Setamos `MISE_FISH_AUTO_ACTIVATE=0` (universal var, desliga o vendor
+  mise.fish do brew) e ativamos manualmente com `mise activate fish --shims`.
+  Resultado: PATH com **1 entrada** (`~/.local/share/mise/shims`) em vez de
+  100+ install dirs individuais. IDEs (Cursor, Claude Code, VS Code) herdam
+  shims em subprocess GUI. Ver comentário inline no conf.d pra contexto
+  completo.
+
+  **Histórico do problema**: IDEs como Cursor, Claude Code, VS Code,
+  IntelliJ trabalham melhor com **shims** do mise que com `mise activate`
+  full (que modifica PATH a cada prompt do shell e só roda em shells
+  interativos).
 
   Spawn de subprocess em GUI apps NÃO herda PATH do shell interativo —
   cursor lança `node`, `python`, `terraform`, etc. e não encontra os
@@ -350,35 +358,24 @@ Itens isolados que não cabem nas fatias acima.
 
   Doc oficial: https://mise.jdx.dev/dev-tools/shims.html#adding-shims-to-path
 
-  Adicionar `~/.local/share/mise/shims` ao PATH em:
+  **TODOs derivados** (não fechados por esta fatia):
 
-    - macOS:
-        - Bash:  ~/.bash_profile
-        - Zsh:   ~/.zprofile (ou ~/.zshenv pra IDEs spawn de GUI)
-        - Fish:  ~/.config/fish/conf.d/00-mise-shims.fish
-                 (fish não distingue rc/profile, conf.d roda sempre,
-                 prefixo 00- garante ordem)
+  - **macOS GUI apps lançados via Spotlight/Dock** (fora do terminal):
+    shells fish + conf.d cobrem terminal. Pra GUI apps fora do terminal,
+    `launchctl setenv` ou config per-app (Cursor:
+    `terminal.integrated.env.osx`) pode ser necessário se IDE não estiver
+    spawned de dentro do shell. Avaliar com uso real.
 
-    - macOS GUI apps (Spotlight/Dock launch, fora do terminal):
-        - launchctl setenv PATH ou LaunchAgent plist persistente,
-          OU configurar `terminal.integrated.env.osx` per-app
-          (Cursor/VS Code suporta).
+  - **Outras shells** (bash, zsh): se eventualmente migrar de fish, vai
+    precisar config equivalente em `~/.bash_profile` / `~/.zprofile`
+    setando `~/.local/share/mise/shims` no PATH.
 
-  Verificar default shell antes de decidir onde inserir:
-    dscl . -read /Users/$USER UserShell
-
-  Implementação: criar dotfile fish/config compatível no chezmoi
-  (provavelmente `dot_config/fish/conf.d/00-mise-shims.fish`) com:
-    set -gx PATH "$HOME/.local/share/mise/shims" $PATH
-
-  Cuidado: shims vs `mise activate` — usar UM ou OUTRO, não ambos.
-  Shims são mais lentos por invocação (mise resolve a versão correta
-  em cada call) mas funcionam em qualquer contexto. Activate é mais
-  rápido mas só funciona em shell interativo.
-
-  Recomendação: shims globais via PATH login + activate adicional
-  no shell interativo pra ganhar `mise hook-env` features (env vars
-  por projeto, hooks `cd`, etc.).
+  - **`mise activate` full em paralelo a shims**: nossa config atual
+    descarta mise activate (vendor desligado via MISE_FISH_AUTO_ACTIVATE=0).
+    Perdemos `mise hook-env` features (cd hooks, env vars por projeto via
+    [env]). Pra recuperar: criar conf.d adicional que ativa mode full em
+    shell interativo APENAS (e ainda mantém shims pra GUI/subprocess).
+    Trade-off: mais código de config, hooks de cd ficam mais lentos.
 
 - **Duplicação `chezmoi` brew vs mise**: chezmoi está no Brewfile
   (`/opt/homebrew/bin/chezmoi`) E no `mise.toml` do repo
