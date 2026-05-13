@@ -158,7 +158,12 @@ bat                = "0.26.1"    # https://github.com/sharkdp/bat
 bottom             = "0.12.3"    # https://github.com/ClementTsang/bottom
 cheat              = "5.1.0"     # https://github.com/cheat/cheat
 checkov            = "3.2.528"   # https://github.com/bridgecrewio/checkov
-chezmoi            = "2.70.3"    # https://github.com/twpayne/chezmoi
+# chezmoi: gerenciado via brew (Brewfile) pra resolver o chicken-and-egg do
+# bootstrap (chezmoi precisa existir ANTES do mise existir pra rodar o
+# initial chezmoi apply). Mover pra mise criaria fluxo: install mise (curl)
+# → install chezmoi via mise → chezmoi apply, adicionando complexidade sem
+# ganho funcional. Brew gerencia atualizações via brew upgrade chezmoi.
+# chezmoi          = "2.70.3"    # https://github.com/twpayne/chezmoi
 choose             = "1.3.7"     # https://github.com/theryangeary/choose
 cloudflared        = "2026.3.0"  # https://github.com/cloudflare/cloudflared
 conftest           = "0.68.2"    # https://github.com/open-policy-agent/conftest

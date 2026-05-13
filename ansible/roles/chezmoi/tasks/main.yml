@@ -219,7 +219,15 @@
 - name: "Mise — install: Fase 1 (cores linguagem)"
   ansible.builtin.command:
     cmd: "{{ mise_binary }} install {{ mise_core_tools | join(' ') }}"
+    chdir: "{{ ansible_user_dir }}"   # $HOME — evita mise.toml repo-level
   environment: &mise_install_env
+    # PATH explícito com brew bins pra garantir que mise encontre tools do
+    # ambiente brew durante o install (gpg, ag, curl, etc.). Sem isso,
+    # ansible_env.PATH pode não incluir /opt/homebrew/bin/ dependendo de
+    # como o playbook foi invocado (bootstrap.sh via SSH herda PATH do
+    # shell de login que pode diferir), causando WARN como
+    # 'mise WARN gpg not found' mesmo com gnupg instalado.
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
     GITHUB_API_TOKEN: >-
       {{ lookup('env', 'GITHUB_API_TOKEN', default='')
          if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
@@ -243,6 +251,7 @@
 - name: "Mise — install: Fase 2 (backends pré-reqs)"
   ansible.builtin.command:
     cmd: "{{ mise_binary }} install {{ mise_backend_tools | join(' ') }}"
+    chdir: "{{ ansible_user_dir }}"   # $HOME — evita mise.toml repo-level
   environment: *mise_install_env
   register: mise_phase2
   changed_when: mise_phase2.stdout | length > 0
@@ -254,6 +263,7 @@
 - name: "Mise — install: Fase 3 (todas as outras tools, com retry + tolerante a falhas)"
   ansible.builtin.command:
     cmd: "{{ mise_binary }} install"
+    chdir: "{{ ansible_user_dir }}"   # $HOME — evita mise.toml repo-level
   environment: *mise_install_env
   register: mise_phase3
   retries: 2

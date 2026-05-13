@@ -22,63 +22,68 @@
 # prefixo — substituindo as BSD.
 #
 #
-# ORDEM (replica do mac antigo do user — PATH order no final, top = primeiro)
-# ---------------------------------------------------------------------------
-#   /opt/homebrew/opt/make/libexec/gnubin       (gmake → make)
-#   /opt/homebrew/opt/libtool/libexec/gnubin    (glibtool, glibtoolize → libtool, libtoolize)
-#   /opt/homebrew/opt/grep/libexec/gnubin       (ggrep, gegrep, gfgrep → grep, egrep, fgrep)
-#   /opt/homebrew/opt/gpatch/libexec/gnubin     (gpatch → patch)
-#   /opt/homebrew/opt/gnu-which/libexec/gnubin  (gwhich → which)
-#   /opt/homebrew/opt/gnu-tar/libexec/gnubin    (gtar → tar)
-#   /opt/homebrew/opt/gnu-sed/libexec/gnubin    (gsed → sed)
-#   /opt/homebrew/opt/gnu-indent/libexec/gnubin (gindent → indent)
-#   /opt/homebrew/opt/gawk/libexec/gnubin       (gawk → awk; gawk symlink permanece também)
-#   /opt/homebrew/opt/findutils/libexec/gnubin  (gfind, glocate, gxargs → find, locate, xargs)
-#   /opt/homebrew/opt/coreutils/libexec/gnubin  (ls, cp, mv, rm, dirname, basename, ... GNU)
+# ORDEM TARGETED — replica do mac antigo do user
+# -----------------------------------------------
+# Mac antigo do user tem PATH na ordem:
+#   ~/.local/bin → ~/bin → mise/shims → /opt/homebrew/bin → /opt/homebrew/sbin
+#     → [11 GNU paths] → /usr/local/bin → /usr/bin → ...
 #
-# `fish_add_path --prepend` adiciona no início. Como fazemos prepend em
-# loop, o ÚLTIMO prepended fica em primeiro. Pra match com ordem do mac
-# antigo, a ordem do loop é INVERSA — coreutils primeiro no loop, make
-# por último.
+# Ou seja, GNU paths ficam DEPOIS de brew bin/sbin (que vêm do brew shellenv
+# rodado cedo no fish startup) e ANTES dos system dirs.
 #
+# Tentar usar `fish_add_path --prepend` colocaria GNU paths NO INÍCIO do PATH,
+# antes inclusive de mise/shims e user dirs — incorreto.
 #
-# CONVIVÊNCIA COM 00-mise-shims.fish
-# ----------------------------------
-# 00-mise-shims.fish roda ANTES deste arquivo (ordem alfabética em conf.d/).
-# Ele adiciona ~/.local/bin, ~/bin e shims do mise. Depois deste arquivo,
-# os GNU paths ficam ATRÁS desses user dirs no PATH:
-#
-#   ~/.local/bin → ~/bin → mise shims → make/libexec/gnubin → ...
-#                                       libtool/libexec/gnubin → ...
-#                                       (etc até coreutils/...) → /opt/homebrew/bin → ...
-#
-# Isso é exatamente a ordem do mac antigo do user, com mise shims no meio
-# (que substitui o que ele tinha lá antes via outras tools de versionamento).
+# Solução: manipular o array $PATH diretamente, inserindo os GNU paths LOGO
+# APÓS /opt/homebrew/sbin (último brew bin), preservando o resto.
 
 
-# Lista de GNU brews que têm libexec/gnubin. Ordem INVERSA da ordem final no
-# PATH (último item do loop = primeiro no PATH após prepends).
-set -l _gnu_brews \
-    coreutils \
-    findutils \
-    gawk \
-    gnu-indent \
-    gnu-sed \
-    gnu-tar \
-    gnu-which \
-    gpatch \
-    grep \
-    libtool \
-    make
+# Lista NA ORDEM FINAL desejada (top = mais prioritário entre os GNU paths).
+# Mesma ordem que o mac antigo do user, sem postgresql@18 (que é específico
+# de instalação manual dele, não generalizável).
+set -l _gnu_paths \
+    /opt/homebrew/opt/make/libexec/gnubin \
+    /opt/homebrew/opt/libtool/libexec/gnubin \
+    /opt/homebrew/opt/grep/libexec/gnubin \
+    /opt/homebrew/opt/gpatch/libexec/gnubin \
+    /opt/homebrew/opt/gnu-which/libexec/gnubin \
+    /opt/homebrew/opt/gnu-tar/libexec/gnubin \
+    /opt/homebrew/opt/gnu-sed/libexec/gnubin \
+    /opt/homebrew/opt/gnu-indent/libexec/gnubin \
+    /opt/homebrew/opt/gawk/libexec/gnubin \
+    /opt/homebrew/opt/findutils/libexec/gnubin \
+    /opt/homebrew/opt/coreutils/libexec/gnubin
 
-for _brew in $_gnu_brews
-    set -l _gnubin /opt/homebrew/opt/$_brew/libexec/gnubin
-    if test -d $_gnubin
-        fish_add_path --prepend $_gnubin
+# Filtrar: só adiciona paths que existem no filesystem E ainda não estão no
+# PATH (pra idempotência — se conf.d roda duas vezes não duplica).
+set -l _new_paths
+for _p in $_gnu_paths
+    if test -d $_p; and not contains -- $_p $PATH
+        set -a _new_paths $_p
     end
 end
 
-# Limpeza de variáveis locais (não vaza pra escopo do shell)
-set -e _gnu_brews
-set -e _brew
-set -e _gnubin
+# Encontrar índice de /opt/homebrew/sbin (anchor pós-brew). Se ausente, fall-
+# back pra /opt/homebrew/bin. Se nenhum dos dois existe, fall-back final
+# pro fim do PATH (append).
+if test (count $_new_paths) -gt 0
+    set -l _anchor_idx (contains -i -- /opt/homebrew/sbin $PATH)
+    if test -z "$_anchor_idx"
+        set _anchor_idx (contains -i -- /opt/homebrew/bin $PATH)
+    end
+    if test -n "$_anchor_idx"
+        # Inserir _new_paths logo após o anchor:
+        #   PATH antes: [... , anchor, X, Y, Z]
+        #   PATH depois: [... , anchor, _new_paths..., X, Y, Z]
+        set -gx PATH $PATH[1..$_anchor_idx] $_new_paths $PATH[(math $_anchor_idx + 1)..-1]
+    else
+        # Sem brew no PATH: append no fim (raro mas defensivo)
+        set -gx PATH $PATH $_new_paths
+    end
+end
+
+# Limpeza de variáveis locais
+set -e _gnu_paths
+set -e _new_paths
+set -e _p
+set -e _anchor_idx
