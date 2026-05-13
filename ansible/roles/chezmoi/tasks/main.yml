@@ -485,19 +485,25 @@
 - name: "Caveman — install/update via universal installer"
   ansible.builtin.shell:
     # Flags pra unattended:
-    #   --never-prompt: flag OFICIAL documentada em INSTALL.md do caveman.
-    #     "Auto when stdin is not a TTY" não funciona em prática dentro do
-    #     Ansible porque install.sh internamente faz `exec npx -y github:...`,
-    #     que re-spawna processo e perde o stdin context. Flag explícita
-    #     resolve. (Tentativa anterior com `--non-interactive` falhou — não
-    #     é flag válida do caveman, foi ignorada silenciosamente.)
+    #   --non-interactive: flag OFICIAL confirmada via `bash install.sh --help`.
+    #     Help text: "Never prompt; use defaults. (Auto when stdin is not a
+    #     TTY.)" — note que "never-prompt" é DESCRIÇÃO do comportamento, não
+    #     nome de flag. Doc diz que auto-detect funciona quando stdin não é
+    #     TTY, mas em prática isso falha aqui porque install.sh internamente
+    #     faz `exec npx -y github:...` que re-spawna processo e perde o
+    #     stdin context. Flag explícita resolve.
     #   --all: ativa hooks + init + mcp-shrink (full feature set). Sem isso,
     #     installer entra em multi-select TUI pra escolher features.
-    #   --no-color: desabilita ANSI escapes — output mais limpo no ansible log
-    #     e evita issues em ambientes que não suportam TTY colors.
+    #   --no-color: desabilita ANSI escapes — output mais limpo no ansible log.
     # < /dev/null: defensivo — força stdin closed mesmo se algo no pipeline
     # tenta ler input.
-    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash -s -- --never-prompt --all --no-color < /dev/null"
+    #
+    # Se ainda travar com essas flags: provavelmente é sub-comando interno
+    # (claude plugin install, gemini extensions install, etc) que prompta
+    # independente das flags do caveman. Debug: rodar manual com --dry-run
+    # pra ver sequência exata de comandos, ou tentar --minimal (skipa hooks
+    # + MCP + rules — menos sub-prompts possíveis).
+    cmd: "curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash -s -- --non-interactive --all --no-color < /dev/null"
   environment:
     # PATH inclui mise shims (pra Node), brew bins (pra claude/agent/gemini)
     # e ansible_env.PATH (fallback). Sem isso, installer pode falhar em
