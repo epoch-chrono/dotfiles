@@ -223,3 +223,51 @@
       {{ 'Upgrade aplicado em ' + (mas_upgrade_result.msg | default('todos os apps')) | string
          if mas_upgrade_result.changed
          else 'Nenhum upgrade necessário (todos os apps já estão na versão mais recente)' }}
+
+
+# ── Cursor CLI — symlink ~/.local/bin/agent → /opt/homebrew/bin/cursor-agent ─
+# Cask `cursor-cli` instala o binário como `cursor-agent` (nomenclatura
+# antiga). A Cursor renomeou pra `agent` como comando primary (nov/2025+),
+# mas o cask oficial do brew ainda não acompanhou — continua exportando
+# o binário com nome antigo.
+#
+# Workaround: symlink em ~/.local/bin/agent (que já está na frente do PATH
+# via conf.d/00-mise-shims.fish), apontando pro binário do brew. Resultado:
+# `agent` resolve via symlink em ~/.local/bin/, executando o binário real
+# do cask. `cursor-agent` continua funcionando como backward-compat.
+#
+# Roda APENAS se /opt/homebrew/bin/cursor-agent existe (caso o cask
+# tenha sido pulado por algum motivo no brew bundle).
+
+- name: "Cursor CLI — verificar se cursor-agent foi instalado pelo cask"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/cursor-agent
+  register: cursor_agent_check
+
+- name: "Cursor CLI — garantir ~/.local/bin/ existe"
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.local/bin"
+    state: directory
+    mode: '0755'
+  when: cursor_agent_check.stat.exists
+
+- name: "Cursor CLI — symlink ~/.local/bin/agent → cursor-agent"
+  ansible.builtin.file:
+    src: /opt/homebrew/bin/cursor-agent
+    dest: "{{ ansible_user_dir }}/.local/bin/agent"
+    state: link
+    force: false   # não sobrescreve se já existe arquivo/link com mesmo destino
+  when: cursor_agent_check.stat.exists
+  register: cursor_agent_symlink
+
+- name: "Cursor CLI — exibir status do symlink"
+  ansible.builtin.debug:
+    msg: >-
+      {% if not cursor_agent_check.stat.exists %}
+      ⚠  cursor-agent não encontrado em /opt/homebrew/bin/ — skip symlink
+         (cask cursor-cli pode ter sido pulado no brew bundle).
+      {% elif cursor_agent_symlink.changed | default(false) %}
+      ✓  Symlink criado: ~/.local/bin/agent → /opt/homebrew/bin/cursor-agent
+      {% else %}
+      ✓  Symlink ~/.local/bin/agent já existe (sem mudança).
+      {% endif %}
