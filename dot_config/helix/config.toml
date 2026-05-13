@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ~/.config/helix/config.toml
+# ─────────────────────────────────────────────────────────────────────────────
+# Helix Editor — config minimal, filosofia VANILLA HELIX
+#
+# Princípio: não emular vim. Não adicionar keybindings que tornem o helix
+# parecido com outros editors (sem `C-s = :write`, sem `jk → escape`, sem
+# `space f = file_picker` redefinindo defaults). A proposta é quebrar
+# paradigma e aprender o vocabulário nativo do helix:
+#
+#   - `:w` direto na command palette pra salvar (não C-s)
+#   - `Esc` real pra sair de insert mode (não jk)
+#   - `space f` JÁ É file_picker por default — não precisa redefinir
+#   - `:toggle <option>` pra alternar features (não keybindings custom)
+#
+# Mantemos apenas configs visuais/funcionais que NÃO tocam o paradigma
+# modal do editor (theme, mouse, rulers, statusline, LSP, formatting, etc).
+#
+# Health check: `hx --health` mostra LSPs instalados e linguagens detectadas.
+# v2.0.0 — purga das decorações vim-like da v1.x
+
+
+theme = "catppuccin_mocha"
+
+
+[editor]
+mouse = true
+bufferline = "multiple"          # mostrar tabs quando >1 buffer aberto
+color-modes = true               # cor do cursor muda por modo (insert/normal/select)
+true-color = true
+rulers = [80, 120]
+idle-timeout = 250               # ms antes de eventos idle (autocomplete, etc.)
+completion-timeout = 5           # ms antes de mostrar completions
+shell = ["/opt/homebrew/bin/fish", "-c"]
+
+
+[editor.cursor-shape]
+# Forma do cursor por modo (preferência visual nativa do helix,
+# não emulação de vim — helix tem select mode além de insert/normal).
+insert = "bar"
+normal = "block"
+select = "underline"
+
+
+[editor.file-picker]
+hidden = false                   # mostrar dotfiles
+git-ignore = true                # respeitar .gitignore
+max-depth = 8
+
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]
+center = ["diagnostics"]
+right = ["selections", "register", "position", "file-encoding", "file-line-ending", "file-type", "version-control"]
+separator = "│"
+
+
+[editor.lsp]
+display-messages = true
+display-inlay-hints = true
+
+
+[editor.indent-guides]
+render = true
+character = "▏"
+
+
+[editor.soft-wrap]
+enable = true
+
+
+[editor.auto-save]
+focus-lost = true                # salvar ao perder foco da janela

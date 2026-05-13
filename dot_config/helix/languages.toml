@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ~/.config/helix/languages.toml
+# ─────────────────────────────────────────────────────────────────────────────
+# Helix Editor — LSP + formatters para stack SRE/IaC
+# v1.1.0 — sincronizado com filosofia vanilla helix (sem keybindings aqui,
+#          só LSP + auto-format).
+#
+# Pré-requisitos: LSPs/formatters precisam estar no PATH. Instalar via
+# mise/brew conforme fatia futura (ver Brewfile + config.toml.tmpl). Lista:
+#
+#   terraform-ls          — LSP pra HCL/tfvars (hashicorp)
+#   yaml-language-server  — LSP pra YAML (genérico) com schemas
+#   ruff                  — LSP + formatter pra Python (rust-based, rápido)
+#   prettier              — formatter pra YAML/JSON/Markdown
+#   taplo                 — formatter pra TOML
+#   fish_indent           — formatter built-in do fish (vem com brew install fish)
+#
+# Health check: `hx --health <language>` mostra status do LSP/formatter
+# da linguagem específica. Sem `<language>`, mostra todos.
+
+
+# ─── Terraform / HCL ────────────────────────────────────────────────────────
+
+[language-server.terraform-ls]
+command = "terraform-ls"
+args = ["serve"]
+
+[[language]]
+name = "hcl"
+formatter = { command = "tofu", args = ["fmt", "-"] }   # opentofu (Brewfile/mise)
+auto-format = true
+language-servers = ["terraform-ls"]
+
+[[language]]
+name = "tfvars"
+formatter = { command = "tofu", args = ["fmt", "-"] }
+auto-format = true
+language-servers = ["terraform-ls"]
+
+
+# ─── YAML (Ansible, K8s, CI/CD) ─────────────────────────────────────────────
+
+[language-server.yaml-language-server]
+command = "yaml-language-server"
+args = ["--stdio"]
+
+[language-server.yaml-language-server.config.yaml]
+validate = true
+completion = true
+
+[language-server.yaml-language-server.config.yaml.schemas]
+"https://json.schemastore.org/github-workflow.json" = ".github/workflows/*.yml"
+"https://json.schemastore.org/ansible-playbook.json" = "playbooks/*.yml"
+
+[[language]]
+name = "yaml"
+language-servers = ["yaml-language-server"]
+formatter = { command = "prettier", args = ["--parser", "yaml"] }
+
+
+# ─── Python ─────────────────────────────────────────────────────────────────
+
+[language-server.ruff]
+command = "ruff"
+args = ["server"]
+
+[[language]]
+name = "python"
+language-servers = ["ruff"]
+formatter = { command = "ruff", args = ["format", "-"] }
+auto-format = true
+
+
+# ─── Fish Shell ─────────────────────────────────────────────────────────────
+
+[[language]]
+name = "fish"
+formatter = { command = "fish_indent" }
+auto-format = true
+
+
+# ─── JSON / JSONC ───────────────────────────────────────────────────────────
+
+[[language]]
+name = "json"
+formatter = { command = "prettier", args = ["--parser", "json"] }
+
+[[language]]
+name = "jsonc"
+formatter = { command = "prettier", args = ["--parser", "json"] }
+
+
+# ─── TOML ───────────────────────────────────────────────────────────────────
+
+[[language]]
+name = "toml"
+formatter = { command = "taplo", args = ["fmt", "-"] }
+
+
+# ─── Markdown ───────────────────────────────────────────────────────────────
+
+[[language]]
+name = "markdown"
+formatter = { command = "prettier", args = ["--parser", "markdown"] }
+soft-wrap.enable = true
