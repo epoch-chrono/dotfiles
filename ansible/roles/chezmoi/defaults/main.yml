@@ -40,3 +40,34 @@ github_pat_item_uuid: "x63sxispbdoahpxchnq3ji3scq"   # item: api-key/github.com/
 # Mesmo vault do GitHub (00-personal/01-chezmoi).
 gitlab_pat_vault_uuid: "niarnlvrteesurkbocpta7it4e"  # vault: 00-personal/01-chezmoi
 gitlab_pat_item_uuid: "ics64ncwjljnlq4iheus7zp3k4"   # item: api-key/gitlab.com/.../chezmoi-bootstrap
+
+# ── Mise install em fases ──────────────────────────────────────────────────
+# Pra isolar falhas e dar mensagens mais claras, dividimos `mise install`
+# em 3 etapas:
+#   Fase 1 — cores linguagem (precisam funcionar; se falhar, abort)
+#   Fase 2 — backends pré-reqs (idem; uv/aube alimentam pipx:/npm:)
+#   Fase 3 — todo o resto (com retry + failed_when: false; registra falhas)
+#
+# Listas abaixo contêm APENAS NOMES das tools — versões continuam só no
+# dot_config/mise/config.toml.tmpl (single source of truth). `mise install
+# python` (sem @versão) lê a versão do config.toml e instala.
+
+mise_core_tools:
+  - python          # 3.13.11 + 2.7.18 (multi-version)
+  - node            # lts
+  - java            # lts
+  - go              # 1.26.3
+  - rust            # 1.95.0
+  - ruby            # 3.4.9
+  - elixir          # 1.19.5-otp-28
+  - erlang          # 28.5
+  - perl            # 5.42.2
+
+mise_backend_tools:
+  - aqua            # backend aqua:
+  - uv              # backend pipx: (via uv)
+  - pipx            # backend pipx: (fallback se uv quebrar)
+  - aube            # backend npm: (via aube)
+  - npm             # backend npm: (fallback se aube quebrar)
+  - usage           # mise usa pra completions
+  - sqlite          # dependência de algumas tools

@@ -192,12 +192,34 @@
       {% endif %}
   when: mise_binary_check.stat.exists
 
-- name: "Mise — instalar tools declarados"
-  ansible.builtin.command: "{{ mise_binary }} install"
-  environment:
-    # Propaga ambas as env vars do mise pra mesmo valor (defensive — mise
-    # resolve por ordem MISE_GITHUB_TOKEN > GITHUB_API_TOKEN > GITHUB_TOKEN).
-    # Valor: env GITHUB_API_TOKEN se setado, senão resultado do op item get.
+# ── Mise install em 3 fases (isolamento de falhas) ────────────────────────
+# Estratégia: separar install em fases pra (a) diagnosticar onde quebrou
+# se algo der erro e (b) tolerar falhas em tools não-críticas sem abortar
+# o bootstrap inteiro.
+#
+#   Fase 1 — cores linguagem: precisa funcionar. Sem fail tolerance.
+#            Tools listadas em `mise_core_tools` (defaults/main.yml).
+#            Mise lê versões do ~/.config/mise/config.toml.
+#
+#   Fase 2 — backends pré-reqs: precisa funcionar. aqua/uv/aube alimentam
+#            os installs subsequentes via backends pipx:/npm:/aqua:.
+#            Tools listadas em `mise_backend_tools` (defaults/main.yml).
+#
+#   Fase 3 — tudo o resto: `mise install` (sem args) instala o que ainda
+#            falta. Tolera falhas individuais (network transient, asset
+#            removido) com `failed_when: false` + retry. No fim, exibe
+#            resumo do que sobrou faltando pra ação manual.
+#
+# Listas em defaults/main.yml contêm APENAS NOMES — versões continuam só
+# no config.toml.tmpl (single source of truth).
+
+# Bloco de env vars de auth GitHub/GitLab — reaproveitado em todas as
+# fases via YAML anchor. Mise resolve token na ordem oficial.
+
+- name: "Mise — install: Fase 1 (cores linguagem)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} install {{ mise_core_tools | join(' ') }}"
+  environment: &mise_install_env
     GITHUB_API_TOKEN: >-
       {{ lookup('env', 'GITHUB_API_TOKEN', default='')
          if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
@@ -206,35 +228,76 @@
       {{ lookup('env', 'GITHUB_API_TOKEN', default='')
          if lookup('env', 'GITHUB_API_TOKEN', default='') | length > 0
          else (github_pat_from_op.stdout | default('')) }}
-    # GitLab tokens (opcionais): se o user setou no env do bootstrap OU se
-    # foi resolvido via op (task acima), propagamos pro mise install. Mise
-    # resolve pela ordem oficial:
-    # MISE_GITLAB_ENTERPRISE_TOKEN > MISE_GITLAB_TOKEN > GITLAB_TOKEN.
-    # Útil pra tools com release-pattern via "gitlab:owner/repo" e pra
-    # elevar rate limit ao instalar tools hospedados em GitLab. Se
-    # ausentes, mise faz requests anônimos (rate limit baixo).
     MISE_GITLAB_TOKEN: "{{ lookup('env', 'MISE_GITLAB_TOKEN', default='') }}"
     GITLAB_TOKEN: >-
       {{ lookup('env', 'GITLAB_TOKEN', default='')
          if lookup('env', 'GITLAB_TOKEN', default='') | length > 0
          else (gitlab_pat_from_op.stdout | default('') if (gitlab_pat_from_op.rc | default(1)) == 0 else '') }}
     MISE_GITLAB_ENTERPRISE_TOKEN: "{{ lookup('env', 'MISE_GITLAB_ENTERPRISE_TOKEN', default='') }}"
-  register: mise_install_result
-  changed_when: mise_install_result.stdout != "" or mise_install_result.stderr != ""
+  register: mise_phase1
+  changed_when: mise_phase1.stdout | length > 0
+  # SEM failed_when: false — cores precisam funcionar. Se Python ou Node
+  # falham, bootstrap aborta porque o resto depende deles.
   when: mise_binary_check.stat.exists
 
-- name: "Mise — exibir output do install"
-  ansible.builtin.debug:
-    msg: |
-      {{ 'Output:' if (mise_install_result.stdout or mise_install_result.stderr) else 'Tudo já em sync — nenhum tool novo.' }}
-      stdout: {{ mise_install_result.stdout | default('(vazio)') }}
-      stderr: {{ mise_install_result.stderr | default('(vazio)') }}
+- name: "Mise — install: Fase 2 (backends pré-reqs)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} install {{ mise_backend_tools | join(' ') }}"
+  environment: *mise_install_env
+  register: mise_phase2
+  changed_when: mise_phase2.stdout | length > 0
+  # SEM failed_when: false — backends precisam funcionar. Sem aqua/uv/
+  # aube, os tools com backends pipx:/npm:/aqua: vão falhar todos na
+  # fase 3.
   when: mise_binary_check.stat.exists
 
-- name: "Mise — exibir output do install"
+- name: "Mise — install: Fase 3 (todas as outras tools, com retry + tolerante a falhas)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} install"
+  environment: *mise_install_env
+  register: mise_phase3
+  retries: 2
+  delay: 30
+  until: mise_phase3.rc == 0
+  changed_when: mise_phase3.stdout | length > 0
+  failed_when: false   # tolera falhas individuais — registra na próxima task
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — listar tools que ainda faltam após instalação"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} ls --missing"
+  register: mise_missing
+  changed_when: false
+  failed_when: false
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — exibir resumo final da instalação"
   ansible.builtin.debug:
     msg: |
-      {{ 'Output:' if (mise_install_result.stdout or mise_install_result.stderr) else 'Tudo já em sync — nenhum tool novo.' }}
-      stdout: {{ mise_install_result.stdout | default('(vazio)') }}
-      stderr: {{ mise_install_result.stderr | default('(vazio)') }}
+      ╔══════════════════════════════════════════════════════════════════╗
+      ║                  Mise install — resumo final                     ║
+      ╚══════════════════════════════════════════════════════════════════╝
+      Fase 1 (cores):    {{ 'OK' if mise_phase1.rc | default(1) == 0 else 'FAIL' }}
+      Fase 2 (backends): {{ 'OK' if mise_phase2.rc | default(1) == 0 else 'FAIL' }}
+      Fase 3 (resto):    {{ 'OK' if mise_phase3.rc | default(1) == 0 else 'FAIL (com tolerância)' }}
+
+      {% if (mise_missing.stdout | default('') | trim | length) > 0 %}
+      ⚠  Tools que ainda NÃO instalaram (ação manual necessária):
+
+      {{ mise_missing.stdout }}
+
+      Pra reinstalar individual com diagnóstico:
+        mise install <tool>@<version> -v
+
+      Pra tentar todas as faltantes de uma vez:
+        mise install
+      {% else %}
+      ✓  Todas as tools instaladas com sucesso.
+      {% endif %}
+
+      {% if mise_phase3.rc | default(0) != 0 %}
+      ⚠  Fase 3 teve exit code não-zero mesmo após retries — logs:
+        stdout: {{ (mise_phase3.stdout | default('') | truncate(500)) }}
+        stderr: {{ (mise_phase3.stderr | default('') | truncate(500)) }}
+      {% endif %}
   when: mise_binary_check.stat.exists
