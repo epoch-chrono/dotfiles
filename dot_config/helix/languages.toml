@@ -2,18 +2,31 @@
 # ~/.config/helix/languages.toml
 # ─────────────────────────────────────────────────────────────────────────────
 # Helix Editor — LSP + formatters para stack SRE/IaC
-# v1.1.0 — sincronizado com filosofia vanilla helix (sem keybindings aqui,
-#          só LSP + auto-format).
+# v1.2.0 — + bash/dockerfile (LSP + linter externo) + markdown linter mention.
 #
-# Pré-requisitos: LSPs/formatters precisam estar no PATH. Instalar via
-# mise/brew conforme fatia futura (ver Brewfile + config.toml.tmpl). Lista:
+# Pré-requisitos: LSPs/formatters precisam estar no PATH. Instalados via
+# mise/brew (ver dot_config/mise/config.toml.tmpl + Brewfile). Lista:
 #
 #   terraform-ls          — LSP pra HCL/tfvars (hashicorp)
 #   yaml-language-server  — LSP pra YAML (genérico) com schemas
 #   ruff                  — LSP + formatter pra Python (rust-based, rápido)
+#   bash-language-server  — LSP pra shell scripts (.sh, .bash)
+#   docker-langserver     — LSP pra Dockerfile (binário do pacote
+#                           dockerfile-language-server-nodejs)
 #   prettier              — formatter pra YAML/JSON/Markdown
 #   taplo                 — formatter pra TOML
+#   shfmt                 — formatter pra shell scripts
 #   fish_indent           — formatter built-in do fish (vem com brew install fish)
+#
+# Linters externos (não-LSP, rodados via pre-commit ou CLI manual):
+#   hadolint              — linter Dockerfile (não tem LSP — usar via CLI/CI)
+#   markdownlint (CLI)    — linter Markdown (não-LSP — usar via CLI/CI)
+#   ansible-lint          — linter Ansible (não-LSP — usar via CLI/CI)
+#   shellcheck            — linter shell (consumido pelo bash-language-server
+#                           internamente como diagnostic source)
+#
+# ansible-language-server: instalado no mise pra cursor/cline (helix não tem
+# language 'ansible' nativa — yaml-ls com schemas já cobre o suficiente aqui).
 #
 # Health check: `hx --health <language>` mostra status do LSP/formatter
 # da linguagem específica. Sem `<language>`, mostra todos.
@@ -98,8 +111,41 @@ formatter = { command = "taplo", args = ["fmt", "-"] }
 
 
 # ─── Markdown ───────────────────────────────────────────────────────────────
+# Linter externo: markdownlint-cli (binário 'markdownlint') — rodar via
+# pre-commit ou manual (`markdownlint **/*.md`). Não-LSP, helix não exibe
+# diagnostics dele inline.
 
 [[language]]
 name = "markdown"
 formatter = { command = "prettier", args = ["--parser", "markdown"] }
 soft-wrap.enable = true
+
+
+# ─── Bash / Shell ───────────────────────────────────────────────────────────
+# bash-language-server consome shellcheck internamente como diagnostic
+# source, então shellcheck aparece como warnings/errors no helix
+# automaticamente (se shellcheck estiver no PATH — vem do brew).
+
+[language-server.bash-language-server]
+command = "bash-language-server"
+args = ["start"]
+
+[[language]]
+name = "bash"
+language-servers = ["bash-language-server"]
+formatter = { command = "shfmt", args = ["-i", "2", "-ci", "-"] }
+auto-format = true
+
+
+# ─── Dockerfile ─────────────────────────────────────────────────────────────
+# Binário 'docker-langserver' vem do pacote npm
+# dockerfile-language-server-nodejs.
+# Linter externo: hadolint (via CLI ou pre-commit) — não integrado ao LSP.
+
+[language-server.docker-langserver]
+command = "docker-langserver"
+args = ["--stdio"]
+
+[[language]]
+name = "dockerfile"
+language-servers = ["docker-langserver"]
