@@ -1,0 +1,36 @@
+---
+# =============================================================================
+# ansible/roles/macos-apps-extra/defaults/main.yml
+# =============================================================================
+# Configurações de apps macOS que NÃO estão no brew nem na MAS:
+#   - URLs voláteis (pCloud é o caso clássico — link do CDN muda cada release)
+#   - Distribuição como PKG/DMG direto do fornecedor
+#   - Apps proprietários sem cask oficial nem disponibilizados via App Store
+#
+# Cada app é uma entrada com:
+#   name           — display name (label, debug msg)
+#   app_path       — path absoluto em /Applications/ pra check idempotência
+#   download_url   — URL direta OU 'dynamic:<task_name>' pra resolução em runtime
+#   pkg_filename   — nome do arquivo baixado (também usado no installer)
+#   tasks_file     — nome do arquivo de tasks (em tasks/<file>.yml)
+#
+# Pra adicionar um novo app: criar tasks/<app>.yml + adicionar entry aqui.
+
+macos_apps_extra:
+  - name: "pCloud Drive"
+    app_path: "/Applications/pCloud Drive.app"
+    tasks_file: "pcloud.yml"
+    notes: "API pública resolve URL atualizada do PKG (cada release muda)"
+
+# Adicionar futuros apps aqui:
+#  - name: "Some App"
+#    app_path: "/Applications/Some App.app"
+#    tasks_file: "some-app.yml"
+
+# ─── pCloud-specific config ─────────────────────────────────────────────────
+# Código público da API pCloud que aponta pro download do pCloud Drive para
+# macOS. Ref: https://gist.github.com/tomgross/bae4f30023272d8c8c0d920b62720c6b
+# Se pCloud mudar esse código no futuro, ajustar aqui.
+
+pcloud_api_url: "https://api.pcloud.com/getpublinkdownload"
+pcloud_api_code: "XZNF4C7Zrqw256sL45jrAn7RhtDVnkKAlOw7"

@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.47.3
+# Versão atual: 0.48.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -298,6 +298,16 @@
       tags:
         - macos-defaults
         - defaults
+
+    # macos-apps-extra — install de apps que NÃO estão no brew nem MAS,
+    # geralmente por URLs voláteis (ex: pCloud) ou distribuição proprietária.
+    # Cada app é um workflow self-contained: download → install → cleanup,
+    # idempotente via stat do .app em /Applications/. Skip em Linux.
+    - role: macos-apps-extra
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - apps-extra
+        - extra
 
     # Shell — adicionar fish a /etc/shells + mudar UserShell do user atual.
     # Última role do playbook (fish precisa do brew install + ideal que

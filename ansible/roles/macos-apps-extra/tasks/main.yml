@@ -1,0 +1,20 @@
+---
+# =============================================================================
+# ansible/roles/macos-apps-extra/tasks/main.yml
+# =============================================================================
+# Entry point. Inclui tasks/<app>.yml de cada app declarado em
+# defaults/main.yml. Cada arquivo cuida do seu próprio workflow + resumo.
+#
+# Adicionar um novo app:
+#   1. Criar ansible/roles/macos-apps-extra/tasks/<app>.yml com:
+#      - stat do app_path → register
+#      - block: download + install + cleanup
+#      - debug: resumo no final
+#   2. Adicionar entry em defaults/main.yml#macos_apps_extra
+
+- name: "macos-apps-extra — incluir tasks de cada app"
+  ansible.builtin.include_tasks: "{{ app.tasks_file }}"
+  loop: "{{ macos_apps_extra }}"
+  loop_control:
+    loop_var: app
+    label: "{{ app.name }} ({{ app.tasks_file }})"

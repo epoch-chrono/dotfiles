@@ -1,0 +1,137 @@
+---
+# =============================================================================
+# ansible/roles/macos-apps-extra/tasks/pcloud.yml
+# =============================================================================
+# Workflow pra instalar pCloud Drive (sem brew, sem MAS).
+#
+# Por que custom: pCloud rejeitado pelo Homebrew (PR #57634) porque URLs do
+# CDN são voláteis — cada release o path muda. Solução: usar a API pública
+# do pCloud pra resolver URL em runtime, baixar PKG, instalar via `installer`.
+#
+# Idempotência: stat /Applications/pCloud Drive.app antes; só executa o
+# workflow se não existir.
+
+- name: "macos-apps-extra (pcloud) — verificar se pCloud Drive.app já existe"
+  ansible.builtin.stat:
+    path: "{{ app.app_path }}"
+  register: pcloud_check
+  tags:
+    - pcloud
+
+# Workflow de install — só roda quando pCloud Drive.app não existe.
+- name: "macos-apps-extra (pcloud) — install workflow (skip se já instalado)"
+  when: not pcloud_check.stat.exists
+  tags:
+    - pcloud
+  block:
+    # ─── 1. Resolver URL atual via API pública pCloud ───────────────────────
+    - name: "pCloud — consultar API pra obter URL atualizada do PKG"
+      ansible.builtin.uri:
+        url: "{{ pcloud_api_url }}?code={{ pcloud_api_code }}"
+        return_content: true
+        status_code: [200]
+      register: pcloud_api_result
+
+    - name: "pCloud — abortar se API retornou erro (result != 0)"
+      ansible.builtin.fail:
+        msg: |
+          API do pCloud retornou erro:
+            result: {{ pcloud_api_result.json.result }}
+            error: {{ pcloud_api_result.json.error | default('(no error msg)') }}
+
+          Causa provável: código público {{ pcloud_api_code }} mudou.
+          Atualizar pcloud_api_code em defaults/main.yml.
+      when: pcloud_api_result.json.result | default(-1) != 0
+
+    - name: "pCloud — montar URL final (https://<host>/<path>)"
+      ansible.builtin.set_fact:
+        pcloud_pkg_url: "https://{{ pcloud_api_result.json.hosts[0] }}{{ pcloud_api_result.json.path }}"
+        pcloud_pkg_filename: "{{ pcloud_api_result.json.path | basename | urldecode }}"
+
+    - name: "pCloud — exibir URL resolvida (debug)"
+      ansible.builtin.debug:
+        msg: |
+          URL pCloud resolvida via API:
+            {{ pcloud_pkg_url }}
+          Filename:
+            {{ pcloud_pkg_filename }}
+
+    # ─── 2. Download do PKG ─────────────────────────────────────────────────
+    # ~80MB tipicamente. /tmp/ é wiped a cada reboot — bom como staging.
+
+    - name: "pCloud — baixar PKG pra /tmp/"
+      ansible.builtin.get_url:
+        url: "{{ pcloud_pkg_url }}"
+        dest: "/tmp/pcloud-drive.pkg"
+        mode: "0644"
+        timeout: 120                  # 2min default é OK pra ~80MB
+      register: pcloud_download
+
+    - name: "pCloud — confirmar download"
+      ansible.builtin.stat:
+        path: "/tmp/pcloud-drive.pkg"
+      register: pcloud_pkg_stat
+
+    - name: "pCloud — abortar se PKG não foi baixado"
+      ansible.builtin.fail:
+        msg: "PKG não foi baixado em /tmp/pcloud-drive.pkg"
+      when: not pcloud_pkg_stat.stat.exists
+
+    # ─── 3. Install unattended via `installer` CLI ──────────────────────────
+    # `installer` é nativo macOS. Flag -target / instala no volume root.
+    # Requer sudo (escreve em /Applications/, /Library/, etc.).
+
+    - name: "pCloud — install via installer -pkg (sudo)"
+      ansible.builtin.command:
+        cmd: installer -pkg /tmp/pcloud-drive.pkg -target /
+      become: true
+      register: pcloud_install_result
+      changed_when: "'successful' in (pcloud_install_result.stdout | default(''))"
+      failed_when: pcloud_install_result.rc != 0
+
+    - name: "pCloud — confirmar app instalado"
+      ansible.builtin.stat:
+        path: "{{ app.app_path }}"
+      register: pcloud_post_install
+
+    - name: "pCloud — abortar se app não apareceu pós-install"
+      ansible.builtin.fail:
+        msg: |
+          Instalação reportou sucesso mas {{ app.app_path }} não existe.
+          stdout do installer:
+          {{ pcloud_install_result.stdout }}
+      when: not pcloud_post_install.stat.exists
+
+    # ─── 4. Cleanup do .pkg ─────────────────────────────────────────────────
+
+    - name: "pCloud — cleanup do PKG baixado"
+      ansible.builtin.file:
+        path: "/tmp/pcloud-drive.pkg"
+        state: absent
+
+  rescue:
+    # Cleanup mesmo se algo falhou no meio.
+    - name: "pCloud — cleanup do PKG (rescue de falha)"
+      ansible.builtin.file:
+        path: "/tmp/pcloud-drive.pkg"
+        state: absent
+
+    - name: "pCloud — re-raise a falha original"
+      ansible.builtin.fail:
+        msg: "Install do pCloud falhou. Veja tasks acima pra detalhes."
+
+
+# ─── Resumo ─────────────────────────────────────────────────────────────────
+
+- name: "pCloud — exibir resumo"
+  ansible.builtin.debug:
+    msg: |
+      ── pCloud Drive ──
+      {{
+        'já instalado em ' + app.app_path + ' (skip)'
+        if pcloud_check.stat.exists
+        else 'instalado nesta execução via API pública (URL volátil resolvida em runtime)'
+      }}
+
+      Setup post-install (login, Drive folder, system extension approval)
+      seguem MANUAIS — ver MacZeroToHero runbook.
