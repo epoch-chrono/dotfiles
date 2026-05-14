@@ -531,17 +531,19 @@
     # Cursor: via npx skills add (-a cursor)
     # --yes pula prompts; --all instala TODAS as 7 skills (caveman, caveman-commit,
     # caveman-compress, caveman-help, caveman-review, caveman-stats, cavecrew)
+    # cd $HOME ANTES do npx — sem isso, skills cria .agents/skills/ no CWD
+    # (= ansible/ quando roda via ansible-playbook), poluindo o repo.
     - bin: cursor-agent
       label: cursor
       cmd: |
-        npx -y skills add JuliusBrussee/caveman \
+        cd "$HOME" && npx -y skills add JuliusBrussee/caveman \
           -a cursor --yes --all < /dev/null 2>&1 || true
 
     # Crush: via npx skills add (-a crush)
     - bin: crush
       label: crush
       cmd: |
-        npx -y skills add JuliusBrussee/caveman \
+        cd "$HOME" && npx -y skills add JuliusBrussee/caveman \
           -a crush --yes --all < /dev/null 2>&1 || true
 
     # Block Goose: via npx skills add (-a goose)
@@ -549,7 +551,7 @@
     - bin: goose
       label: block-goose
       cmd: |
-        npx -y skills add JuliusBrussee/caveman \
+        cd "$HOME" && npx -y skills add JuliusBrussee/caveman \
           -a goose --yes --all < /dev/null 2>&1 || true
   loop_control:
     label: "{{ item.label }}"

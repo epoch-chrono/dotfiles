@@ -28,3 +28,9 @@ __pycache__/
 ansible/collections/
 ansible/vars/local.yml
 *.retry
+
+# Caveman / coding-agent skills — npx skills add cria no CWD em vez de $HOME.
+# Fix aplicado no role chezmoi (cd $HOME && npx ...), mas se reaparecer,
+# ignorar pra evitar poluir o repo.
+.agents/
+skills-lock.json
