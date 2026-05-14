@@ -1,0 +1,118 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ~/.config/git/ignore — global gitignore
+# Managed by chezmoi: github.com/epoch-chrono/dotfiles
+# ─────────────────────────────────────────────────────────────────────────────
+# Patterns aplicados a TODOS os repos (não substitui .gitignore do projeto).
+# Filosofia: cobrir noise universal (OS, IDE, swap files). Ignorar dependências
+# de linguagem (node_modules, .venv) também porque sempre são geradas e nunca
+# devem ir pro repo — se um projeto específico precisar versionar, override
+# no .gitignore local com !pattern.
+
+# ─── macOS ───────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.DocumentRevisions-V100
+.TemporaryItems
+.com.apple.timemachine.donotpresent
+
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
+# JetBrains (todos os IDEs: IntelliJ, GoLand, PyCharm, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code / Cursor
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+Session.vim
+.vim/
+
+# Helix
+.helix/
+
+# Emacs
+\#*\#
+.\#*
+.emacs.desktop
+.emacs.desktop.lock
+
+# ─── direnv ──────────────────────────────────────────────────────────────────
+# Vitor: todo projeto teu tem .envrc com 'source_up'. SEMPRE no gitignore.
+.envrc
+
+# ─── Logs / temp ─────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ─── Node.js ─────────────────────────────────────────────────────────────────
+node_modules/
+.npm
+.yarn/cache
+.yarn/install-state.gz
+.pnp.*
+
+# ─── Secrets / env ───────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+op-token-*
+*.pem
+*.key
+
+# ─── Build artifacts ─────────────────────────────────────────────────────────
+dist/
+build/
+target/
+out/
+*.o
+*.so
+*.dylib
+
+# ─── 1Password / SSH / etc — não deve aparecer mas defensive ─────────────────
+.ssh-keys/
+*.gpg
+
+# ─── Terraform / OpenTofu ────────────────────────────────────────────────────
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+docker-compose.override.yml

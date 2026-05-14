@@ -1,0 +1,151 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ~/.gitconfig
+# Managed by chezmoi: github.com/epoch-chrono/dotfiles
+# ─────────────────────────────────────────────────────────────────────────────
+# v1.0.0 — single-file config (Vitor confirmou Opção A no multi-select).
+# Identity: vitor@epoch-chrono.com em todos os repos (sem per-directory split).
+# Cross-platform via chezmoi template (paths gpg dinâmicos darwin/linux).
+
+[user]
+    name       = Vitor Jr
+    email      = vitor@epoch-chrono.com
+    signingkey = C62442B2AAC7A6F798F5F587980CDCCEEE784DD7
+
+[init]
+    defaultBranch = main
+    # templatedir = ~/.config/git/templates/   # disabled — descomentar se for usar
+    #                                            templates aplicados em git init
+
+[core]
+    editor       = hx
+    hooksPath    = ~/.config/git/hooks
+    pager        = delta
+    excludesFile = ~/.config/git/ignore        # global gitignore (XDG)
+
+[pull]
+    rebase = true                              # 'git pull' faz rebase, não merge
+
+[fetch]
+    recurseSubmodules = on-demand
+    prune             = true                   # remove refs deletadas no remote
+    pruneTags         = true                   # idem pra tags
+
+[push]
+    default         = upstream
+    followTags      = true                     # push tags anotadas junto
+    autoSetupRemote = true                     # Git 2.37+ — cria upstream auto no 1º push
+
+[merge]
+    conflictStyle = zdiff3                     # 3-way moderno (mais informativo que diff3)
+
+[mergetool]
+    keepBackup      = true
+    keepTemporaries = false
+    writeToTemp     = true
+    prompt          = false
+
+[diff]
+    mnemonicPrefix = true
+    renames        = true
+    wordRegex      = .
+    submodule      = log
+    colorMoved     = default                   # destaca código movido (≠ alterado)
+
+[rebase]
+    autoSquash = true                          # fixup!/squash! reorganizados auto
+    autoStash  = true                          # stash/unstash auto durante rebase
+    updateRefs = true                          # atualiza branches dependentes (Git 2.38+)
+
+[rerere]
+    enabled = true                             # reuse recorded resolution — memoriza
+    autoUpdate = true                          # aplica resolução memorizada automaticamente
+
+[help]
+    autocorrect = prompt                       # sugere comando próximo, sem auto-executar
+
+[branch]
+    sort = -committerdate                      # branches recentes primeiro em 'git branch'
+
+[grep]
+    extendedRegexp = true
+
+[log]
+    abbrevCommit = true
+    follow       = true
+
+[status]
+    submoduleSummary   = true
+    showUntrackedFiles = all
+
+[tag]
+    sort               = version:refname
+    forceSignAnnotated = true
+
+[transfer]
+    fsckObjects = true                         # valida integridade de objetos no I/O
+
+# [safe]
+#     directory = *                            # OPCIONAL — destrava repos owned por
+#                                                outros UIDs (containers, volumes shared).
+#                                                Habilita só se precisar e entender o
+#                                                trade-off de segurança.
+
+[color]
+    ui = auto
+
+[color "branch"]
+    upstream = cyan
+
+[commit]
+    gpgSign  = true
+    template = ~/.gitmessage                   # corrigido — era /Users/maxter/.gitmessage
+
+[gpg]
+    format  = openpgp
+{{- if eq .chezmoi.os "darwin" }}
+    program = /opt/homebrew/bin/gpg            # macOS ARM (Apple Silicon brew)
+{{- else if eq .chezmoi.os "linux" }}
+    program = /usr/bin/gpg                     # Linux distro padrão
+{{- end }}
+
+[interactive]
+    diffFilter = delta --color-only            # delta no 'git add -p' / 'git log -p'
+
+[delta]
+    navigate     = true                        # n/N navega entre changes
+    light        = false                       # dark theme
+    side-by-side = true
+    line-numbers = true
+    syntax-theme = Dracula
+    hyperlinks   = true                        # links file:line clicáveis no terminal
+
+# ─── Aliases ─────────────────────────────────────────────────────────────────
+# Convenção: atalhos curtos pra workflow diário; verbosos pra ações destrutivas.
+# Adicionar mais conforme rotina dita — `git config --get-regexp ^alias\.` lista
+# tudo (alias 'aliases' abaixo).
+
+[alias]
+    # Básicos
+    co       = checkout
+    br       = branch
+    ci       = commit
+    st       = status -sb                      # -sb = short + branch
+
+    # Workflow comum
+    unstage  = reset HEAD --
+    last     = log -1 HEAD
+    amend    = commit --amend --no-edit        # re-commit sem editar mensagem
+    reword   = commit --amend                  # re-commit editando mensagem
+
+    # Logs visuais
+    lg  = log --graph --pretty=format:'%C(red)%h%C(reset) %C(yellow)%d%C(reset) %s %C(green)(%cr)%C(reset) %C(bold blue)<%an>%C(reset)' --abbrev-commit
+    lga = log --graph --pretty=format:'%C(red)%h%C(reset) %C(yellow)%d%C(reset) %s %C(green)(%cr)%C(reset) %C(bold blue)<%an>%C(reset)' --abbrev-commit --all
+
+    # Inspeção
+    aliases = config --get-regexp ^alias\\.
+    whoami  = config user.email
+    root    = rev-parse --show-toplevel
+    branches-by-date = for-each-ref --sort=-committerdate refs/heads/ --format='%(committerdate:short) %(refname:short)'
+
+    # Cleanup — deletar branches locais já mergeadas em main
+    cleanup = "!git branch --merged main | grep -vE '^\\*| main$' | xargs -n 1 git branch -d"
