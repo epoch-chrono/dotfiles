@@ -426,6 +426,21 @@ cask "vlc"                     # media player
 cask "utm"                     # VMs (QEMU frontend)
 
 
+# ── Fontes ────────────────────────────────────────────────────────────────
+# Fira Code Nerd Font (NFP) = Fira Code patcheada com Nerd Fonts:
+#   ✓ 3,600+ Nerd Font glyphs (Font Awesome, Devicons, Material Design,
+#     Octicons, Powerline, etc.) — necessário pra starship/helix/lazygit
+#   ✓ Ligatures Fira Code preservadas (=>, !=, |>, ->, etc.)
+#   ✓ Emojis via fallback do sistema (Apple Color Emoji no macOS)
+#
+# Input Mono Nerd Font NÃO está disponível oficialmente — Nerd Fonts
+# removeu por questões de licença. Versão patcheada manualmente fica
+# em ansible/roles/fonts-input/ (TBD, aguardando validação do user).
+cask "font-fira-code-nerd-font"   # primária — terminal/IDE/starship
+# cask "font-input"               # vanilla, sem Nerd glyphs — não atende
+                                  #   uso atual (commented out)
+
+
 # ===========================================================================
 # MAS — Apps da Mac App Store
 # ===========================================================================
