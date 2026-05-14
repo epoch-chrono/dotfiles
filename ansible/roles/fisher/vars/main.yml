@@ -9,9 +9,16 @@
 #   - User-level (vitor no Mac), sem become_user
 #   - Lista de plugins ajustada pro setup do Vitor (Mac SRE/DevOps)
 #   - pure-fish/pure removido — migração pra starship (v0.42.0+)
+#   - zzhaolei/transient.fish removido — acoplado a Pure prompt, quebra
+#     o fish_prompt do starship (v0.44.2)
 #
 # Pra adicionar/remover plugins: editar essa lista, rodar bootstrap. Idempotente
 # — fisher detecta se já instalado e atualiza apenas (em vez de re-install).
+#
+# NOTA: O role fisher NÃO desinstala plugins ausentes da lista. Pra remover
+# um plugin previamente instalado, executar manualmente UMA vez no Mac:
+#     fisher remove <plugin>
+# Depois disso, o bootstrap nunca mais reinstala (não está na lista).
 
 fisher_plugins:
   - patrickf1/fzf.fish              # fuzzy finder integrado (ctrl-f, alt-c)
@@ -19,5 +26,9 @@ fisher_plugins:
   - halostatue/fish-direnv          # direnv integration (auto-load .envrc)
   - halostatue/fish-macos           # macOS-specific helpers
   - acomagu/fish-async-prompt       # render prompts async (perf em git status)
-  - zzhaolei/transient.fish         # transient prompt (limpa prompt antigo)
-  # pure-fish/pure                  # REMOVIDO — migração pra starship (v0.42.0)
+  # ── REMOVIDOS (não reinstalar) ─────────────────────────────────────────────
+  # pure-fish/pure                  # migração pra starship (v0.42.0)
+  # zzhaolei/transient.fish         # acoplado ao Pure, força configs no
+                                    # fish_prompt que conflitam com starship
+                                    # — sintoma: prompt renderiza só [character]
+                                    # ou volta pro fish default (v0.44.2)
