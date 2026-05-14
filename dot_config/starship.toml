@@ -22,6 +22,7 @@ $directory\
 $git_branch\
 $git_state\
 $git_status\
+$custom.chezmoi\
 $line_break\
 $kubernetes\
 $aws\
@@ -202,6 +203,22 @@ disabled = true                # hora no prompt
 
 [memory_usage]
 disabled = true                # uso de RAM (verbose)
+
+
+# ─── Custom modules ──────────────────────────────────────────────────────────
+
+[custom.chezmoi]
+description = "Show 'dirty' if chezmoi has unapplied changes"
+# `chezmoi status` retorna codes per arquivo (e.g. "MM file") quando dirty.
+# Output vazio = clean. `when` precisa retornar exit 0 pra modulo aparecer.
+when    = "chezmoi status 2>/dev/null | grep -q ."
+command = "echo dirty"
+format  = "[$symbol$output]($style) "
+symbol  = "♻ "
+style   = "yellow bold"
+# Custo: roda `chezmoi status` a cada prompt. Em dirs do dotfiles é rápido
+# (~50ms), em outros dirs chezmoi não acha repo e retorna instantâneo.
+# Se notar lag, desabilitar com `disabled = true`.
 
 
 # ─── Catppuccin Mocha palette ────────────────────────────────────────────────

@@ -1,0 +1,23 @@
+---
+# =============================================================================
+# ansible/roles/fisher/vars/main.yml
+# Fisher plugins instalados/atualizados pelo role.
+# =============================================================================
+#
+# Adaptado de: github.com/epoch-chrono/sebastiao/tree/main/ansible/roles/fisher_setup
+# Diferenças vs sebastiao:
+#   - User-level (vitor no Mac), sem become_user
+#   - Lista de plugins ajustada pro setup do Vitor (Mac SRE/DevOps)
+#   - pure-fish/pure removido — migração pra starship (v0.42.0+)
+#
+# Pra adicionar/remover plugins: editar essa lista, rodar bootstrap. Idempotente
+# — fisher detecta se já instalado e atualiza apenas (em vez de re-install).
+
+fisher_plugins:
+  - patrickf1/fzf.fish              # fuzzy finder integrado (ctrl-f, alt-c)
+  - babarot/enhancd                 # cd com history + fuzzy match
+  - halostatue/fish-direnv          # direnv integration (auto-load .envrc)
+  - halostatue/fish-macos           # macOS-specific helpers
+  - acomagu/fish-async-prompt       # render prompts async (perf em git status)
+  - zzhaolei/transient.fish         # transient prompt (limpa prompt antigo)
+  # pure-fish/pure                  # REMOVIDO — migração pra starship (v0.42.0)

@@ -1,0 +1,97 @@
+---
+# =============================================================================
+# ansible/roles/fisher/tasks/main.yml
+# Fisher (fish plugin manager) + plugins essenciais.
+# =============================================================================
+#
+# Adaptado de: github.com/epoch-chrono/sebastiao/tree/main/ansible/roles/fisher_setup
+#
+# Difs vs sebastiao:
+#   - User-level (vitor no Mac), sem `become_user`
+#   - Shell em /opt/homebrew/bin/fish (Mac ARM) vs /usr/local/bin/fish (Linux)
+#   - $HOME via {{ ansible_user_dir }} (cross-platform safe)
+#   - GITHUB_API_TOKEN do env var (bootstrap.sh injeta) — sem AWS SM lookup
+#   - kubectl.fish function fica no chezmoi (não nesse role)
+#   - 00-env.fish (AWS instance metadata) — NÃO aplicável ao Mac
+#
+# Pré-req: fish já instalado (Brewfile). fisher é bootstrapped on-demand
+# via download do fisher.fish + source.
+
+- name: "Fisher — fish presente?"
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/fish
+  register: fisher_fish_check
+
+- name: "Fisher — abortar se fish ausente (pré-req do role)"
+  ansible.builtin.fail:
+    msg: "Fish não encontrado em /opt/homebrew/bin/fish. Rodar 'brew install fish' antes."
+  when: not fisher_fish_check.stat.exists
+
+- name: "Fisher — garantir diretórios fish (functions, conf.d)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ansible_user_dir }}/.config/fish/functions"
+    - "{{ ansible_user_dir }}/.config/fish/conf.d"
+    - "{{ ansible_user_dir }}/.config/fish/completions"
+
+- name: "Fisher — download bootstrap script (fisher.fish)"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish
+    dest: /tmp/fisher.fish
+    mode: "0644"
+    force: true                              # sobrescreve cache se existir
+  register: fisher_bootstrap_download
+
+- name: "Fisher — install/update self (jorgebucaran/fisher)"
+  # Estratégia: detectar se fisher já está instalado e funcional via
+  # `fisher --version`. Se sim, atualiza. Se não, source do bootstrap + install.
+  # GITHUB_API_TOKEN evita rate limit do GitHub API ao baixar plugins.
+  ansible.builtin.shell: |
+    eval ({{ ansible_user_dir }}/.local/bin/mise activate fish --shims)
+    if fisher --version 2>&1 1>/dev/null
+      fisher update jorgebucaran/fisher
+    else
+      source /tmp/fisher.fish && fisher install jorgebucaran/fisher
+    end
+  args:
+    executable: /opt/homebrew/bin/fish
+  environment:
+    HOME: "{{ ansible_user_dir }}"
+    GITHUB_API_TOKEN: "{{ lookup('env', 'GITHUB_API_TOKEN') | default('', true) }}"
+  register: fisher_self_result
+  changed_when: "'Installed' in (fisher_self_result.stdout | default(''))"
+  failed_when: false
+
+- name: "Fisher — install/update plugins (loop {{ fisher_plugins | length }})"
+  ansible.builtin.shell: |
+    eval ({{ ansible_user_dir }}/.local/bin/mise activate fish --shims)
+    if fisher list {{ item }} | string match -q {{ item }}
+      fisher update {{ item }}
+    else
+      fisher install {{ item }}
+    end
+  args:
+    executable: /opt/homebrew/bin/fish
+  environment:
+    HOME: "{{ ansible_user_dir }}"
+    GITHUB_API_TOKEN: "{{ lookup('env', 'GITHUB_API_TOKEN') | default('', true) }}"
+  loop: "{{ fisher_plugins }}"
+  loop_control:
+    label: "{{ item }}"
+  register: fisher_plugin_result
+  changed_when: "'Installed' in (item.stdout | default(''))"
+  failed_when: false
+
+- name: "Fisher — exibir resumo"
+  ansible.builtin.debug:
+    msg: |
+      ── Fisher self ──
+      {{ fisher_self_result.stdout_lines | default(['(no output)']) | join('\n      ') }}
+
+      ── Plugins ──
+      {% for r in fisher_plugin_result.results | default([]) %}
+        {{ r.item }}: {{ 'OK' if r.rc | default(1) == 0 else 'FAIL (rc=' + (r.rc|string) + ')' }}
+      {%- endfor %}

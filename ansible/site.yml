@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.42.0
+# Versão atual: 0.43.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -273,6 +273,17 @@
       tags:
         - chezmoi
         - dotfiles
+
+    # Fisher — fish plugin manager + plugins essenciais. Depende do chezmoi
+    # ter materializado fish/conf.d/ antes (pra evitar conflito de
+    # diretórios). Idempotente: detecta plugins já instalados e atualiza
+    # em vez de re-install. Skip em Linux (fish path /opt/homebrew/bin/fish
+    # é Mac ARM-specific).
+    - role: fisher
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - fisher
+        - fish
 
     # Shell — adicionar fish a /etc/shells + mudar UserShell do user atual.
     # Última role do playbook (fish precisa do brew install + ideal que
