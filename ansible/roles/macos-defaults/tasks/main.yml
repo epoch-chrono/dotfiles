@@ -130,10 +130,6 @@
     - associations
 
 
-  tags:
-    - associations
-
-
 # ─── Keybase helper — REMOVIDO ──────────────────────────────────────────────
 # Keybase 6.6.2+ usa SMJobBless API + FUSE for macOS (kernel extension closed-
 # source) pra Finder integration. Setup moderno requer:
