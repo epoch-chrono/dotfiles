@@ -70,34 +70,6 @@
     label: "{{ item.name }} (id: {{ item.id }})"
 
 
-# ── 3b. Cask cleanup ──────────────────────────────────────────────────────
-# Remove casks obsoletos do Mac antes do brew bundle (que NÃO desinstala
-# casks que saíram do Brewfile — só instala/upgrade). Lista é mantida aqui
-# em vez de em vars/ porque é histórica/transitória: cada item deve ter
-# referência de quando saiu do Brewfile e o porquê.
-#
-# Idempotente: `brew list --cask <name>` retorna rc != 0 se não instalado,
-# nesse caso o uninstall é skipado.
-
-- name: "Cask cleanup — desinstalar casks obsoletos"
-  ansible.builtin.shell: |
-    if /opt/homebrew/bin/brew list --cask {{ item.cask }} >/dev/null 2>&1; then
-      /opt/homebrew/bin/brew uninstall --cask --force {{ item.cask }}
-    else
-      echo "{{ item.cask }} não está instalado — skip"
-    fi
-  args:
-    executable: /bin/bash
-  loop:
-    # v0.46.0 — Vitor migrou pra tunnelblick + tunnelblickctl (.ovpn files
-    # da NordVPN). Cask removido do Brewfile, agora desinstalando do Mac.
-    - { cask: "nordvpn", reason: "v0.46.0 — substituído por tunnelblick + tunnelblickctl" }
-  loop_control:
-    label: "{{ item.cask }} ({{ item.reason }})"
-  register: cask_cleanup_result
-  changed_when: "'Uninstalling' in cask_cleanup_result.stdout"
-
-
 # ── 4. Brew bundle apply ──────────────────────────────────────────────────
 # Aplica taps + formulas + casks. MAS apps NÃO estão no Brewfile.
 #

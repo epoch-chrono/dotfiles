@@ -308,18 +308,13 @@ cask "claudebar"               # menubar pra monitoramento de tokens/usage (Clau
 # ── Browsers / VPN / network ──────────────────────────────────────────────
 cask "google-chrome"           # browser
 
-# Tunnelblick (OpenVPN client) — substitui NordVPN cask (removido em v0.46.0).
-# Vitor migrou pra .ovpn files que a NordVPN disponibiliza, gerenciados via
-# tunnelblickctl (CLI pra start/stop/list de tunnels).
+# Tunnelblick (OpenVPN client) + tunnelblickctl (CLI control) — gerencia
+# .ovpn files (Apoia.se infra + NordVPN servers via .ovpn export).
 tap "benwebber/tunnelblickctl"
-brew "tunnelblickctl"          # CLI control pra tunnelblick (benwebber tap)
-cask "tunnelblick@beta"        # OpenVPN client — beta para features novas do OpenVPN
-# cask "nordvpn"               # ← removido em v0.46.0, substituído por tunnelblick
-#                                 + tunnelblickctl (.ovpn files da NordVPN)
+brew "tunnelblickctl"
+cask "tunnelblick@beta"        # beta — features novas do OpenVPN
 
 cask "adguard"                 # content blocker
-# cask "tailscale-app"         # ← removido em v0.36.2 — PKG installer falha em macOS Tahoe.
-#                                 Migrado pra formula 'brew "tailscale"' (Network/security section).
 cask "rustdesk"                # remote desktop
 cask "ngrok"                   # tunneling reverso HTTP/TCP
 cask "royal-tsx"               # gerenciador de RDP/SSH/etc (substitui MS RD)
