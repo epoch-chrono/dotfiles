@@ -7,13 +7,12 @@
 # Roda DEPOIS do homebrew (depende de apps instalados via cask).
 # Cobre as configurações que SÃO automatizáveis sem MDM:
 #   1. Remove quarantine attribute de apps (suprime "downloaded from internet")
-#   2. Set Keka como uncompressor default pra formatos comuns
-#   3. Instala Keybase helper (se Keybase instalado e helper presente)
+#   2. Default browser → Chrome (idempotente; ACIONA PROMPT GUI obrigatório
+#      desde Big Sur — automation parcial, mas força o user a confirmar)
+#   3. Set Keka como uncompressor default pra formatos comuns
+#   4. Instala Keybase helper (se Keybase instalado e helper presente)
 #
-# O que NÃO cobre (impossível sem MDM ou interação humana):
-#   - Default browser: API LSSetDefaultHandlerForURLScheme gera prompt
-#     modal GUI desde macOS Big Sur (2020). Mover pro MacZeroToHero
-#     runbook (manual).
+# O que NÃO cobre (impossível sem MDM):
 #   - TCC permissions (Accessibility, FDA, Screen Recording, Input Monitoring,
 #     Bluetooth, Local Network, Network Extensions, Apple Events, etc.)
 #   - Notifications "Allow" pre-approval
@@ -21,8 +20,9 @@
 # Essas ficam pro MacZeroToHero runbook.
 #
 # Dependencies (instaladas via Brewfile):
-#   - duti (CLI pra LSHandlers — funciona pra content type, NÃO pra
-#     URL scheme handlers como http/https)
+#   - defaultbrowser (CLI Swift — aciona prompt nativo do macOS)
+#   - duti (CLI pra LSHandlers — funciona pra content type UTI E pra
+#     check do http URL scheme handler)
 
 # ─── 1. Remove quarantine attribute (Gatekeeper "downloaded from internet") ──
 # Apps baixados via brew cask carregam o xattr com.apple.quarantine. macOS então
@@ -55,7 +55,38 @@
 #   changed_when: false
 
 
-# ─── 2. Keka como uncompressor default (zip, rar, 7z, tar, gz, bz2) ─────────
+# ─── 2. Default browser → Chrome (idempotente, mas prompt GUI obrigatório) ──
+# macOS Big Sur+ bloqueia mudança silenciosa do default browser. A task abaixo
+# detecta o handler atual do scheme 'http' via duti. Se já é Chrome, skip.
+# Se não, dispara `defaultbrowser chrome` que ACIONA UM PROMPT MODAL GUI:
+#   "Do you want to change your default web browser to Chrome?"
+# Sem clicar "Use Chrome", o set não toma efeito (mesmo com rc=0 da CLI).
+#
+# Decisão consciente: manter a task mesmo sabendo da limitação. Acionar o
+# prompt é melhor que esquecer — força o user a tomar a decisão consciente
+# durante o bootstrap em vez de descobrir Safari como default depois.
+
+- name: "macos-defaults — detectar handler atual do scheme http (= default browser)"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/duti -x http
+  register: http_handler_check
+  changed_when: false
+  failed_when: false           # http sem handler retorna rc != 0; tratado como "needs set"
+  tags:
+    - browser
+
+- name: "macos-defaults — disparar prompt pra setar Chrome (se ainda não for default)"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/defaultbrowser chrome
+  when: "'com.google.Chrome' not in (http_handler_check.stdout | default(''))"
+  register: defaultbrowser_result
+  changed_when: defaultbrowser_result.rc == 0
+  failed_when: false
+  tags:
+    - browser
+
+
+# ─── 3. Keka como uncompressor default (zip, rar, 7z, tar, gz, bz2) ─────────
 # duti seta LSHandlers (Launch Services). Formato:
 #   duti -s <bundle_id> <UTI> all
 #
@@ -151,6 +182,10 @@
     msg: |
       ── macos-defaults aplicado ──
       • Quarantine removido (qBittorrent, Cursor)
+      • Default browser: {{
+            'já é Chrome (skip)' if 'com.google.Chrome' in (http_handler_check.stdout | default(''))
+            else 'PROMPT GUI ACIONADO — confirme manualmente no macOS pra completar'
+        }}
       • Keka uncompressor: {{
             (keka_set_result.results | default([]) | rejectattr('skipped', 'defined') | list | length)
         }} UTIs setados nesta execução (de 8 totais)
@@ -163,5 +198,5 @@
              else 'app não encontrado, skip')
         }}
 
-      Default browser e configs TCC (Accessibility, FDA, etc.) seguem
-      MANUAIS — ver MacZeroToHero runbook.
+      Configs TCC (Accessibility, FDA, etc.) seguem MANUAIS — ver
+      MacZeroToHero runbook.
