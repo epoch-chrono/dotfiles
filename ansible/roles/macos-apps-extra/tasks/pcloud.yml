@@ -57,14 +57,15 @@
             {{ pcloud_pkg_filename }}
 
     # ─── 2. Download do PKG ─────────────────────────────────────────────────
-    # ~80MB tipicamente. /tmp/ é wiped a cada reboot — bom como staging.
+    # ~53MB típico em 4.x (vs ~80MB da 3.x — FileProvider é mais enxuto que
+    # FUSE/kext). /tmp/ é wiped a cada reboot — bom como staging.
 
     - name: "pCloud — baixar PKG pra /tmp/"
       ansible.builtin.get_url:
         url: "{{ pcloud_pkg_url }}"
         dest: "/tmp/pcloud-drive.pkg"
         mode: "0644"
-        timeout: 120                  # 2min default é OK pra ~80MB
+        timeout: 120                  # 2min é folgado pra ~53MB
       register: pcloud_download
 
     - name: "pCloud — confirmar download"

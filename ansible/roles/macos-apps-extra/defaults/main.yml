@@ -29,8 +29,30 @@ macos_apps_extra:
 
 # ─── pCloud-specific config ─────────────────────────────────────────────────
 # Código público da API pCloud que aponta pro download do pCloud Drive para
-# macOS. Ref: https://gist.github.com/tomgross/bae4f30023272d8c8c0d920b62720c6b
-# Se pCloud mudar esse código no futuro, ajustar aqui.
+# macOS. A versão 3.x (kext via osxfuse/FUSE) foi descontinuada pelo pCloud —
+# a API não aceita mais o código antigo XZNF4C7Zrqw256sL45jrAn7RhtDVnkKAlOw7
+# (que apontava pra 3.7.9).
+#
+# Versão atual: 4.0.11 (UNIVERSAL.pkg, ~53MB).
+#   - Usa FileProvider Extension nativo do macOS (sem kext)
+#   - NÃO requer Reduced Security + Recovery Mode em Apple Silicon
+#   - Setup post-install (login, Drive folder, extension approval) segue
+#     manual — ver MacZeroToHero runbook
+#
+# Quando o pCloud lançar nova versão e a API começar a falhar, atualizar o
+# código abaixo. Pra descobrir o código atual:
+#
+#   curl -s "https://www.pcloud.com/release-notes/mac-os.html" \
+#     -A "Mozilla/5.0" \
+#     | python3 -c '
+#   import sys, re
+#   html = sys.stdin.read()
+#   # Procura a primeira entrada (versão mais recente) na página
+#   m = re.search(r"(4\.\d+\.\d+).*?code=([A-Za-z0-9]+)", html, re.DOTALL)
+#   if m: print(f"Versão: {m.group(1)}  Código: {m.group(2)}")'
+#
+# Sanity check: curl -s "https://api.pcloud.com/getpublinkdownload?code=<X>" \
+#                 | jq -r .path
 
 pcloud_api_url: "https://api.pcloud.com/getpublinkdownload"
-pcloud_api_code: "XZNF4C7Zrqw256sL45jrAn7RhtDVnkKAlOw7"
+pcloud_api_code: "XZsM0O5ZJ3t7mlu0PahirlgvRfmLl0GNMWMy"  # 4.0.11 (04/05/2026)
