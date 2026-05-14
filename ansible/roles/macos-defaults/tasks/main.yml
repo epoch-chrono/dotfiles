@@ -7,11 +7,13 @@
 # Roda DEPOIS do homebrew (depende de apps instalados via cask).
 # Cobre as configurações que SÃO automatizáveis sem MDM:
 #   1. Remove quarantine attribute de apps (suprime "downloaded from internet")
-#   2. Set default browser → Chrome
-#   3. Set Keka como uncompressor default pra formatos comuns
-#   4. Instala Keybase helper (se Keybase instalado)
+#   2. Set Keka como uncompressor default pra formatos comuns
+#   3. Instala Keybase helper (se Keybase instalado e helper presente)
 #
-# O que NÃO cobre (impossível sem MDM):
+# O que NÃO cobre (impossível sem MDM ou interação humana):
+#   - Default browser: API LSSetDefaultHandlerForURLScheme gera prompt
+#     modal GUI desde macOS Big Sur (2020). Mover pro MacZeroToHero
+#     runbook (manual).
 #   - TCC permissions (Accessibility, FDA, Screen Recording, Input Monitoring,
 #     Bluetooth, Local Network, Network Extensions, Apple Events, etc.)
 #   - Notifications "Allow" pre-approval
@@ -19,8 +21,8 @@
 # Essas ficam pro MacZeroToHero runbook.
 #
 # Dependencies (instaladas via Brewfile):
-#   - defaultbrowser (CLI Swift)
-#   - duti (CLI pra LSHandlers)
+#   - duti (CLI pra LSHandlers — funciona pra content type, NÃO pra
+#     URL scheme handlers como http/https)
 
 # ─── 1. Remove quarantine attribute (Gatekeeper "downloaded from internet") ──
 # Apps baixados via brew cask carregam o xattr com.apple.quarantine. macOS então
@@ -53,33 +55,19 @@
 #   changed_when: false
 
 
-# ─── 2. Default browser → Chrome ────────────────────────────────────────────
-# defaultbrowser CLI (Swift) seta via LaunchServices. Output: "Chrome (set)"
-# se mudou, ou "Chrome (already default)" se já era. Argumento é o ID curto
-# do browser, não bundle ID.
-#
-# IDs disponíveis: `defaultbrowser` (sem args) lista os instalados.
-
-- name: "macos-defaults — set default browser → Chrome"
-  ansible.builtin.command:
-    cmd: defaultbrowser chrome
-  register: defaultbrowser_result
-  changed_when: "'(already)' not in defaultbrowser_result.stdout"
-  failed_when: defaultbrowser_result.rc != 0
-  tags:
-    - browser
-
-
-# ─── 3. Keka como uncompressor default (zip, rar, 7z, tar, gz, bz2) ─────────
+# ─── 2. Keka como uncompressor default (zip, rar, 7z, tar, gz, bz2) ─────────
 # duti seta LSHandlers (Launch Services). Formato:
 #   duti -s <bundle_id> <UTI> all
 #
 # UTI = Uniform Type Identifier (público do Apple).
 # Bundle ID Keka: com.aone.keka
+#
+# Idempotência: `duti -x <UTI>` mostra handler atual (app, bundle ID, path).
+# Se output contém 'com.aone.keka' → já é Keka, skip. Caso contrário, set.
 
-- name: "macos-defaults — set Keka como handler de arquivos compactados"
+- name: "macos-defaults — verificar handler atual de cada UTI"
   ansible.builtin.command:
-    cmd: duti -s com.aone.keka {{ item }} all
+    cmd: /opt/homebrew/bin/duti -x {{ item }}
   loop:
     - public.zip-archive
     - com.rarlab.rar-archive
@@ -89,14 +77,27 @@
     - org.gnu.gnu-zip-tar-archive
     - public.bzip2-archive
     - public.xz-archive
-  register: keka_duti_result
-  changed_when: keka_duti_result.rc == 0
+  register: keka_uti_check
+  changed_when: false
+  failed_when: false           # UTI sem handler retorna rc!=0; tratado como "needs set"
+  tags:
+    - associations
+
+- name: "macos-defaults — set Keka como handler (só UTIs que ainda não são)"
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/duti -s com.aone.keka {{ item.item }} all
+  loop: "{{ keka_uti_check.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: "'com.aone.keka' not in (item.stdout | default(''))"
+  register: keka_set_result
+  changed_when: keka_set_result.rc == 0
   failed_when: false           # Keka pode não estar instalado em alguns hosts
   tags:
     - associations
 
 
-# ─── 4. Keybase helper (Finder integration + redirector) ────────────────────
+# ─── 3. Keybase helper (Finder integration + redirector) ────────────────────
 # Keybase precisa do redirector-install (helper KBFS Finder integration) ser
 # executado fora do app bundle pra integração funcionar. Path do helper dentro
 # do bundle pode variar entre versões — usamos uma sonda de paths conhecidos.
@@ -150,8 +151,9 @@
     msg: |
       ── macos-defaults aplicado ──
       • Quarantine removido (qBittorrent, Cursor)
-      • Default browser: Chrome ({{ 'definido nesta execução' if defaultbrowser_result.changed else 'já era default' }})
-      • Keka uncompressor: configurado pra 8 UTIs
+      • Keka uncompressor: {{
+            (keka_set_result.results | default([]) | rejectattr('skipped', 'defined') | list | length)
+        }} UTIs setados nesta execução (de 8 totais)
       • Keybase helper: {{
             'instalado em ' + (keybase_helper_path.stdout | trim)
             if keybase_app_check.stat.exists and (keybase_helper_path.stdout | default('') | trim) != ''
@@ -161,5 +163,5 @@
              else 'app não encontrado, skip')
         }}
 
-      Configs TCC (Accessibility, FDA, etc.) seguem MANUAIS — ver
-      MacZeroToHero runbook.
+      Default browser e configs TCC (Accessibility, FDA, etc.) seguem
+      MANUAIS — ver MacZeroToHero runbook.
