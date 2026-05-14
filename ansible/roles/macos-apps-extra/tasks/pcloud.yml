@@ -134,5 +134,9 @@
         else 'instalado nesta execução via API pública (URL volátil resolvida em runtime)'
       }}
 
-      Setup post-install (login, Drive folder, system extension approval)
-      seguem MANUAIS — ver MacZeroToHero runbook.
+      Setup post-install (MANUAIS — ver MacZeroToHero runbook):
+        1. Abrir pCloud Drive.app e fazer login
+        2. Confirmar Drive folder location (default ~/pCloud Drive)
+        3. Quando pedir, autorizar o privileged helper (admin password)
+           → instala /Library/PrivilegedHelperTools/com.pcloud.pcloudfs.Mounter.Helper
+           → habilita o mount FUSE como root (pcloudfs.fs via SMJobBless)
