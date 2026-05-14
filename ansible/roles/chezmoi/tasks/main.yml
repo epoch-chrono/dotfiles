@@ -518,14 +518,15 @@
         claude plugin install caveman@caveman 2>&1 || true
         claude mcp add caveman-shrink -- npx -y caveman-shrink 2>&1 || true
 
-    # Gemini CLI: extension install --consent (bypassa prompt nativo do gemini)
-    # 'already installed' eh tratado como sucesso silencioso
-    - bin: gemini
-      label: gemini-cli
-      cmd: |
-        gemini extensions install \
-          https://github.com/JuliusBrussee/caveman \
-          --consent < /dev/null 2>&1 || true
+    # NOTA: gemini-cli INTENCIONALMENTE removido do pre-install (v0.37.0).
+    # Razão: instalar caveman como gemini extension + universal skills gera
+    # conflict warnings toda vez que `gemini` inicia ("Skill conflict
+    # detected: caveman from ~/.agents/skills/ is overriding the same skill
+    # from ~/.gemini/extensions/caveman/"). Como universal skills cobrem
+    # gemini automaticamente (gemini lê ~/.agents/skills/ também), a
+    # extension fica redundante. Tirando o pre-install + excluindo do
+    # caveman installer via --only whitelist abaixo = sem duplicação,
+    # sem warnings, sem perda de funcionalidade.
 
     # Cursor: via npx skills add (-a cursor)
     # --yes pula prompts; --all instala TODAS as 7 skills (caveman, caveman-commit,
@@ -569,11 +570,28 @@
 # Como agents já estão configurados (passo acima), o installer detecta e
 # pula essas seções. Apenas a parte de hooks + init permanece.
 
-- name: "Caveman — universal installer (hooks + statusline + init rules)"
+- name: "Caveman — universal installer (hooks + statusline + init rules, EXCLUI gemini)"
   ansible.builtin.shell:
     cmd: |
+      # Build --only args dinamicamente — todos os agents detectados EXCETO gemini.
+      # Razão pra excluir gemini: instalar caveman como gemini extension +
+      # universal skills (~/.agents/skills/) gera conflict warnings toda vez
+      # que `gemini` inicia. Universal skills cobrem gemini transparentemente
+      # (gemini reads de ~/.agents/skills/ também), então pular o gemini-
+      # specific install resolve o conflito sem perder funcionalidade.
+      #
+      # --only é repeatable. Se nenhum agent for detectado, $only_args fica
+      # vazio e o installer ainda processa todos os agents detectados (default)
+      # — mas isso é fallback defensivo, esperado é ter ao menos claude.
+      only_args=""
+      command -v claude >/dev/null 2>&1        && only_args="$only_args --only claude"
+      command -v cursor-agent >/dev/null 2>&1  && only_args="$only_args --only cursor"
+      command -v crush >/dev/null 2>&1         && only_args="$only_args --only crush"
+      command -v goose >/dev/null 2>&1         && only_args="$only_args --only goose"
+      # gemini propositalmente NÃO incluído (ver pre-install per agent acima)
+
       curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh \
-        | bash -s -- --non-interactive --all --no-color < /dev/null
+        | bash -s -- --non-interactive --all $only_args --no-color < /dev/null
   environment:
     # PATH inclui mise shims (pra Node), brew bins (pra claude/agent/gemini)
     # e ansible_env.PATH (fallback). Sem isso, installer pode falhar em
@@ -611,15 +629,17 @@
       NOTA: O output do universal installer pode mostrar:
         failed:
           • caveman-shrink — claude mcp add failed
-          • gemini — gemini extensions install failed
 
-      Esses são FALSOS NEGATIVOS benignos. Acontecem porque o caveman installer
-      re-tenta comandos que o pre-install per agent já fez:
+      Esse é FALSO NEGATIVO benigno. Acontece porque o caveman installer
+      re-tenta o comando que o pre-install per agent já fez:
         - caveman-shrink: claude mcp add (já registrado no pre-install)
-        - gemini:         gemini extensions install (já instalado com --consent)
-      Sub-comandos retornam 'already installed' que o caveman marca como
+      Sub-comando retorna 'already exists' que o caveman marca como
       'failed' no resumo, mas funcionalmente está OK. Pra validar de fato,
       ver a task 'Caveman — validação funcional' abaixo.
+
+      Gemini intencionalmente NÃO é instalado como extension (v0.37.0+)
+      — universal skills (~/.agents/skills/) cobrem o gemini sem o
+      conflito de duplicidade.
       {% else %}
       ⚠  Falhou (rc={{ caveman_install.rc | default('?') }}).
          stderr: {{ caveman_install.stderr | default('(sem stderr)') | truncate(200) }}
@@ -633,19 +653,23 @@
 # funcionalmente: ver se cada componente existe no filesystem / responde a
 # query.
 #
-# 7 checks cobrem todas as instalações esperadas:
-#   1. ~/.claude/hooks/         — hooks instalados (claude-hooks)
+# 6 checks cobrem todas as instalações esperadas (v0.37.0+):
+#   1. ~/.claude/hooks/          — hooks instalados (claude-hooks)
 #   2. settings.json com caveman — hooks registrados em ~/.claude/settings.json
-#   3. claude plugin list       — plugin claude registrado
-#   4. claude mcp list          — MCP caveman-shrink registrado
-#   5. gemini extensions list   — extension caveman instalada
-#   6. ~/.agents/skills/caveman/ — universal skills (cobre cursor/crush/goose)
-#   7. ~/AGENTS.md              — caveman-init rule files no $HOME
+#   3. claude plugin list        — plugin claude registrado
+#   4. claude mcp list           — MCP caveman-shrink registrado
+#   5. ~/.agents/skills/caveman/ — universal skills (cobre cursor/crush/goose/gemini)
+#   6. ~/AGENTS.md               — caveman-init rule files no $HOME
+#
+# Gemini extension não é verificada — intencionalmente não instalada pra
+# evitar conflito com universal skills (gemini lê ambos os locations e
+# mostra "Skill conflict detected" warnings). Universal skills cobrem
+# gemini transparentemente.
 #
 # Se algum falhar, debug task abaixo lista quais. Bootstrap não bloqueia
 # (changed_when: false, failed_when: false).
 
-- name: "Caveman — validação funcional (7 checks)"
+- name: "Caveman — validação funcional (6 checks)"
   ansible.builtin.shell: |
     set +e
     pass=0; fail=0; total=0
@@ -676,12 +700,11 @@
     # 4. MCP caveman-shrink registrado
     check "MCP caveman-shrink registrado" sh -c 'claude mcp list 2>/dev/null | grep -q caveman-shrink'
 
-    # 5. Gemini extension instalada (se gemini estiver presente)
-    if command -v gemini >/dev/null 2>&1; then
-      check "Gemini extension caveman" sh -c 'gemini extensions list 2>/dev/null | grep -qi caveman'
-    fi
+    # NOTA: gemini extension caveman NÃO é verificada — intencionalmente
+    # não é instalada (v0.37.0+) pra evitar conflict warnings com universal
+    # skills. Gemini acessa caveman via ~/.agents/skills/ (check #5 abaixo).
 
-    # 6. Universal skills (~/.agents/skills/caveman)
+    # 5. Universal skills (~/.agents/skills/caveman) — cobre gemini também
     check "Universal skills (~/.agents/skills/caveman)" test -d "$HOME/.agents/skills/caveman"
 
     # 7. Init rules
