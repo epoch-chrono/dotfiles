@@ -1,0 +1,134 @@
+---
+# =============================================================================
+# ansible/roles/macos-defaults/tasks/main.yml
+# Configurações pós-instalação de apps no macOS.
+# =============================================================================
+#
+# Roda DEPOIS do homebrew (depende de apps instalados via cask).
+# Cobre as configurações que SÃO automatizáveis sem MDM:
+#   1. Remove quarantine attribute de apps (suprime "downloaded from internet")
+#   2. Set default browser → Chrome
+#   3. Set Keka como uncompressor default pra formatos comuns
+#   4. Instala Keybase helper (se Keybase instalado)
+#
+# O que NÃO cobre (impossível sem MDM):
+#   - TCC permissions (Accessibility, FDA, Screen Recording, Input Monitoring,
+#     Bluetooth, Local Network, Network Extensions, Apple Events, etc.)
+#   - Notifications "Allow" pre-approval
+#   - Safari extensions enable
+# Essas ficam pro MacZeroToHero runbook.
+#
+# Dependencies (instaladas via Brewfile):
+#   - defaultbrowser (CLI Swift)
+#   - duti (CLI pra LSHandlers)
+
+# ─── 1. Remove quarantine attribute (Gatekeeper "downloaded from internet") ──
+# Apps baixados via brew cask carregam o xattr com.apple.quarantine. macOS então
+# mostra "Are you sure you want to open?" no 1º uso. Removendo o xattr suprime
+# esse prompt sem deshabilitar Gatekeeper globalmente.
+#
+# Aplicado APENAS em apps que sabidamente trigaram o prompt no setup do user
+# (qBittorrent, Cursor). xattr -dr é recursivo e idempotente — se o attr não
+# existe, retorna 0 silenciosamente.
+
+- name: "macos-defaults — remover quarantine de apps específicos"
+  ansible.builtin.command:
+    cmd: xattr -dr com.apple.quarantine "/Applications/{{ item }}"
+  loop:
+    - "qBittorrent.app"
+    - "Cursor.app"
+    # Adicionar outros aqui se aparecer Gatekeeper prompt em mais apps
+  failed_when: false           # apps podem não estar instalados — não falha
+  changed_when: false          # idempotente, não tem como detectar diff confiável
+  tags:
+    - quarantine
+
+# Versão "all-apps" — descomenta se quiser limpar TUDO em /Applications.
+# Mais agressivo, mas funciona pra setup novo onde nada deveria ter trust issues.
+#
+# - name: "macos-defaults — remover quarantine de TODOS os apps em /Applications"
+#   ansible.builtin.shell: |
+#     find /Applications -maxdepth 2 -name "*.app" -print0 | \
+#       xargs -0 -n1 xattr -dr com.apple.quarantine 2>/dev/null || true
+#   changed_when: false
+
+
+# ─── 2. Default browser → Chrome ────────────────────────────────────────────
+# defaultbrowser CLI (Swift) seta via LaunchServices. Output: "Chrome (set)"
+# se mudou, ou "Chrome (already default)" se já era. Argumento é o ID curto
+# do browser, não bundle ID.
+#
+# IDs disponíveis: `defaultbrowser` (sem args) lista os instalados.
+
+- name: "macos-defaults — set default browser → Chrome"
+  ansible.builtin.command:
+    cmd: defaultbrowser chrome
+  register: defaultbrowser_result
+  changed_when: "'(already)' not in defaultbrowser_result.stdout"
+  failed_when: defaultbrowser_result.rc != 0
+  tags:
+    - browser
+
+
+# ─── 3. Keka como uncompressor default (zip, rar, 7z, tar, gz, bz2) ─────────
+# duti seta LSHandlers (Launch Services). Formato:
+#   duti -s <bundle_id> <UTI> all
+#
+# UTI = Uniform Type Identifier (público do Apple).
+# Bundle ID Keka: com.aone.keka
+
+- name: "macos-defaults — set Keka como handler de arquivos compactados"
+  ansible.builtin.command:
+    cmd: duti -s com.aone.keka {{ item }} all
+  loop:
+    - public.zip-archive
+    - com.rarlab.rar-archive
+    - org.7-zip.7-zip-archive
+    - public.tar-archive
+    - org.gnu.gnu-zip-archive
+    - org.gnu.gnu-zip-tar-archive
+    - public.bzip2-archive
+    - public.xz-archive
+  register: keka_duti_result
+  changed_when: keka_duti_result.rc == 0
+  failed_when: false           # Keka pode não estar instalado em alguns hosts
+  tags:
+    - associations
+
+
+# ─── 4. Keybase helper (Finder integration + redirector) ────────────────────
+# Keybase precisa de helper instalado fora do app bundle pra Finder integration
+# funcionar. Comando one-shot, idempotente.
+
+- name: "macos-defaults — verificar se Keybase está instalado"
+  ansible.builtin.stat:
+    path: /Applications/Keybase.app/Contents/Resources/redirector-install
+  register: keybase_check
+  tags:
+    - keybase
+
+- name: "macos-defaults — instalar Keybase redirector (precisa sudo)"
+  ansible.builtin.command:
+    cmd: /Applications/Keybase.app/Contents/Resources/redirector-install
+  become: true
+  when: keybase_check.stat.exists
+  register: keybase_helper_result
+  changed_when: "'already installed' not in (keybase_helper_result.stdout | default(''))"
+  failed_when: false
+  tags:
+    - keybase
+
+
+# ─── 5. Resumo ──────────────────────────────────────────────────────────────
+
+- name: "macos-defaults — exibir resumo"
+  ansible.builtin.debug:
+    msg: |
+      ── macos-defaults aplicado ──
+      • Quarantine removido (qBittorrent, Cursor)
+      • Default browser: {{ defaultbrowser_result.stdout | default('?') | trim }}
+      • Keka uncompressor: configurado pra 8 UTIs
+      • Keybase helper: {{ 'instalado' if keybase_check.stat.exists else 'app não encontrado, skip' }}
+
+      Configs TCC (Accessibility, FDA, etc.) seguem MANUAIS — ver
+      MacZeroToHero runbook.

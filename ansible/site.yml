@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # site.yml — entry point do playbook
 # ────────────────────────────────────────────────────────────────────────────
-# Versão atual: 0.45.0
+# Versão atual: 0.46.0
 #   - 0.1.0: role hello (smoke test)
 #   - 0.2.0: + role macos-base (defaults declarativos)
 #   - 0.3.0: + handlers em macos-base (killall cfprefsd/Finder/Dock/SystemUIServer)
@@ -284,6 +284,20 @@
       tags:
         - fisher
         - fish
+
+    # macos-defaults — configurações pós-instalação dos apps:
+    #   - Remove quarantine de apps específicos (Gatekeeper)
+    #   - Set default browser (Chrome)
+    #   - Set Keka como uncompressor default (8 UTIs)
+    #   - Instala Keybase helper se aplicável
+    # Depende dos apps estarem instalados (homebrew rodou). Skip em Linux.
+    # Configs TCC (Accessibility/FDA/etc.) NÃO estão aqui — impossível sem
+    # MDM. Ver MacZeroToHero runbook.
+    - role: macos-defaults
+      when: ansible_facts.system == "Darwin"
+      tags:
+        - macos-defaults
+        - defaults
 
     # Shell — adicionar fish a /etc/shells + mudar UserShell do user atual.
     # Última role do playbook (fish precisa do brew install + ideal que
