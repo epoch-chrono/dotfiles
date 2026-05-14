@@ -214,7 +214,7 @@ description = "Show 'dirty' if chezmoi has unapplied changes"
 when    = "chezmoi status 2>/dev/null | grep -q ."
 command = "echo dirty"
 format  = "[$symbol$output]($style) "
-symbol  = "♻ "
+symbol  = " "
 style   = "yellow bold"
 # Custo: roda `chezmoi status` a cada prompt. Em dirs do dotfiles é rápido
 # (~50ms), em outros dirs chezmoi não acha repo e retorna instantâneo.
