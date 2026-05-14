@@ -2,21 +2,23 @@
 # ~/.config/helix/languages.toml
 # ─────────────────────────────────────────────────────────────────────────────
 # Helix Editor — LSP + formatters para stack SRE/IaC
-# v1.2.0 — + bash/dockerfile (LSP + linter externo) + markdown linter mention.
+# v1.3.0 — + docker-compose + jq + marksman (markdown).
 #
 # Pré-requisitos: LSPs/formatters precisam estar no PATH. Instalados via
 # mise/brew (ver dot_config/mise/config.toml.tmpl + Brewfile). Lista:
 #
-#   terraform-ls          — LSP pra HCL/tfvars (hashicorp)
-#   yaml-language-server  — LSP pra YAML (genérico) com schemas
-#   ruff                  — LSP + formatter pra Python (rust-based, rápido)
-#   bash-language-server  — LSP pra shell scripts (.sh, .bash)
-#   docker-langserver     — LSP pra Dockerfile (binário do pacote
-#                           dockerfile-language-server-nodejs)
-#   prettier              — formatter pra YAML/JSON/Markdown
-#   taplo                 — formatter pra TOML
-#   shfmt                 — formatter pra shell scripts
-#   fish_indent           — formatter built-in do fish (vem com brew install fish)
+#   terraform-ls              — LSP pra HCL/tfvars (hashicorp)
+#   yaml-language-server      — LSP pra YAML (genérico) com schemas
+#   ruff                      — LSP + formatter pra Python (rust-based, rápido)
+#   bash-language-server      — LSP pra shell scripts (.sh, .bash)
+#   docker-langserver         — LSP pra Dockerfile (pacote dockerfile-language-server-nodejs)
+#   docker-compose-langserver — LSP pra docker-compose.yml (pacote @microsoft/compose-language-service)
+#   jq-lsp                    — LSP pra .jq files (go binary)
+#   marksman                  — LSP pra Markdown (F# binary)
+#   prettier                  — formatter pra YAML/JSON/Markdown
+#   taplo                     — formatter pra TOML
+#   shfmt                     — formatter pra shell scripts
+#   fish_indent               — formatter built-in do fish (vem com brew install fish)
 #
 # Linters externos (não-LSP, rodados via pre-commit ou CLI manual):
 #   hadolint              — linter Dockerfile (não tem LSP — usar via CLI/CI)
@@ -25,8 +27,12 @@
 #   shellcheck            — linter shell (consumido pelo bash-language-server
 #                           internamente como diagnostic source)
 #
-# ansible-language-server: instalado no mise pra cursor/cline (helix não tem
-# language 'ansible' nativa — yaml-ls com schemas já cobre o suficiente aqui).
+# Skipados intencionalmente:
+#   ansible-language-server  — instalado no mise pra cursor/cline (helix não
+#                              tem language 'ansible' nativa — yaml-ls com
+#                              schemas já cobre o suficiente aqui).
+#   markdown-oxide           — PKM-focused (Obsidian-style daily notes,
+#                              backlinks). Marksman cobre uso general purpose.
 #
 # Health check: `hx --health <language>` mostra status do LSP/formatter
 # da linguagem específica. Sem `<language>`, mostra todos.
@@ -111,12 +117,19 @@ formatter = { command = "taplo", args = ["fmt", "-"] }
 
 
 # ─── Markdown ───────────────────────────────────────────────────────────────
+# marksman é LSP general purpose pra Markdown (completion, refs, diagnostics,
+# wiki-link support pra Zettelkasten). prettier formata.
 # Linter externo: markdownlint-cli (binário 'markdownlint') — rodar via
 # pre-commit ou manual (`markdownlint **/*.md`). Não-LSP, helix não exibe
 # diagnostics dele inline.
 
+[language-server.marksman]
+command = "marksman"
+args = ["server"]
+
 [[language]]
 name = "markdown"
+language-servers = ["marksman"]
 formatter = { command = "prettier", args = ["--parser", "markdown"] }
 soft-wrap.enable = true
 
@@ -149,3 +162,37 @@ args = ["--stdio"]
 [[language]]
 name = "dockerfile"
 language-servers = ["docker-langserver"]
+
+
+# ─── Docker Compose ─────────────────────────────────────────────────────────
+# Binário 'docker-compose-langserver' vem do pacote npm
+# @microsoft/compose-language-service. Detecção via file glob (helix prioriza
+# match mais específico, então docker-compose tem precedência sobre yaml).
+
+[language-server.docker-compose-langserver]
+command = "docker-compose-langserver"
+args = ["--stdio"]
+
+[[language]]
+name = "docker-compose"
+language-servers = ["docker-compose-langserver"]
+file-types = [
+  { glob = "docker-compose.yaml" },
+  { glob = "docker-compose.yml" },
+  { glob = "docker-compose.*.yaml" },
+  { glob = "docker-compose.*.yml" },
+  { glob = "compose.yaml" },
+  { glob = "compose.yml" },
+]
+formatter = { command = "prettier", args = ["--parser", "yaml"] }
+
+
+# ─── jq ─────────────────────────────────────────────────────────────────────
+# jq-lsp é Go binary instalado via mise (backend go:).
+
+[language-server.jq-lsp]
+command = "jq-lsp"
+
+[[language]]
+name = "jq"
+language-servers = ["jq-lsp"]
