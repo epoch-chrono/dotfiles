@@ -215,6 +215,12 @@ brew "p7zip"              # 7zip (compressão)
 brew "socat"              # socket cat — debug de rede avançado
 brew "tcpdump"            # captura de pacotes
 brew "tcpflow"            # reconstrução de fluxo TCP
+brew "tailscale"          # mesh VPN WireGuard — formula CLI; cask "tailscale-app" falha em
+                          # macOS Tahoe (issue tailscale/tailscale#17891 — PKG installer +
+                          # System Extension órfã). Daemon roda via:
+                          #   sudo brew services start tailscale
+                          #   sudo tailscale up
+                          # Sem GUI/menu bar app — operação via CLI (status / login / etc.)
 
 
 # ── Container / cloud ─────────────────────────────────────────────────────
@@ -303,7 +309,8 @@ cask "google-chrome"           # browser
 cask "adguard"                 # content blocker
 cask "nordvpn"                 # VPN pessoal
 cask "tunnelblick@beta"        # OpenVPN client (Apoia.se) — beta para features novas do OpenVPN
-cask "tailscale-app"           # mesh VPN
+# cask "tailscale-app"  ← removido em v0.36.2 — PKG installer falha em macOS Tahoe.
+#                         Migrado pra formula 'brew "tailscale"' (Network/security section).
 cask "rustdesk"                # remote desktop
 cask "ngrok"                   # tunneling reverso HTTP/TCP
 cask "royal-tsx"               # gerenciador de RDP/SSH/etc (substitui MS RD)
