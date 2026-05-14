@@ -11,6 +11,8 @@
 #   - pure-fish/pure removido — migração pra starship (v0.42.0+)
 #   - zzhaolei/transient.fish removido — acoplado a Pure prompt, quebra
 #     o fish_prompt do starship (v0.44.2)
+#   - acomagu/fish-async-prompt removido — wrapper async interferia no
+#     init do starship; sem ele, prompt funciona corretamente (v0.44.3)
 #
 # Pra adicionar/remover plugins: editar essa lista, rodar bootstrap. Idempotente
 # — fisher detecta se já instalado e atualiza apenas (em vez de re-install).
@@ -25,10 +27,13 @@ fisher_plugins:
   - babarot/enhancd                 # cd com history + fuzzy match
   - halostatue/fish-direnv          # direnv integration (auto-load .envrc)
   - halostatue/fish-macos           # macOS-specific helpers
-  - acomagu/fish-async-prompt       # render prompts async (perf em git status)
   # ── REMOVIDOS (não reinstalar) ─────────────────────────────────────────────
   # pure-fish/pure                  # migração pra starship (v0.42.0)
   # zzhaolei/transient.fish         # acoplado ao Pure, força configs no
-                                    # fish_prompt que conflitam com starship
-                                    # — sintoma: prompt renderiza só [character]
-                                    # ou volta pro fish default (v0.44.2)
+  #                                 # fish_prompt que conflitam com starship
+  #                                 # — sintoma: prompt renderiza só [character]
+  #                                 # ou volta pro fish default (v0.44.2)
+  # acomagu/fish-async-prompt       # wrapper async no fish_prompt que
+  #                                 # interferiu com o init do starship —
+  #                                 # user removeu manualmente e validou
+  #                                 # que prompt funciona sem ele (v0.44.3)

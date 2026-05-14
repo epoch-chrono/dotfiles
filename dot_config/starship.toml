@@ -2,281 +2,252 @@
 # ~/.config/starship.toml
 # Managed by chezmoi: github.com/epoch-chrono/dotfiles
 # ─────────────────────────────────────────────────────────────────────────────
-# STATUS: TEMPORARIAMENTE DESATIVADO (v0.44.1 — 2026-05-14).
-#
-# A config customizada (defaults SRE/DevOps + Catppuccin Mocha) entrou em
-# conflito com plugins do fisher ainda ativos no setup (pure-fish/pure +
-# acomagu/fish-async-prompt + zzhaolei/transient.fish), causando prompt
-# bagunçado:
-#   - Pure prompt aparecia primeiro (resíduo do plugin)
-#   - transient.fish substituía depois por '❯' solto
-#   - fish_prompt default voltava em algumas sessions ('user@host ~>')
-#   - Módulos contextuais (kubernetes/aws) não renderizavam
-#
-# Decisão: comentar TODO o conteúdo. Starship usa defaults built-in quando
-# o arquivo está vazio/comentado — prompt simples mas funcional:
-#   directory + git_branch + git_status + character (❯)
-#
-# Pra reativar a config completa no futuro:
-#   1. Remover plugins conflitantes do fisher
-#      (vars/main.yml da role fisher — comentar pure-fish/async/transient)
-#   2. Descomentar o conteúdo abaixo
-#   3. Bump dotfiles + bootstrap
-#
-# Conteúdo original preservado abaixo (comentado) pra referência futura.
-# ─────────────────────────────────────────────────────────────────────────────
+# v1.0.0 — defaults SRE/DevOps (Opção B confirmada).
+# Stack alvo: k8s + aws + terraform + python/node/go + git
+# Palette:    Catppuccin Mocha (combina com Helix theme catppuccin_mocha).
+# Fonte:      requer Nerd Font instalada (font-jetbrains-mono-nerd-font ou
+#             similar — Brewfile cobre).
 
-# # ─────────────────────────────────────────────────────────────────────────────
-# # ~/.config/starship.toml
-# # Managed by chezmoi: github.com/epoch-chrono/dotfiles
-# # ─────────────────────────────────────────────────────────────────────────────
-# # v1.0.0 — defaults SRE/DevOps (Opção B confirmada).
-# # Stack alvo: k8s + aws + terraform + python/node/go + git
-# # Palette:    Catppuccin Mocha (combina com Helix theme catppuccin_mocha).
-# # Fonte:      requer Nerd Font instalada (font-jetbrains-mono-nerd-font ou
-# #             similar — Brewfile cobre).
+palette     = "catppuccin_mocha"
+add_newline = true
 
-# palette     = "catppuccin_mocha"
-# add_newline = true
-
-# # Layout:
-# #   linha 1: user@host (cond) + directory + git_branch + git_status
-# #   linha 2: contextos (k8s/aws/tf) + languages + cmd_duration
-# #   linha 3: char (❯)
-# format = """
-# $username\
-# $hostname\
-# $directory\
-# $git_branch\
-# $git_state\
-# $git_status\
-# $custom.chezmoi\
-# $line_break\
-# $kubernetes\
-# $aws\
-# $gcloud\
-# $azure\
-# $terraform\
-# $python\
-# $nodejs\
-# $golang\
-# $rust\
-# $package\
-# $cmd_duration\
-# $line_break\
-# $character"""
+# Layout:
+#   linha 1: user@host (cond) + directory + git_branch + git_status
+#   linha 2: contextos (k8s/aws/tf) + languages + cmd_duration
+#   linha 3: char (❯)
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$custom.chezmoi\
+$line_break\
+$kubernetes\
+$aws\
+$gcloud\
+$azure\
+$terraform\
+$python\
+$nodejs\
+$golang\
+$rust\
+$package\
+$cmd_duration\
+$line_break\
+$character"""
 
 
-# # ─── Username / Hostname (só em SSH ou sudo) ─────────────────────────────────
+# ─── Username / Hostname (só em SSH ou sudo) ─────────────────────────────────
 
-# [username]
-# style_user   = "yellow bold"
-# style_root   = "red bold"
-# format       = "[$user]($style)@"
-# disabled     = false
-# show_always  = false           # mostra só em SSH/sudo
+[username]
+style_user   = "yellow bold"
+style_root   = "red bold"
+format       = "[$user]($style)@"
+disabled     = false
+show_always  = false           # mostra só em SSH/sudo
 
-# [hostname]
-# ssh_only     = true            # mostra só em SSH
-# format       = "[$hostname]($style):"
-# style        = "peach bold"
-
-
-# # ─── Directory ───────────────────────────────────────────────────────────────
-
-# [directory]
-# truncation_length = 3
-# truncate_to_repo  = true
-# style             = "blue bold"
-# read_only         = " 󰌾"        # nerd font lock icon
-# format            = "[$path]($style)[$read_only]($read_only_style) "
-# truncation_symbol = "…/"
-
-# # Aliases visuais pra paths longos
-# [directory.substitutions]
-# "Documents" = "󰈙 Documents"
-# "Downloads" = " Downloads"
-# "~/Git"     = " ~/Git"
+[hostname]
+ssh_only     = true            # mostra só em SSH
+format       = "[$hostname]($style):"
+style        = "peach bold"
 
 
-# # ─── Git ─────────────────────────────────────────────────────────────────────
+# ─── Directory ───────────────────────────────────────────────────────────────
 
-# [git_branch]
-# format = "on [$symbol$branch]($style) "
-# symbol = " "
-# style  = "mauve bold"
+[directory]
+truncation_length = 3
+truncate_to_repo  = true
+style             = "blue bold"
+read_only         = " 󰌾"        # nerd font lock icon
+format            = "[$path]($style)[$read_only]($read_only_style) "
+truncation_symbol = "…/"
 
-# [git_state]
-# format = "[\\($state( $progress_current of $progress_total)\\)]($style) "
-# style  = "yellow bold"
-
-# [git_status]
-# format     = "([\\[$all_status$ahead_behind\\]]($style) )"
-# style      = "red bold"
-# conflicted = "🏳"
-# ahead      = "⇡${count}"
-# behind     = "⇣${count}"
-# diverged   = "⇕⇡${ahead_count}⇣${behind_count}"
-# up_to_date = ""
-# untracked  = "?${count}"
-# stashed    = "\\$${count}"
-# modified   = "!${count}"
-# staged     = "+${count}"
-# renamed    = "»${count}"
-# deleted    = "✘${count}"
+# Aliases visuais pra paths longos
+[directory.substitutions]
+"Documents" = "󰈙 Documents"
+"Downloads" = " Downloads"
+"~/Git"     = " ~/Git"
 
 
-# # ─── Kubernetes ──────────────────────────────────────────────────────────────
-# # Mostra context (e namespace se diferente de default).
-# # Útil pra evitar 'kubectl' no cluster errado.
+# ─── Git ─────────────────────────────────────────────────────────────────────
 
-# [kubernetes]
-# format   = "on [$symbol$context( \\($namespace\\))]($style) "
-# symbol   = "󱃾 "
-# style    = "blue bold"
-# disabled = false               # por padrão starship desabilita; habilitamos
+[git_branch]
+format = "on [$symbol$branch]($style) "
+symbol = " "
+style  = "mauve bold"
 
+[git_state]
+format = "[\\($state( $progress_current of $progress_total)\\)]($style) "
+style  = "yellow bold"
 
-# # ─── AWS ─────────────────────────────────────────────────────────────────────
-# # Mostra profile + region. Aparece quando AWS_PROFILE setado ou em dir com
-# # .aws/config visível.
-
-# [aws]
-# format            = "on [$symbol($profile)(\\($region\\)) ]($style)"
-# symbol            = " "
-# style             = "peach bold"
-# expiration_symbol = "X"        # mostrado quando credencial expirou
-
-
-# # ─── GCP / Azure (disabled por padrão — habilitar conforme uso) ──────────────
-
-# [gcloud]
-# format   = "on [$symbol$account@$project]($style) "
-# symbol   = "☁ "
-# style    = "blue bold"
-# disabled = true                # habilitar se trabalhar com GCP
-
-# [azure]
-# format   = "on [$symbol($subscription)]($style) "
-# symbol   = "󰠅 "
-# style    = "blue bold"
-# disabled = true                # habilitar se trabalhar com Azure
+[git_status]
+format     = "([\\[$all_status$ahead_behind\\]]($style) )"
+style      = "red bold"
+conflicted = "🏳"
+ahead      = "⇡${count}"
+behind     = "⇣${count}"
+diverged   = "⇕⇡${ahead_count}⇣${behind_count}"
+up_to_date = ""
+untracked  = "?${count}"
+stashed    = "\\$${count}"
+modified   = "!${count}"
+staged     = "+${count}"
+renamed    = "»${count}"
+deleted    = "✘${count}"
 
 
-# # ─── Terraform / OpenTofu ────────────────────────────────────────────────────
-# # Mostra workspace. Aparece em dirs com .terraform/.
+# ─── Kubernetes ──────────────────────────────────────────────────────────────
+# Mostra context (e namespace se diferente de default).
+# Útil pra evitar 'kubectl' no cluster errado.
 
-# [terraform]
-# format = "via [$symbol$workspace]($style) "
-# symbol = "💠 "
-# style  = "lavender bold"
-
-
-# # ─── Languages ───────────────────────────────────────────────────────────────
-
-# [python]
-# format        = "via [$symbol$pyenv_prefix($version )(\\($virtualenv\\) )]($style)"
-# symbol        = "🐍 "
-# style         = "yellow bold"
-# python_binary = ["python", "python3"]
-
-# [nodejs]
-# format = "via [$symbol($version )]($style)"
-# symbol = " "
-# style  = "green bold"
-
-# [golang]
-# format = "via [$symbol($version )]($style)"
-# symbol = " "
-# style  = "sapphire bold"
-
-# [rust]
-# format = "via [$symbol($version )]($style)"
-# symbol = "🦀 "
-# style  = "peach bold"
+[kubernetes]
+format   = "on [$symbol$context( \\($namespace\\))]($style) "
+symbol   = "󱃾 "
+style    = "blue bold"
+disabled = false               # por padrão starship desabilita; habilitamos
 
 
-# # ─── Package version (Cargo.toml/package.json/pyproject.toml/Chart.yaml) ─────
+# ─── AWS ─────────────────────────────────────────────────────────────────────
+# Mostra profile + region. Aparece quando AWS_PROFILE setado ou em dir com
+# .aws/config visível.
 
-# [package]
-# format   = "is [$symbol$version]($style) "
-# symbol   = "📦 "
-# style    = "red bold"
-# disabled = false
-
-
-# # ─── Command duration ────────────────────────────────────────────────────────
-
-# [cmd_duration]
-# min_time = 2_000               # ms — mostra só > 2s
-# format   = "took [$duration]($style) "
-# style    = "yellow bold"
+[aws]
+format            = "on [$symbol($profile)(\\($region\\)) ]($style)"
+symbol            = " "
+style             = "peach bold"
+expiration_symbol = "X"        # mostrado quando credencial expirou
 
 
-# # ─── Character (prompt symbol) ───────────────────────────────────────────────
+# ─── GCP / Azure (disabled por padrão — habilitar conforme uso) ──────────────
 
-# [character]
-# success_symbol = "[❯](green bold)"
-# error_symbol   = "[❯](red bold)"
-# vimcmd_symbol  = "[❮](green bold)"
+[gcloud]
+format   = "on [$symbol$account@$project]($style) "
+symbol   = "☁ "
+style    = "blue bold"
+disabled = true                # habilitar se trabalhar com GCP
 
-
-# # ─── Disabled (módulos não relevantes pro user — habilitar se precisar) ──────
-
-# [battery]
-# disabled = true                # macOS battery indicator
-
-# [time]
-# disabled = true                # hora no prompt
-
-# [memory_usage]
-# disabled = true                # uso de RAM (verbose)
+[azure]
+format   = "on [$symbol($subscription)]($style) "
+symbol   = "󰠅 "
+style    = "blue bold"
+disabled = true                # habilitar se trabalhar com Azure
 
 
-# # ─── Custom modules ──────────────────────────────────────────────────────────
+# ─── Terraform / OpenTofu ────────────────────────────────────────────────────
+# Mostra workspace. Aparece em dirs com .terraform/.
 
-# [custom.chezmoi]
-# description = "Show 'dirty' if chezmoi has unapplied changes"
-# # `chezmoi status` retorna codes per arquivo (e.g. "MM file") quando dirty.
-# # Output vazio = clean. `when` precisa retornar exit 0 pra modulo aparecer.
-# when    = "chezmoi status 2>/dev/null | grep -q ."
-# command = "echo dirty"
-# format  = "[$symbol$output]($style) "
-# symbol  = "♻ "
-# style   = "yellow bold"
-# # Custo: roda `chezmoi status` a cada prompt. Em dirs do dotfiles é rápido
-# # (~50ms), em outros dirs chezmoi não acha repo e retorna instantâneo.
-# # Se notar lag, desabilitar com `disabled = true`.
+[terraform]
+format = "via [$symbol$workspace]($style) "
+symbol = "💠 "
+style  = "lavender bold"
 
 
-# # ─── Catppuccin Mocha palette ────────────────────────────────────────────────
-# # https://github.com/catppuccin/catppuccin
+# ─── Languages ───────────────────────────────────────────────────────────────
 
-# [palettes.catppuccin_mocha]
-# rosewater = "#f5e0dc"
-# flamingo  = "#f2cdcd"
-# pink      = "#f5c2e7"
-# mauve     = "#cba6f7"
-# red       = "#f38ba8"
-# maroon    = "#eba0ac"
-# peach     = "#fab387"
-# yellow    = "#f9e2af"
-# green     = "#a6e3a1"
-# teal      = "#94e2d5"
-# sky       = "#89dceb"
-# sapphire  = "#74c7ec"
-# blue      = "#89b4fa"
-# lavender  = "#b4befe"
-# text      = "#cdd6f4"
-# subtext1  = "#bac2de"
-# subtext0  = "#a6adc8"
-# overlay2  = "#9399b2"
-# overlay1  = "#7f849c"
-# overlay0  = "#6c7086"
-# surface2  = "#585b70"
-# surface1  = "#45475a"
-# surface0  = "#313244"
-# base      = "#1e1e2e"
-# mantle    = "#181825"
-# crust     = "#11111b"
+[python]
+format        = "via [$symbol$pyenv_prefix($version )(\\($virtualenv\\) )]($style)"
+symbol        = "🐍 "
+style         = "yellow bold"
+python_binary = ["python", "python3"]
 
+[nodejs]
+format = "via [$symbol($version )]($style)"
+symbol = " "
+style  = "green bold"
+
+[golang]
+format = "via [$symbol($version )]($style)"
+symbol = " "
+style  = "sapphire bold"
+
+[rust]
+format = "via [$symbol($version )]($style)"
+symbol = "🦀 "
+style  = "peach bold"
+
+
+# ─── Package version (Cargo.toml/package.json/pyproject.toml/Chart.yaml) ─────
+
+[package]
+format   = "is [$symbol$version]($style) "
+symbol   = "📦 "
+style    = "red bold"
+disabled = false
+
+
+# ─── Command duration ────────────────────────────────────────────────────────
+
+[cmd_duration]
+min_time = 2_000               # ms — mostra só > 2s
+format   = "took [$duration]($style) "
+style    = "yellow bold"
+
+
+# ─── Character (prompt symbol) ───────────────────────────────────────────────
+
+[character]
+success_symbol = "[❯](green bold)"
+error_symbol   = "[❯](red bold)"
+vimcmd_symbol  = "[❮](green bold)"
+
+
+# ─── Disabled (módulos não relevantes pro user — habilitar se precisar) ──────
+
+[battery]
+disabled = true                # macOS battery indicator
+
+[time]
+disabled = true                # hora no prompt
+
+[memory_usage]
+disabled = true                # uso de RAM (verbose)
+
+
+# ─── Custom modules ──────────────────────────────────────────────────────────
+
+[custom.chezmoi]
+description = "Show 'dirty' if chezmoi has unapplied changes"
+# `chezmoi status` retorna codes per arquivo (e.g. "MM file") quando dirty.
+# Output vazio = clean. `when` precisa retornar exit 0 pra modulo aparecer.
+when    = "chezmoi status 2>/dev/null | grep -q ."
+command = "echo dirty"
+format  = "[$symbol$output]($style) "
+symbol  = "♻ "
+style   = "yellow bold"
+# Custo: roda `chezmoi status` a cada prompt. Em dirs do dotfiles é rápido
+# (~50ms), em outros dirs chezmoi não acha repo e retorna instantâneo.
+# Se notar lag, desabilitar com `disabled = true`.
+
+
+# ─── Catppuccin Mocha palette ────────────────────────────────────────────────
+# https://github.com/catppuccin/catppuccin
+
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo  = "#f2cdcd"
+pink      = "#f5c2e7"
+mauve     = "#cba6f7"
+red       = "#f38ba8"
+maroon    = "#eba0ac"
+peach     = "#fab387"
+yellow    = "#f9e2af"
+green     = "#a6e3a1"
+teal      = "#94e2d5"
+sky       = "#89dceb"
+sapphire  = "#74c7ec"
+blue      = "#89b4fa"
+lavender  = "#b4befe"
+text      = "#cdd6f4"
+subtext1  = "#bac2de"
+subtext0  = "#a6adc8"
+overlay2  = "#9399b2"
+overlay1  = "#7f849c"
+overlay0  = "#6c7086"
+surface2  = "#585b70"
+surface1  = "#45475a"
+surface0  = "#313244"
+base      = "#1e1e2e"
+mantle    = "#181825"
+crust     = "#11111b"
