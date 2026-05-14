@@ -1,15 +1,28 @@
 
 
+# ─── Subject ──────────────────────────────────────#  ← 50 chars
+# Formato: <type>(<scope>): <subject>
+# Conventional Commits — type lowercase, sem ponto final.
+
+# ─── Body ───────────────────────────────────────────────────────────────#  ← 72 chars
+# WHY (não WHAT — diff mostra o what).
+# Primeira pessoa do singular: "eu fiz", "eu refatorei", "eu adicionei".
+
+
+
+# ─── Footer (opcional) ──────────────────────────────────────────────────────
+# BREAKING CHANGE: <descrição se quebra API/comportamento>
+# Refs: NA-123, ABC-456    (Jira/issue IDs)
+# Co-authored-by: Nome <email@example.com>
+#
 # ─────────────────────────────────────────────────────────────────────────────
-# Title (max 50 chars):  <type>(<scope>): <subject>
-#
 # Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-# Subject: imperative mood ("add" not "added"), lowercase, sem ponto final.
 #
-# Body (max 72 chars/linha): explicar WHY, não WHAT. WHAT está no diff.
+# Convenções (Vitor):
+#   - Conventional Commits — https://www.conventionalcommits.org/
+#   - Subject: imperativo + primeira pessoa, lowercase, sem ponto final
+#   - Body: WHY não WHAT, 72 chars/linha
+#   - Sem mencionar nomes de AI tooling (instrução pessoal global)
 #
-# Footer:
-#   BREAKING CHANGE: <descrição>
-#   Refs: NA-123, ABC-456
-#   Co-authored-by: Nome <email>
+# Chris Beams (canonical): https://chris.beams.io/posts/git-commit/
 # ─────────────────────────────────────────────────────────────────────────────
