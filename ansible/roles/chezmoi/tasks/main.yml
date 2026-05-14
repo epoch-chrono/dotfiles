@@ -570,6 +570,43 @@
 # Como agents já estão configurados (passo acima), o installer detecta e
 # pula essas seções. Apenas a parte de hooks + init permanece.
 
+# ── CLEANUP: gemini extension residual (de runs anteriores) ──────────────
+# Antes do v0.37.0, o pre-install per agent instalava caveman como gemini
+# extension via `gemini extensions install ... --consent`. Resultado:
+# `~/.gemini/extensions/caveman/` existe + universal skills em
+# `~/.agents/skills/caveman` = "Skill conflict detected" warnings toda
+# vez que `gemini` inicia.
+#
+# A v0.37.0 parou de criar a extension, mas não removeu o que já existia
+# em runs anteriores. Esta task limpa o residual:
+#
+#   1. `gemini extensions uninstall caveman` — método oficial, atualiza
+#      também registros internos do gemini (config files).
+#   2. `file: state: absent` — defensive backup caso uninstall falhe ou
+#      diretório fique órfão.
+#
+# Idempotente: ambas as tasks toleram ausência (uninstall sem -force
+# falha com "not installed" → || true; file: absent é no-op se ausente).
+
+- name: "Caveman — gemini extension uninstall (cleanup residual)"
+  ansible.builtin.shell:
+    cmd: gemini extensions uninstall caveman 2>&1 || true
+  environment:
+    PATH: "{{ ansible_user_dir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: gemini_caveman_uninstall
+  changed_when: "'caveman' in (gemini_caveman_uninstall.stdout | default('') | lower) and 'not installed' not in (gemini_caveman_uninstall.stdout | default('') | lower)"
+  failed_when: false
+  when:
+    - claude_binary_check.stat.exists
+
+- name: "Caveman — remover diretório gemini extension residual (defensive)"
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.gemini/extensions/caveman"
+    state: absent
+  when:
+    - claude_binary_check.stat.exists
+
+
 - name: "Caveman — universal installer (hooks + statusline + init rules, EXCLUI gemini)"
   ansible.builtin.shell:
     cmd: |
