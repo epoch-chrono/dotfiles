@@ -436,3 +436,4 @@ lazy), o filename **deve** ser idêntico ao nome da function:
 - **Espelho público**: este arquivo, sanitizado
 - **Mudanças**: alterar primeiro o Notion, depois sincronizar pra cá
 - **Débito técnico relacionado**: ver página Notion "Débito Técnico — Dotfiles / Taxonomia v1" (privada)
+- **Workflow de renomeação/exclusão**: ver `docs/MAINTENANCE.md` (como prevenir órfãos no destination via `.chezmoiremove`)
