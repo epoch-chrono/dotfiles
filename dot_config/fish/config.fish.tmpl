@@ -2,71 +2,49 @@
 # ~/.config/fish/config.fish
 # Managed by chezmoi: github.com/epoch-chrono/dotfiles
 # ──────────────────────────────────────────────────────────────────────────
-# Entry point do Fish — mantido enxuto. Tudo o que pode ser delegado vai
-# pra conf.d/NN-contexto.fish (auto-sourced ANTES deste arquivo) ou
-# functions/<nome>.fish (lazy-loaded por uso).
+# Entry point do Fish — mantido estritamente minimal.
 #
-# Inventário do que está em conf.d/:
-#   00-mise-shims.fish    — PATH ordering, mise --shims
-#   01-gnu-paths.fish     — GNU coreutils paths
-#   02-starship.fish      — prompt
-#   03-editor.fish        — EDITOR/VISUAL (helix)
-#   04-ollama.fish        — OLLAMA_* env vars
-#   05-iterm2.fish        — iTerm2 shell integration (cond)
-#   06-envman.fish        — envman load (cond)
-#   07-op-plugins.fish    — 1Password CLI plugins (cond)
-#   08-antigravity.fish   — Antigravity PATH (cond)
-#   09-openclaw.fish      — OpenClaw completions (cond)
+# Filosofia: tudo user-controlled (env vars, functions, aliases, integrations)
+# vive em ~/.dotfiles/ seguindo a taxonomia v1 (ver docs/TAXONOMY.md). O
+# config.fish faz UMA coisa: source dos fragments em ~/.dotfiles/ por raiz
+# de escopo (personal e professional).
 #
-# Responsabilidades deste arquivo (que NÃO podem ir pra conf.d/):
-#   1. Source dos fragments multi-shell em ~/.dotfiles/ — precisam rodar
-#      DEPOIS do conf.d (dependem de env e PATH já configurados).
-#   2. launchctl setenv (PATH/DOCKER_HOST) — só em login shells.
-#   3. PATH dedupe defensivo no final.
+# Arquivos gerados automaticamente por tools (brew vendor, fisher plugins,
+# `op plugin init`, etc.) podem aparecer em ~/.config/fish/conf.d/ — esses
+# são carregados pelo próprio Fish ANTES deste arquivo, sem necessidade de
+# intervenção aqui.
 # ──────────────────────────────────────────────────────────────────────────
 
 
-# ── 1. Source ~/.dotfiles/ fragments (multi-shell, post-conf.d) ───────────
-# Estrutura atual ainda usa nomes pré-taxonomia v1 (00-private.d / 01-customer.d).
-# Migração v1 pendente — ver Notion: "Definir taxonomia de diretórios
-# (personal vs client/<slug>)". Quando migrar, atualizar paths abaixo:
-#   00-private.d  → 000-personal.d
-#   01-customer.d → 100-professional.d
-# E ajustar a recursividade conforme a nova hierarquia.
+# ── 1. Bloco default do Fish (raramente usado) ────────────────────────────
+# Mantido por convenção do template inicial do Fish. Comandos colocados
+# aqui rodam SÓ em shells interativos (não em scripts, cron, etc.).
 
 if status is-interactive
-    if test -d $HOME/.dotfiles/00-private.d
-        for file in (find $HOME/.dotfiles/00-private.d -type f -iname '*.fish' | sort)
-            source "$file"
-        end
-    end
-
-    if test -d $HOME/.dotfiles/01-customer.d
-        for file in (find $HOME/.dotfiles/01-customer.d -type f -iname '*.fish' | sort)
-            source "$file"
-        end
-    end
+    # Commands to run in interactive sessions can go here
 end
 
 
-# ── 2. launchd env (login shells): PATH/DOCKER_HOST para GUI apps ─────────
-# launchctl setenv propaga vars pro env do launchd — daí GUI apps (Cursor,
-# Podman Desktop, etc.) leem PATH/DOCKER_HOST corretos. Sem isso, GUI apps
-# herdam PATH "limpo" do launchd, não enxergam mise/brew/.local/bin.
+# ── 2. Loader de fragments user-controlled em ~/.dotfiles/ ────────────────
+# Estrutura esperada (ver docs/TAXONOMY.md):
+#   ~/.dotfiles/000-personal.d/      — configs pessoais
+#   ~/.dotfiles/100-professional.d/  — configs por cliente (recursive)
 #
-# Só roda em login shells (uma vez por sessão de login) — não em cada
-# terminal aberto. Custo zero em uso normal.
+# Filenames seguem lifecycle pattern: <NN><L>-<contexto>.<shell>
+# Ex: 10a-environment.fish, 20a-functions.fish, 30a-aliases.fish, ...
+#
+# `find ... -iname '*.fish' | sort` garante ordem determinística por
+# filename — letras `a`/`b`/`c` no sufixo controlam ordem de carregamento
+# por shell quando o user mantém triplo .bash/.fish/.zsh no mesmo dir.
 
-if status is-login
-    launchctl setenv PATH "$PATH"
-    launchctl setenv DOCKER_HOST "unix://{{ .chezmoi.homeDir }}/.local/share/containers/podman/machine/podman.sock"
+if test -d $HOME/.dotfiles/000-personal.d
+    for file in (find $HOME/.dotfiles/000-personal.d -type f -iname '*.fish' | sort)
+        source "$file"
+    end
 end
 
-
-# ── 3. PATH dedupe defensivo ──────────────────────────────────────────────
-# Mesmo com 00-mise-shims.fish usando `fish_add_path --prepend --move`,
-# source dos ~/.dotfiles/ fragments e plugins de terceiros pode reintroduzir
-# duplicatas no PATH. Awk one-liner remove repetições preservando first-seen
-# order (mantém prioridade da primeira ocorrência).
-
-set PATH (printf '%s\n' $PATH | awk '!seen[$0]++')
+if test -d $HOME/.dotfiles/100-professional.d
+    for file in (find $HOME/.dotfiles/100-professional.d -type f -iname '*.fish' | sort)
+        source "$file"
+    end
+end
