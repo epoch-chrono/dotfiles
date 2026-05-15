@@ -1,13 +1,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# brew-compile-with
+# fn-brew-compile-with
 # ─────────────────────────────────────────────────────────────────────────────
 # Ativa LDFLAGS/CPPFLAGS/PKG_CONFIG_PATH SÓ pros brews passados como args.
 #
 # Útil quando sabes exatamente qual lib precisas pra compilar:
 #
-#   brew-compile-with openssl@3 readline
+#   fn-brew-compile-with openssl@3 readline
 #   pip install psycopg2-binary
-#   brew-compile-env-off
+#   fn-brew-compile-env-off
 #
 # Idempotente: limpa as 3 vars ANTES de adicionar, então chamar 2 vezes
 # resulta no estado da última chamada (não acumula).
@@ -21,10 +21,10 @@
 # pelo brew). Skip silencioso de brews que não existem (não falha o
 # comando inteiro).
 
-function brew-compile-with --description "Ativa flags de build pra brews específicos passados como args"
+function fn-brew-compile-with --description "Ativa flags de build pra brews específicos passados como args"
     if test (count $argv) -eq 0
-        echo "Uso: brew-compile-with <brew1> [<brew2> ...]" >&2
-        echo "Exemplo: brew-compile-with openssl@3 readline sqlite" >&2
+        echo "Uso: fn-brew-compile-with <brew1> [<brew2> ...]" >&2
+        echo "Exemplo: fn-brew-compile-with openssl@3 readline sqlite" >&2
         return 1
     end
 
@@ -80,7 +80,7 @@ function brew-compile-with --description "Ativa flags de build pra brews especí
         echo "  LDFLAGS=$LDFLAGS"
         echo "  CPPFLAGS=$CPPFLAGS"
         echo "  PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-        echo "Pra limpar: brew-compile-env-off"
+        echo "Pra limpar: fn-brew-compile-env-off"
     else
         echo "Nenhum brew dos especificados está instalado: $argv" >&2
         return 1
