@@ -216,6 +216,65 @@
 # Bloco de env vars de auth GitHub/GitLab — reaproveitado em todas as
 # fases via YAML anchor. Mise resolve token na ordem oficial.
 
+
+# ── Mise housekeeping (Fase 0) ────────────────────────────────────────────
+# Rotina de cleanup que resolveu transient break no install do backend npm
+# em execução anterior. Roda SEMPRE antes das 3 fases de install pra
+# prevenir recorrência.
+#
+# 4 tasks distintas — alvos diferentes:
+#   doctor       — diagnóstico (não-bloqueante)
+#   cache clear  — limpa cache files (todos)
+#   cache prune  — remove cache files stale (>30 dias sem acesso por default)
+#   prune        — remove installations orfãs (versions fora de configs tracked)
+#
+# Trade-off: adiciona ~3-8s por execução do playbook. Aceitável pra bootstrap.
+# Cada task: `changed_when: false` (cleanup sempre roda, nunca conta como
+# mudança real). `failed_when: false` SÓ no doctor (diagnóstico — pode
+# reportar warning sem ser bloqueador).
+
+- name: "Mise — housekeeping: doctor (diagnóstico, não-bloqueante)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} doctor --yes"
+    chdir: "{{ ansible_user_dir }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: mise_doctor
+  changed_when: false
+  failed_when: false
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — housekeeping: cache clear (limpa cache files)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} cache clear --yes"
+    chdir: "{{ ansible_user_dir }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: mise_cache_clear
+  changed_when: false
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — housekeeping: cache prune (remove cache files stale >30d)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} cache prune --yes"
+    chdir: "{{ ansible_user_dir }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: mise_cache_prune
+  changed_when: false
+  when: mise_binary_check.stat.exists
+
+- name: "Mise — housekeeping: prune (remove installations orfãs)"
+  ansible.builtin.command:
+    cmd: "{{ mise_binary }} prune --yes"
+    chdir: "{{ ansible_user_dir }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+  register: mise_prune
+  changed_when: false
+  when: mise_binary_check.stat.exists
+
+
 - name: "Mise — install: Fase 1 (cores linguagem)"
   ansible.builtin.command:
     cmd: "{{ mise_binary }} install {{ mise_core_tools | join(' ') }}"
