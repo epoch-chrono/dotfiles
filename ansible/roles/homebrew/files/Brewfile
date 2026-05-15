@@ -71,6 +71,12 @@ tap "turbot/tap"
 # (versão 1.1.1w-1, suporta darwin/arm64).
 tap "rbenv/tap"
 
+# Mole — CLI pra criar túneis SSH com resiliência (reconnect, aliases,
+# multiple tunnels via mesma conexão). Tap mantido por davrodpin, projeto
+# ativo. Sem alternativa via mise (não tem entry no registry), então fica
+# em brew. Repo: github.com/davrodpin/mole
+tap "davrodpin/mole"
+
 
 # ── Gerenciadores de versão e dotfiles ────────────────────────────────────
 # Ferramentas que orquestram outras ferramentas. Ficam no brew (não no
@@ -205,11 +211,13 @@ brew "defaultbrowser"     # set default browser via CLI (usado pelo role macos-d
 brew "maclaunch"          # gerenciar launch agents/daemons
 brew "pinentry-mac"       # GPG pinentry para macOS
 brew "displayplacer"      # CLI pra gerenciar layout/resolução de monitores
+brew "dockutil"           # CLI pra add/remove/move items do Dock macOS
 
 
 # ── Network / security ────────────────────────────────────────────────────
 
 brew "clamav"             # antivirus (scan ad-hoc)
+brew "mole"               # CLI pra túneis SSH com resiliência (tap davrodpin/mole)
 brew "mtr"                # traceroute + ping integrado
 brew "nmap"               # network scanner
 brew "p7zip"              # 7zip (compressão)
