@@ -280,6 +280,88 @@ Templates **personal** e **professional** diferem em exemplos (personal usa
 `EDITOR=hx`, `OLLAMA_HOST`, etc.; professional usa `AWS_PROFILE`,
 `KUBECONFIG`, etc.) mas têm a mesma estrutura de stages.
 
+### Naming de user-defined commands (functions, abbreviations, aliases, scripts)
+
+Convenção pra **discoverability via tab completion** + separação visual
+entre comandos user-defined e binários do sistema/distros.
+
+Princípio: digitar `fn-<tab>` lista todas as functions custom; o mesmo
+princípio se estende (opcionalmente) a scripts em `$PATH`.
+
+#### Tabela de convenções por tipo
+
+| Tipo | Prefixo | Exemplo | Por quê |
+|---|---|---|---|
+| **Function custom (usual)** | `fn-<scope>-<verb>` | `fn-aws-bastion`, `fn-git-cleanup-merged` | Tab completion: `fn-<tab>` lista todas |
+| **Function que override binary** | Sem prefixo (precisa casar) | `cat` (wrapper pra `bat`), `ll` (`eza`) | Function precisa ter o mesmo nome do binário |
+| **Abbreviation (Fish)** | Sem prefixo, curto | `g`, `k`, `tf`, `tg` | O propósito é brevidade — prefixo derrota o objetivo |
+| **Alias (bash/zsh)** | Sem prefixo, curto | `g='git'` | Idem abbreviations |
+| **Script em `~/bin` ou `~/.local/bin`** | `s-<name>` (opcional) | `s-deploy-staging`, `cleanup-docker.sh` | Prefixo opcional — use quando quiser que `s-<tab>` liste scripts user-defined |
+
+#### Sub-namespaces dentro de `fn-`
+
+Pra evitar `fn-` virar bagunça quando crescer, agrupar por **domínio**
+como segundo nível:
+
+| Sub-namespace | Domínio | Exemplos |
+|---|---|---|
+| `fn-aws-*` | AWS CLI / SSM / IAM | `fn-aws-bastion`, `fn-aws-creds-rotate` |
+| `fn-git-*` | Git workflows custom | `fn-git-cleanup-merged`, `fn-git-prune-remotes` |
+| `fn-kube-*` | Kubernetes / kubectl | `fn-kube-ctx-switch`, `fn-kube-pod-logs` |
+| `fn-mongo-*` | MongoDB / Atlas | `fn-mongo-dump-collection`, `fn-mongo-tunnel` |
+| `fn-tf-*` | Terraform / OpenTofu | `fn-tf-plan-target`, `fn-tf-state-rm` |
+| `fn-op-*` | 1Password CLI wrappers | `fn-op-export-creds`, `fn-op-rotate-key` |
+| `fn-<cliente>-*` | Específico de um cliente | `fn-<cliente-foo>-deploy`, `fn-<cliente-foo>-ssm` |
+| `fn-x-*` | Misc / experimental | `fn-x-bench-curl`, `fn-x-cleanup-tmp` |
+
+#### Descrição obrigatória pra discoverability
+
+Tab completion no Fish mostra a description da function se definida.
+Combinado com o prefixo, vira um "menu" auto-documentado:
+
+````fish
+function fn-aws-bastion --description 'Open SSM session to client AWS bastion'
+    aws --profile $argv[1] ssm start-session --target $argv[2]
+end
+````
+
+````
+$ fn-<tab>
+fn-aws-bastion         Open SSM session to client AWS bastion
+fn-aws-creds-rotate    Rotate access keys via 1Password
+fn-git-cleanup-merged  Delete local branches already merged to main
+fn-kube-ctx-switch     Switch kubectl context by client slug
+````
+
+Bash/zsh não têm equivalente direto de `--description`, mas comentário
+na linha acima da declaração serve como documentação inline (e ferramentas
+de completion como `_complete_alias` podem extrair).
+
+#### Filenames seguem o nome da function (Fish)
+
+Quando function vive em `~/.config/fish/functions/<nome>.fish` (auto-load
+lazy), o filename **deve** ser idêntico ao nome da function:
+
+````
+~/.config/fish/functions/
+├── fn-aws-bastion.fish              ← contém function fn-aws-bastion
+├── fn-git-cleanup-merged.fish       ← contém function fn-git-cleanup-merged
+└── fn-kube-ctx-switch.fish          ← contém function fn-kube-ctx-switch
+````
+
+É exigência do Fish (auto-load resolve pelo filename). Mantém kebab-case
+(já é regra geral da taxonomia).
+
+#### Notas de aplicação
+
+- **Migração de functions existentes** pra essa convenção: rename é
+  trivial (renomear o `.fish` + atualizar `function <name>` interno).
+- **Override de binaries**: ficam como exceção documentada (não recebem
+  prefixo). Listar essas exceções em comentário no início do dir/fragment.
+- **Conflito com binaries externos**: prefixo `fn-` é seguro (improvável
+  algum binário público usar esse prefixo); ainda assim, validar com
+  `command -v fn-<algo>` antes de criar.
+
 ---
 
 ## Source of truth e atualização
