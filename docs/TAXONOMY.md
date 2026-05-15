@@ -134,12 +134,10 @@ no raiz. Conteúdo varia conforme o domínio, **estrutura é a mesma**.
 │   ├── 10a-environment.fish
 │   ├── 10b-environment.zsh
 │   ├── 10c-environment.bash
-│   ├── 20a-functions.fish
-│   ├── 20b-functions.zsh
-│   ├── 20c-functions.bash
-│   ├── 30a-aliases.fish
-│   ├── 40a-completions.fish
-│   └── 50a-post.fish
+│   ├── 20a-aliases.fish
+│   ├── 30a-completions.fish
+│   ├── 40a-post.fish
+│   └── 99a-others.fish
 ├── 100-professional.d/
 │   ├── 00-epoch.d/
 │   │   ├── 10a-environment.fish
@@ -154,6 +152,9 @@ no raiz. Conteúdo varia conforme o domínio, **estrutura é a mesma**.
 `logs/` é exceção semântica — não é fragment, é depósito de output de
 operações (brew, mise, pip, etc.). Convive no raiz mas não segue o
 padrão `NNN-<scope>.d`.
+
+**Functions ficam fora de `~/.dotfiles/`** — vivem em
+`~/.config/{fish,zsh,bash}/functions/`. Ver subseção dedicada abaixo.
 
 ### Lifecycle pattern dentro de dirs de fragments
 
@@ -171,13 +172,17 @@ seguem o pattern `<NN><L>-<contexto>.<shell>`:
 |---|---|---|
 | `00` | pre | bootstrap muito early, antes de qualquer outra coisa |
 | `10` | environment | env vars (`set -gx`), PATH additions |
-| `20` | functions | funções shell |
-| `30` | aliases | aliases |
-| `40` | completions | source de completions, integrations |
-| `50` | post | cleanups, dedup, late overrides |
+| `20` | aliases | aliases / abbreviations |
+| `30` | completions | source de completions, integrations |
+| `40` | post | cleanups, dedup, late overrides |
+| `99` | others | catch-all — idealmente vazio (ver subseção "Templates" abaixo) |
 
 Saltos de 10 abrem espaço pra sub-fragments futuros sem renumerar
-(ex: `15a-paths.fish` entre environment-geral e functions).
+(ex: `15a-paths.fish` entre environment-geral e aliases).
+
+**Functions não tem stage no lifecycle** — vivem em dirs shell-native fora
+de `~/.dotfiles/`. Justificativa na subseção "Functions: exceção à regra
+`~/.dotfiles/`" mais abaixo.
 
 #### Letras por shell
 
@@ -197,9 +202,62 @@ que usam `find ... | sort`. Sem a letra, sorting natural daria
 |---|---|---|---|
 | `00a-pre.fish` | pre | fish | Bootstrap super-early |
 | `10a-environment.fish` | env | fish | `set -gx OLLAMA_HOST ...` |
-| `20a-functions.fish` | fn | fish | Functions complexas (não-lazy) |
-| `30a-aliases.fish` | alias | fish | `alias k=kubectl` |
-| `50a-post.fish` | post | fish | PATH dedupe final |
+| `20a-aliases.fish` | alias | fish | `abbr -a k kubectl` |
+| `30a-completions.fish` | comp | fish | `source ~/.iterm2_shell_integration.fish` |
+| `40a-post.fish` | post | fish | PATH dedupe final |
+
+### Functions: exceção à regra `~/.dotfiles/`
+
+Functions de qualquer shell ficam **fora** do lifecycle de fragments em
+`~/.dotfiles/` e residem em dirs shell-ecosystem-native, organizados por
+shell:
+
+| Shell | Path | Lazy-load |
+|---|---|---|
+| Fish | `~/.config/fish/functions/<name>.fish` | ✅ Nativo (Fish carrega só quando invocada) |
+| zsh | `~/.config/zsh/functions/<name>.zsh` | ✅ Via `autoload -Uz` + `$fpath` no `.zshrc` |
+| bash | `~/.config/bash/functions/<name>.bash` | ❌ Sem mecanismo nativo — loader em `.bashrc` faz eager-load |
+
+Justificativa pra exceção:
+
+- **Fish já obriga essa localização**: o `~/.config/fish/functions/` é dir
+  fish-imposto pro auto-load. Não tem escolha.
+- **zsh ganha lazy-load**: com `autoload -Uz` setup uma vez, cada function
+  só é carregada quando invocada.
+- **bash não tem lazy-load nativo**: mesmo assim, ganha organização (1 file
+  por function, filename = nome da function). Loader em `.bashrc` similar
+  ao que `config.fish` faz pra `~/.dotfiles/`:
+
+  ````bash
+  for file in $(find "$HOME/.config/bash/functions" -type f -iname '*.bash' | sort); do
+      source "$file"
+  done
+  ````
+
+- **Versionamento permanece via chezmoi**: `dot_config/<shell>/functions/<name>.<ext>`
+  no repo.
+- **Padrão consistente cross-shell**: cada shell tem seu próprio `~/.config/<shell>/functions/`,
+  loaded pela mecânica do shell (Fish nativo, zsh autoload, bash loader).
+
+Naming dos arquivos segue a convenção `fn-<scope>-<verb>` documentada
+em "Naming de user-defined commands" mais abaixo. **Filename = nome da
+function** (exigência do Fish auto-load; convenção pra consistência cross-shell).
+
+Exemplo de árvore:
+
+````text
+~/.config/
+├── fish/functions/
+│   ├── fn-aws-bastion.fish
+│   ├── fn-git-cleanup-merged.fish
+│   └── fn-kube-ctx-switch.fish
+├── zsh/functions/
+│   ├── fn-aws-bastion.zsh
+│   └── fn-git-cleanup-merged.zsh
+└── bash/functions/
+    ├── fn-aws-bastion.bash
+    └── fn-git-cleanup-merged.bash
+````
 
 ### `conf.d/` auto-generated vs `~/.dotfiles/` user-controlled
 
@@ -247,16 +305,18 @@ tem **um dir de template** chamado `99z-template.d/`:
 ~/.dotfiles/
 ├── 000-personal.d/
 │   └── 99z-template.d/                     ← reference, não executado
-│       ├── 00a-pre.fish.tpl
-│       ├── 10a-environment.fish.tpl
-│       └── ...
+│       ├── 00a-pre.{fish,zsh,bash}.tpl     ← 3 arquivos por stage (a=fish, b=zsh, c=bash)
+│       ├── 10a-environment.{fish,zsh,bash}.tpl
+│       ├── 20a-aliases.{fish,zsh,bash}.tpl
+│       ├── 30a-completions.{fish,zsh,bash}.tpl
+│       ├── 40a-post.{fish,zsh,bash}.tpl
+│       └── 99a-others.{fish,zsh,bash}.tpl
 └── 100-professional.d/
     ├── 00-epoch.d/                         ← entidade real (executado)
     │   ├── 00a-pre.fish
     │   └── 10a-environment.fish
     └── 99z-template.d/                     ← reference, não executado
-        ├── 00a-pre.fish.tpl
-        └── ...
+        └── (mesma estrutura de personal, exemplos divergentes)
 ````
 
 Convenções:
@@ -278,7 +338,13 @@ chmod 0644 ~/.dotfiles/100-professional.d/03-cliente-novo.d/00a-pre.fish
 
 Templates **personal** e **professional** diferem em exemplos (personal usa
 `EDITOR=hx`, `OLLAMA_HOST`, etc.; professional usa `AWS_PROFILE`,
-`KUBECONFIG`, etc.) mas têm a mesma estrutura de stages.
+`KUBECONFIG`, etc.) mas têm a mesma estrutura de stages: `00-pre`,
+`10-environment`, `20-aliases`, `30-completions`, `40-post`, `99-others`.
+
+> **Nota histórica**: stage `20-functions` que existia na v1.0 (templates
+> publicados em v0.50.0) foi **removido** na v1.1.1 (v0.50.3). Functions
+> vivem em `~/.config/{fish,zsh,bash}/functions/` — ver subseção "Functions:
+> exceção à regra `~/.dotfiles/`" acima.
 
 ### Naming de user-defined commands (functions, abbreviations, aliases, scripts)
 

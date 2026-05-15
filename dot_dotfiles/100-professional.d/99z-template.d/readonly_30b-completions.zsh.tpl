@@ -1,26 +1,27 @@
 #!/usr/bin/env zsh
 # ────────────────────────────────────────────────────────────────────────
-# 40b-completions.zsh.tpl
+# 30b-completions.zsh.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
 # (find ... -iname '*.zsh' não casa com '*.zsh.tpl').
 #
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
-#   Escopo:  personal  (configurações pessoais (não vinculadas a cliente))
-#   Stage:   40  (completions)
+#   Escopo:  professional  (configurações de cliente/profissional (escopo por entidade))
+#   Stage:   30  (completions)
 #   Shell:   zsh
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 40b-completions.zsh.tpl ../<scope-dir>/40b-completions.zsh
+#        cp 30b-completions.zsh.tpl ../<scope-dir>/30b-completions.zsh
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.zsh.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
@@ -40,12 +41,9 @@
 # Aqui pra plugins externos, op plugin init, etc.
 
 
-# ── Exemplos comentados (zsh, personal) ────────────────────────────────────
-# # [[ -f "$HOME/.iterm2_shell_integration.zsh" ]] && \
-# #     source "$HOME/.iterm2_shell_integration.zsh"
-# #
-# # [[ -f "$HOME/.config/op/plugins.sh" ]] && \
-# #     source "$HOME/.config/op/plugins.sh"
+# ── Exemplos comentados (zsh, professional) ────────────────────────────────
+# # [[ -f "$HOME/.config/<client>/completions.zsh" ]] && \
+# #     source "$HOME/.config/<client>/completions.zsh"
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────

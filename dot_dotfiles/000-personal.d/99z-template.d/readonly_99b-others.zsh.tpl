@@ -19,13 +19,14 @@
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.zsh.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Catch-all para conteúdo que não cabe limpinho nos stages 00–50.
+# Catch-all para conteúdo que não cabe limpinho nos stages 00–40.
 # Idealmente VAZIO — se tem conteúdo aqui, é débito técnico.
 
 
@@ -36,7 +37,7 @@
 
 # ── Boas práticas (zsh) ────────────────────────────────────────────────────
 # Tente NÃO usar. Cada coisa que entra aqui é candidato a
-# promoção pra stage adequado (00–50).
+# promoção pra stage adequado (00–40).
 # Se virar permanente, refatore.
 
 

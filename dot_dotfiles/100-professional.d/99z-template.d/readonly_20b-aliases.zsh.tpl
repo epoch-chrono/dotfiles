@@ -1,51 +1,48 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # ────────────────────────────────────────────────────────────────────────
-# 50c-post.bash.tpl
+# 20b-aliases.zsh.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
-# (find ... -iname '*.bash' não casa com '*.bash.tpl').
+# (find ... -iname '*.zsh' não casa com '*.zsh.tpl').
 #
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
-#   Escopo:  personal  (configurações pessoais (não vinculadas a cliente))
-#   Stage:   50  (post)
-#   Shell:   bash
+#   Escopo:  professional  (configurações de cliente/profissional (escopo por entidade))
+#   Stage:   20  (aliases)
+#   Shell:   zsh
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 50c-post.bash.tpl ../<scope-dir>/50c-post.bash
+#        cp 20b-aliases.zsh.tpl ../<scope-dir>/20b-aliases.zsh
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.zsh.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Cleanups, dedup, late overrides.
-# Roda DEPOIS de todos os outros stages — última chance de ajustar.
+# Aliases e abbreviations.
+# Substituições curtas pra comandos longos / frequentes.
 
 
 # ── Conteúdo típico ────────────────────────────────────────────────────────
-# PATH dedupe, remoção de vars temporárias, overrides finais que
-# precisam sobrescrever algo setado por algum stage anterior ou plugin.
+# Shortcuts de comandos frequentes: git, kubectl, terraform, etc.
 
 
-# ── Boas práticas (bash) ───────────────────────────────────────────────────
-# Cuidado com side effects.
-# PATH dedupe manual: `PATH=$(echo $PATH | awk -v RS=: ...)`.
-# `unset VAR` remove a var.
+# ── Boas práticas (zsh) ────────────────────────────────────────────────────
+# `alias name=value`. Para abbreviations zsh-like, considere
+# plugins como `zsh-abbr` (não vem nativo).
+# Aliases não funcionam dentro de scripts (apenas interactive).
 
 
-# ── Exemplos comentados (bash, personal) ───────────────────────────────────
-# # # PATH dedupe (first-seen)
-# # PATH=$(printf '%s\n' $PATH | tr ':' '\n' | awk '!seen[$0]++' | paste -sd: -)
-# # export PATH
-# #
-# # unset BOOTSTRAP_TMP
+# ── Exemplos comentados (zsh, professional) ────────────────────────────────
+# # alias aws-<client>='aws --profile <client>'
+# # alias k-<client>='kubectl --context <client>-prod'
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ────────────────────────────────────────────────────────────────────────
-# 20c-functions.bash.tpl
+# 20c-aliases.bash.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
 # (find ... -iname '*.bash' não casa com '*.bash.tpl').
@@ -8,44 +8,42 @@
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
 #   Escopo:  professional  (configurações de cliente/profissional (escopo por entidade))
-#   Stage:   20  (functions)
+#   Stage:   20  (aliases)
 #   Shell:   bash
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 20c-functions.bash.tpl ../<scope-dir>/20c-functions.bash
+#        cp 20c-aliases.bash.tpl ../<scope-dir>/20c-aliases.bash
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.bash.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Funções shell custom.
-# Funções pequenas/médias que ganham em estar definidas eagerly.
+# Aliases e abbreviations.
+# Substituições curtas pra comandos longos / frequentes.
 
 
 # ── Conteúdo típico ────────────────────────────────────────────────────────
-# Functions de uso frequente, helpers locais ao usuário, wrappers de
-# tools que recebem args complexos.
+# Shortcuts de comandos frequentes: git, kubectl, terraform, etc.
 
 
 # ── Boas práticas (bash) ───────────────────────────────────────────────────
-# Functions com `function name() { ... }` ou `name() { ... }`.
-# Locals com `local var=...`.
-# Sempre quote os args: `"$@"` ou `"$1"`.
-# Evite globals — exporte só se realmente precisar.
+# `alias name=value`. Não funcionam dentro de scripts (apenas
+# interactive). Para scripts, use functions (que ficam em 
+# ~/.config/bash/functions/, não aqui).
+# Aliases não recebem args — pra args complexos, criar function.
 
 
 # ── Exemplos comentados (bash, professional) ───────────────────────────────
-# # function <client>-ssm() {
-# #     local target="$1"
-# #     aws --profile <client> ssm start-session --target "$target"
-# # }
+# # alias aws-<client>='aws --profile <client>'
+# # alias k-<client>='kubectl --context <client>-prod'
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────

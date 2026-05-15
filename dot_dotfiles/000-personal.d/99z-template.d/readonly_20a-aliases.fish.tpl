@@ -1,52 +1,55 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env fish
 # ────────────────────────────────────────────────────────────────────────
-# 50b-post.zsh.tpl
+# 20a-aliases.fish.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
-# (find ... -iname '*.zsh' não casa com '*.zsh.tpl').
+# (find ... -iname '*.fish' não casa com '*.fish.tpl').
 #
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
 #   Escopo:  personal  (configurações pessoais (não vinculadas a cliente))
-#   Stage:   50  (post)
-#   Shell:   zsh
+#   Stage:   20  (aliases)
+#   Shell:   fish
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 50b-post.zsh.tpl ../<scope-dir>/50b-post.zsh
+#        cp 20a-aliases.fish.tpl ../<scope-dir>/20a-aliases.fish
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.fish.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Cleanups, dedup, late overrides.
-# Roda DEPOIS de todos os outros stages — última chance de ajustar.
+# Aliases e abbreviations.
+# Substituições curtas pra comandos longos / frequentes.
 
 
 # ── Conteúdo típico ────────────────────────────────────────────────────────
-# PATH dedupe, remoção de vars temporárias, overrides finais que
-# precisam sobrescrever algo setado por algum stage anterior ou plugin.
+# Shortcuts de comandos frequentes: git, kubectl, terraform, etc.
 
 
-# ── Boas práticas (zsh) ────────────────────────────────────────────────────
-# Cuidado com side effects.
-# `typeset -U path` já dedupe automaticamente — se usado em stage 10,
-# este stage pode ficar vazio no que tange PATH.
-# `unset VAR` remove a var.
+# ── Boas práticas (fish) ───────────────────────────────────────────────────
+# PREFIRA `abbr -a` sobre `alias`. Abbreviations expandem no
+# command-line (UX melhor: você vê o comando completo antes de
+# rodar, e elas funcionam dentro de aspas/scripts).
+# `alias` em Fish é syntactic sugar pra function — não tem ganho.
+# `abbr --query` lista, `abbr --erase <name>` remove.
 
 
-# ── Exemplos comentados (zsh, personal) ────────────────────────────────────
-# # # PATH dedupe defensivo
-# # typeset -U path
-# #
-# # # Remover var temporária
-# # unset BOOTSTRAP_TMP
+# ── Exemplos comentados (fish, personal) ───────────────────────────────────
+# # abbr -a g git
+# # abbr -a k kubectl
+# # abbr -a tf terraform
+# # abbr -a ll 'eza -lah --icons'
+# # abbr -a cat bat
+# # abbr -a find fd
+# # abbr -a grep rg
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────

@@ -1,54 +1,51 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env fish
 # ────────────────────────────────────────────────────────────────────────
-# 20b-functions.zsh.tpl
+# 20a-aliases.fish.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
-# (find ... -iname '*.zsh' não casa com '*.zsh.tpl').
+# (find ... -iname '*.fish' não casa com '*.fish.tpl').
 #
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
-#   Escopo:  personal  (configurações pessoais (não vinculadas a cliente))
-#   Stage:   20  (functions)
-#   Shell:   zsh
+#   Escopo:  professional  (configurações de cliente/profissional (escopo por entidade))
+#   Stage:   20  (aliases)
+#   Shell:   fish
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 20b-functions.zsh.tpl ../<scope-dir>/20b-functions.zsh
+#        cp 20a-aliases.fish.tpl ../<scope-dir>/20a-aliases.fish
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.fish.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Funções shell custom.
-# Funções pequenas/médias que ganham em estar definidas eagerly.
+# Aliases e abbreviations.
+# Substituições curtas pra comandos longos / frequentes.
 
 
 # ── Conteúdo típico ────────────────────────────────────────────────────────
-# Functions de uso frequente, helpers locais ao usuário, wrappers de
-# tools que recebem args complexos.
+# Shortcuts de comandos frequentes: git, kubectl, terraform, etc.
 
 
-# ── Boas práticas (zsh) ────────────────────────────────────────────────────
-# Functions com `function name() { ... }` ou `name() { ... }`.
-# Locals com `local var=...`.
-# Considere arquivo separado em `~/.zsh/functions/` com autoload.
-# Sempre quote os args: `"$@"` ou `"$1"`.
+# ── Boas práticas (fish) ───────────────────────────────────────────────────
+# PREFIRA `abbr -a` sobre `alias`. Abbreviations expandem no
+# command-line (UX melhor: você vê o comando completo antes de
+# rodar, e elas funcionam dentro de aspas/scripts).
+# `alias` em Fish é syntactic sugar pra function — não tem ganho.
+# `abbr --query` lista, `abbr --erase <name>` remove.
 
 
-# ── Exemplos comentados (zsh, personal) ────────────────────────────────────
-# # function gst() {
-# #     git status -sb "$@"
-# # }
-# #
-# # function mkcd() {
-# #     mkdir -p "$1" && cd "$1"
-# # }
+# ── Exemplos comentados (fish, professional) ───────────────────────────────
+# # abbr -a aws-<client> 'aws --profile <client>'
+# # abbr -a k-<client> 'kubectl --context <client>-prod'
+# # abbr -a ssm-<client> 'aws --profile <client> ssm start-session --target'
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────

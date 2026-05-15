@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 # ────────────────────────────────────────────────────────────────────────
-# 20a-functions.fish.tpl
+# 40a-post.fish.tpl
 # ────────────────────────────────────────────────────────────────────────
 # Template (não-funcional). Sufixo .tpl impede o loader de sourcear
 # (find ... -iname '*.fish' não casa com '*.fish.tpl').
@@ -8,48 +8,45 @@
 # Materializado como read-only (0444) pelo chezmoi via prefixo `readonly_`.
 #
 #   Escopo:  personal  (configurações pessoais (não vinculadas a cliente))
-#   Stage:   20  (functions)
+#   Stage:   40  (post)
 #   Shell:   fish
 #
 # Pra usar:
 #   1. Crie um dir de escopo irmão (ex: 01-cliente-foo.d/, ou direto
 #      em 000-personal.d/ se for fragment pessoal direto).
 #   2. Copie este arquivo pra lá REMOVENDO o sufixo .tpl:
-#        cp 20a-functions.fish.tpl ../<scope-dir>/20a-functions.fish
+#        cp 40a-post.fish.tpl ../<scope-dir>/40a-post.fish
 #   3. chmod 0644 no destino pra poder editar.
 #   4. Substitua o conteúdo do bloco "Body" pelos comandos reais.
 #
-# Edições neste arquivo serão sobrescritas pelo chezmoi no próximo apply
-# (esta versão é a canônica no repo, não no Mac).
+# NOTA: stage `functions` (que existia em v1.0) foi REMOVIDO. Functions de
+# qualquer shell vivem em ~/.config/{fish,zsh,bash}/functions/<name>.fish.
+# Ver docs/TAXONOMY.md → 'Functions: exceção à regra ~/.dotfiles/'.
 # ────────────────────────────────────────────────────────────────────────
 
 
 # ── Propósito ──────────────────────────────────────────────────────────────
-# Funções shell custom.
-# Funções pequenas/médias que ganham em estar definidas eagerly.
+# Cleanups, dedup, late overrides.
+# Roda DEPOIS de todos os outros stages — última chance de ajustar.
 
 
 # ── Conteúdo típico ────────────────────────────────────────────────────────
-# Functions de uso frequente, helpers locais ao usuário, wrappers de
-# tools que recebem args complexos.
+# PATH dedupe, remoção de vars temporárias, overrides finais que
+# precisam sobrescrever algo setado por algum stage anterior ou plugin.
 
 
 # ── Boas práticas (fish) ───────────────────────────────────────────────────
-# PREFIRA `~/.config/fish/functions/<name>.fish` (auto-load lazy).
-# Use este arquivo só para functions que devem ser definidas
-# eagerly (usadas em prompt, em outros fragments deste lifecycle).
-# Sempre declare `--description` (vira help no `functions`).
-# Locals com `set -l`. Não vaze namespace.
+# Cuidado com side effects — mude só o que você tem certeza.
+# Bom lugar pro PATH dedupe defensivo (vars universais persistentes).
+# `set -e VAR` remove a var (local ou global).
 
 
 # ── Exemplos comentados (fish, personal) ───────────────────────────────────
-# # function gst --description 'git status short branch'
-# #     git status -sb $argv
-# # end
+# # # PATH dedupe defensivo (first-seen wins)
+# # set PATH (printf '%s\n' $PATH | awk '!seen[$0]++')
 # #
-# # function mkcd --description 'mkdir -p + cd'
-# #     mkdir -p $argv[1]; and cd $argv[1]
-# # end
+# # # Remover var temporária de bootstrap
+# # set -e BOOTSTRAP_TMP
 
 
 # ── Body — adicione comandos abaixo ────────────────────────────────────────
