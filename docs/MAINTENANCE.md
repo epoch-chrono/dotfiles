@@ -57,6 +57,36 @@ destination automaticamente.
 - ⚠️ Removes acontecem MESMO se o arquivo NÃO foi originalmente criado
   pelo chezmoi — cuidado com globs muito amplos
 
+### Gotcha: braces literais em comentários quebram o parser
+
+O arquivo `.chezmoiremove` INTEIRO (incluindo linhas começando com `#`) é
+processado como template Go. **Qualquer `{{` `}}` literal é interpretado
+pelo parser, mesmo em comentários explicativos**.
+
+Bug acontecido em v0.51.0 → v0.51.1 — minha linha 14 era:
+
+````
+#   - Templating Go suportado (`{{ }}`)
+````
+
+Resultado: `chezmoi apply` quebrou com erro
+`template: .chezmoiremove:14: missing value for command` (o `{{ }}` foi
+interpretado como expressão de template vazia, que é inválida).
+
+**Regras pra escrever comentários no `.chezmoiremove`:**
+
+1. **Não usar `{{` ou `}}` literais** em comentários. Substituir por texto
+   descritivo: "sintaxe Go template — ver chezmoi docs".
+2. Se precisar mostrar braces na renderização, escapar com syntax Go:
+   `{{"{{"}}` → renderiza `{{` no output.
+3. Discussões longas sobre template syntax vivem AQUI (em
+   `docs/MAINTENANCE.md` que NÃO é templated) e podem usar braces
+   livremente em code blocks.
+
+Linter futuro (TD): pre-commit hook que faz `grep -P '(?<!")\{\{|}\}(?!")'`
+no `.chezmoiremove` e falha o commit se encontrar braces não-escapados em
+linhas de comentário.
+
 ## Workflow ao renomear/excluir arquivos tracked
 
 Toda vez que rodar `git mv` ou `git rm` em um arquivo gerenciado pelo

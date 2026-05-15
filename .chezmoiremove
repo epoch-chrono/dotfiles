@@ -11,7 +11,12 @@
 #   - Cada linha = path ou glob, relativo a $HOME
 #   - Linhas começando com `#` = comentários (ignoradas)
 #   - Linhas vazias = ignoradas
-#   - Templating Go suportado (`{{ }}`)
+#   - Templating Go suportado (sintaxe Go template — ver chezmoi docs)
+#     CUIDADO: este arquivo INTEIRO é processado como Go template. NÃO
+#     incluir braces duplos literais em comentários (parser tenta avaliar
+#     como expressão e quebra). Para sintaxe completa + escape de braces
+#     literais, ver docs/MAINTENANCE.md (que NÃO é template — comentários
+#     ali podem usar braces livremente).
 #
 # Manter entradas mesmo após todos os hosts terem aplicado é SEGURO:
 # chezmoi silenciosamente ignora paths que não existem no destination.
