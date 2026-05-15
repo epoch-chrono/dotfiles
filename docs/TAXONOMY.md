@@ -238,6 +238,48 @@ for file in $(find "$HOME/.dotfiles/000-personal.d" -type f -iname '*.bash' | so
 done
 ````
 
+### Templates (`99z-template.d/`) e sufixo `.tpl`
+
+Cada raiz com `<NN>-<slug>.d/` dirs (`000-personal.d/`, `100-professional.d/`)
+tem **um dir de template** chamado `99z-template.d/`:
+
+````text
+~/.dotfiles/
+├── 000-personal.d/
+│   └── 99z-template.d/                     ← reference, não executado
+│       ├── 00a-pre.fish.tpl
+│       ├── 10a-environment.fish.tpl
+│       └── ...
+└── 100-professional.d/
+    ├── 00-epoch.d/                         ← entidade real (executado)
+    │   ├── 00a-pre.fish
+    │   └── 10a-environment.fish
+    └── 99z-template.d/                     ← reference, não executado
+        ├── 00a-pre.fish.tpl
+        └── ...
+````
+
+Convenções:
+
+- **Prefixo `99z-`**: força sort pro final em listings ASCII (`z` é tarde no alfabeto). Marca visual de "não-funcional, referência".
+- **Sufixo `.tpl`** em cada arquivo: impede o loader do shell de sourcear. `find ... -iname '*.fish'` não casa com `*.fish.tpl`. Convenção pessoal — não é convenção chezmoi (chezmoi usa `.tmpl`, com 2 `m`).
+- **Permissão 0444 (read-only)** via prefixo chezmoi `readonly_` no source: o arquivo materializa como `readonly_00a-pre.fish.tpl` no repo, mas chega no Mac como `00a-pre.fish.tpl` com `chmod 0444`. Desencoraja edição manual fora do chezmoi.
+- **Conteúdo**: zero código funcional. Apenas shebang + header documentado + seções "Propósito" / "Conteúdo típico" / "Boas práticas" / "Exemplos comentados" / "Body vazio".
+
+Pra usar um template ao criar uma nova entidade (ex: novo cliente):
+
+````bash
+# Copiar template removendo .tpl no destino
+cp ~/.dotfiles/100-professional.d/99z-template.d/00a-pre.fish.tpl \
+   ~/.dotfiles/100-professional.d/03-cliente-novo.d/00a-pre.fish
+chmod 0644 ~/.dotfiles/100-professional.d/03-cliente-novo.d/00a-pre.fish
+# Editar e substituir o body
+````
+
+Templates **personal** e **professional** diferem em exemplos (personal usa
+`EDITOR=hx`, `OLLAMA_HOST`, etc.; professional usa `AWS_PROFILE`,
+`KUBECONFIG`, etc.) mas têm a mesma estrutura de stages.
+
 ---
 
 ## Source of truth e atualização
