@@ -418,7 +418,8 @@ cask "session-manager-plugin"  # plugin SSM Session Manager pro AWS CLI
 # Note: cada agent tem subscrição/auth própria. cursor-cli requer Cursor
 # subscription; claude-code requer Anthropic account (Claude Pro/Max/
 # Console/etc); gemini-cli usa Google account ou GEMINI_API_KEY.
-brew "gemini-cli"              # https://github.com/google-gemini/gemini-cli (formula)
+# brew "gemini-cli"            # https://github.com/google-gemini/gemini-cli (formula)  # substituido por antigravity-cli
+brew "antigravity-cli"         # https://antigravity.google/product/antigravity-cli
 cask "claude-code"             # stable channel (~1 semana atrás, skip regressions majores)
 cask "cursor-cli"              # command-line agent for Cursor
 
