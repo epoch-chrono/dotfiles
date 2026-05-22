@@ -256,7 +256,6 @@ brew "gtop"               # system monitor TUI
 brew "himalaya"           # email TUI client
 brew "magic-wormhole"     # transferência de arquivos peer-to-peer
 brew "ponysay"            # fortune-cookie estilo, fun
-brew "summarize"          # text summarization (https://summarize.sh)
 brew "sysbench"           # benchmark sistema
 brew "the_silver_searcher" # ag — grep recursivo rápido (asdf plugin é problemático)
 brew "timewarrior"        # time tracking CLI
