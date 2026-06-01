@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────────────
+# run_onchange_after_install-crontab.sh
+# ──────────────────────────────────────────────────────────────────────────
+# Instala o crontab do usuário corrente via `crontab -` (stdin).
+# Re-roda sempre que o conteúdo renderizado deste script muda (chezmoi
+# run_onchange_*).
+#
+# Mecânica:
+#   - chezmoi processa o .tmpl com Go template ANTES de executar
+#   - homeDir expandido em apply-time pro path real do user corrente
+#   - `crontab -` lê stdin e escreve em /private/var/at/tabs/$USER
+#     com permissões corretas (0600 root:wheel) — sem precisar sudo
+#   - chezmoi roda como o user (não sudo), então $USER e homeDir
+#     resolvem pro usuário corrente, ignorando qualquer sudo wrapper
+#
+# Backup obrigatório (convenção do projeto): crontab atual salvo em /tmp
+# antes de substituir.
+#
+# Rollback: crontab /tmp/crontab-backup-<timestamp>.txt
+#
+# macOS-only — ignorado em outros OSes via .chezmoiignore.
+# ──────────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+# Verificar binário disponível
+if ! command -v crontab >/dev/null 2>&1; then
+    echo "✗ comando 'crontab' não encontrado — abortando" >&2
+    exit 1
+fi
+
+# Backup do crontab atual (ou marcador se não existe)
+BACKUP="/tmp/crontab-backup-$(date +%Y%m%d-%H%M%S).txt"
+if crontab -l > "$BACKUP" 2>/dev/null; then
+    echo "✓ backup do crontab atual em $BACKUP"
+else
+    echo "# (nenhum crontab anterior — backup vazio criado pra log)" > "$BACKUP"
+    echo "ℹ nenhum crontab pré-existente; backup vazio em $BACKUP"
+fi
+
+# Install novo crontab via stdin
+# Heredoc com aspas single (<<'EOF') impede bash de expandir $(date), $1, etc.
+# do cron job — esses ficam literais pro cron interpretar at runtime.
+# Mas o Go template do chezmoi já resolveu os paths do PATH= ANTES do bash ver.
+cat <<'CRONTAB_EOF' | crontab -
+SHELL=/opt/homebrew/bin/zsh
+PATH={{ .chezmoi.homeDir }}/.local/bin:{{ .chezmoi.homeDir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/libtool/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/gpatch/libexec/gnubin:/opt/homebrew/opt/gnu-which/libexec/gnubin:/opt/homebrew/opt/gnu-tar/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/gnu-indent/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin
+
+# Brew — manutenção diária às 10:00
+00 10 * * * { echo -e "\n\n$(date)" && brew update; brew unlink mongodb-atlas-cli; brew upgrade nim; brew unlink nim; brew upgrade mongodb-atlas-cli; brew link --overwrite --force nim; brew unlink mongodb-atlas-cli; brew link --overwrite --force mongodb-atlas-cli;brew upgrade --formula; brew upgrade --cask --greedy-auto-updates; brew doctor; brew autoremove; brew cleanup --prune=all --scrub && rm -rf "$(brew --cache)"; } 2>&1 |tee -a /tmp/crontab_out_brew.log
+CRONTAB_EOF
+
+echo "✓ crontab instalado pra usuário $(whoami)"
+echo "  Visualizar: crontab -l"
+echo "  Rollback:   crontab $BACKUP"

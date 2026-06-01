@@ -35,6 +35,7 @@ ansible/
 {{ if ne .chezmoi.os "darwin" }}
 dot_cursor/
 Library/
+run_onchange_after_install-crontab.sh.tmpl
 {{ end }}
 
 
