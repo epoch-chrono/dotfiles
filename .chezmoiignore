@@ -36,6 +36,7 @@ ansible/
 dot_cursor/
 Library/
 run_onchange_after_install-crontab.sh.tmpl
+run_onchange_after_install-launchagent-path.sh.tmpl
 {{ end }}
 
 

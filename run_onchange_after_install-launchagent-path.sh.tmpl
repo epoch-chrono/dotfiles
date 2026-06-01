@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────────────
+# run_onchange_after_install-launchagent-path.sh
+# ──────────────────────────────────────────────────────────────────────────
+# Instala/atualiza LaunchAgent que seta PATH global pra sessão launchd do
+# user. Afeta GUI apps que herdam env de launchd (Antigravity, Cursor,
+# IDEs JetBrains, etc.) — permite que esses apps achem tools do brew/mise/
+# user bins sem precisar config por app.
+#
+# Mecânica:
+#   - chezmoi processa o .tmpl com Go template ANTES de executar
+#   - homeDir expandido em apply-time pro path real do user corrente
+#   - LaunchAgent vive em ~/Library/LaunchAgents/com.user.path.plist
+#   - bootout (unload) + bootstrap (load) recarrega o agent quando o
+#     conteúdo do script muda (chezmoi run_onchange_* re-roda automático)
+#
+# Caveats conhecidos do `launchctl setenv` (documentar pra usuário):
+#   - GUI apps já rodando NÃO pegam o novo PATH — precisam reinício
+#   - Apps lançados como FILHO de outro app herdam do PAI, não do launchd
+#   - API levemente legacy (Apple vem depreciando desde Catalina) — ainda
+#     funciona, mas pra longo prazo migrar pra per-app config é mais robusto
+#
+# Backup obrigatório (convenção do projeto): plist atual salvo em /tmp
+# antes de substituir. Rollback documentado no fim do script.
+#
+# macOS-only — ignorado em outros OSes via .chezmoiignore.
+# ──────────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+PLIST_PATH="{{ .chezmoi.homeDir }}/Library/LaunchAgents/com.user.path.plist"
+PLIST_LABEL="com.user.path"
+
+# Verificar binário disponível
+if ! command -v launchctl >/dev/null 2>&1; then
+    echo "✗ comando 'launchctl' não encontrado — abortando" >&2
+    exit 1
+fi
+
+# Garantir dir (~/Library/LaunchAgents/ pode não existir em Mac novo)
+mkdir -p "$(dirname "$PLIST_PATH")"
+
+# Backup do plist atual se existir
+if [[ -f "$PLIST_PATH" ]]; then
+    BACKUP="/tmp/com.user.path.plist.backup-$(date +%Y%m%d-%H%M%S)"
+    cp "$PLIST_PATH" "$BACKUP"
+    echo "✓ backup do plist atual em $BACKUP"
+else
+    BACKUP=""
+    echo "ℹ nenhum plist pré-existente"
+fi
+
+# Gerar novo plist
+# Heredoc com aspas single (<<'EOF') impede bash de expandir variáveis
+# dentro do conteúdo. Mas o Go template do chezmoi já resolveu os paths
+# com homeDir ANTES do bash ver — então o conteúdo abaixo já tem
+# /Users/<user> literal nos lugares certos.
+cat > "$PLIST_PATH" <<'PLIST_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.path</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>launchctl</string>
+        <string>setenv</string>
+        <string>PATH</string>
+        <string>{{ .chezmoi.homeDir }}/.antigravity-ide/antigravity-ide/bin:{{ .chezmoi.homeDir }}/.local/share/mise/shims:{{ .chezmoi.homeDir }}/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/opt/homebrew/opt/postgresql@18/bin:/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/libtool/libexec/gnubin:/opt/homebrew/opt/gsed/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/gpatch/libexec/gnubin:/opt/homebrew/opt/gnu-which/libexec/gnubin:/opt/homebrew/opt/gnu-tar/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/gnu-indent/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/ed/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/iTerm.app/Contents/Resources/utilities:{{ .chezmoi.homeDir }}/.antigravity/antigravity/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+PLIST_EOF
+
+echo "✓ plist escrito em $PLIST_PATH"
+
+# Recarregar agent: bootout (unload) + bootstrap (load).
+# Target: gui/$UID = domain do user GUI (afeta apps launchd-started).
+# bootout falha se não estiver carregado — tolerar via || true.
+UID_NUM=$(id -u)
+launchctl bootout "gui/${UID_NUM}" "$PLIST_PATH" 2>/dev/null || true
+launchctl bootstrap "gui/${UID_NUM}" "$PLIST_PATH"
+
+echo "✓ LaunchAgent ${PLIST_LABEL} recarregado em gui/${UID_NUM}"
+echo
+echo "  Verificar PATH ativo:  launchctl getenv PATH"
+echo "  Listar agent:          launchctl print gui/${UID_NUM}/${PLIST_LABEL}"
+if [[ -n "$BACKUP" ]]; then
+    echo "  Rollback:              cp \"$BACKUP\" \"$PLIST_PATH\" && \\"
+    echo "                         launchctl bootout gui/\$(id -u) \"$PLIST_PATH\" && \\"
+    echo "                         launchctl bootstrap gui/\$(id -u) \"$PLIST_PATH\""
+fi
+echo
+echo "  NOTA: GUI apps JÁ rodando precisam reinício pra pegar o novo PATH."
