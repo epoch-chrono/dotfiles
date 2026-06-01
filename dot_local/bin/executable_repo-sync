@@ -127,6 +127,28 @@ end
 function normalize_brewfile
     sed -E 's/^(tap|brew|cask)[[:space:]]+"([^"]+)".*/\1 \2/' \
         | grep -E '^(tap|brew|cask) ' \
+        | awk '
+            # Normaliza FQN de tap formula/cask pro short name.
+            # Razão: `brew bundle dump` SEMPRE emite FQN (owner/tap/name)
+            # pra formulas/casks de taps externos. Brewfile, por
+            # convenção, usa short name (válido quando o tap está
+            # declarado linhas acima). Sem normalização, diff via `comm`
+            # falsa-positiva: short name no Brewfile vs FQN no dump são
+            # strings diferentes apesar de referenciarem o mesmo pacote.
+            #
+            # Aplica APENAS pra brew/cask com 3+ segmentos separados por
+            # `/`. Lines tap ficam intactas — tap names SÃO `owner/repo`
+            # (2 segmentos) e não devem virar só `repo`.
+            {
+                if (($1 == "brew" || $1 == "cask")) {
+                    n = split($2, parts, "/")
+                    if (n >= 3) {
+                        $2 = parts[n]
+                    }
+                }
+                print $1, $2
+            }
+        ' \
         | sort -u
 end
 
