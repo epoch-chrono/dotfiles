@@ -612,6 +612,18 @@
       cmd: |
         cd "$HOME" && npx -y skills add JuliusBrussee/caveman \
           -a goose --yes --all < /dev/null 2>&1 || true
+
+    # Antigravity (Google) — agent CLI binary é `agy` (NÃO `antigravity`).
+    # O cask `antigravity-cli` instala /opt/homebrew/bin/agy. O cask
+    # `antigravity` (GUI desktop 2.0) e `antigravity-ide` são separados — não
+    # são o coding agent CLI. Check via `agy` garante detecção do CLI proper.
+    # (soft) na matrix do caveman: install path mais lenient (não falha hard
+    # se algo der errado no skill add).
+    - bin: agy
+      label: antigravity
+      cmd: |
+        cd "$HOME" && npx -y skills add JuliusBrussee/caveman \
+          -a antigravity --yes --all < /dev/null 2>&1 || true
   loop_control:
     label: "{{ item.label }}"
   environment:
@@ -649,6 +661,7 @@
       command -v cursor-agent >/dev/null 2>&1  && only_args="$only_args --only cursor"
       command -v crush >/dev/null 2>&1         && only_args="$only_args --only crush"
       command -v goose >/dev/null 2>&1         && only_args="$only_args --only goose"
+      command -v agy >/dev/null 2>&1           && only_args="$only_args --only antigravity"
       # gemini propositalmente NÃO incluído (ver pre-install per agent acima)
 
       curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh \
