@@ -20,10 +20,16 @@
 
 
 # ── Paths ────────────────────────────────────────────────────────────────
-# Resolução do repo root: caminha do script em direção a um diretório com
-# .git/. Assim funciona tanto quando o script está em bin/ na raiz do repo
-# quanto quando vier de ~/.local/bin/repo-sync (chezmoi futuro) — nesse
-# caso o caminho será diferente e cairemos no path padrão por env var.
+# Resolução do REPO_ROOT em ordem de prioridade:
+#   1. REPO_SYNC_ROOT env var (override explícito)
+#   2. script_dir/../.git existe (script em bin/ na raiz do repo)
+#   3. ~/.local/share/dotfiles/.git (chezmoi source state — caso primário
+#      após `chezmoi apply`, quando o script vive em ~/.local/bin/repo-sync)
+#   4. ~/Git/100-personal.d/01-dotfiles.d/dotfiles (convenção pessoal do
+#      mac antigo, mantido pra compatibilidade)
+#
+# Se nenhum dos paths existe, função imprime warning e retorna o chezmoi
+# source state como melhor chute (script vai falhar mas com mensagem clara).
 
 function repo_root
     if set -q REPO_SYNC_ROOT
@@ -33,13 +39,28 @@ function repo_root
 
     set -l script_path (status --current-filename)
     set -l script_dir (dirname (realpath $script_path))
-    # Se está em bin/ na raiz do repo, sobe um nível
+
+    # 2. Script rodando de bin/ dentro de um clone do repo
     if test -d "$script_dir/../.git"
         realpath "$script_dir/.."
         return
     end
-    # Fallback: assume convenção do user
-    echo "$HOME/Git/100-personal.d/01-dotfiles.d/dotfiles"
+
+    # 3. Chezmoi source state (setup primário no Mac novo)
+    if test -d "$HOME/.local/share/dotfiles/.git"
+        echo "$HOME/.local/share/dotfiles"
+        return
+    end
+
+    # 4. Convenção pessoal do mac antigo
+    if test -d "$HOME/Git/100-personal.d/01-dotfiles.d/dotfiles/.git"
+        echo "$HOME/Git/100-personal.d/01-dotfiles.d/dotfiles"
+        return
+    end
+
+    # Sem fallback viável: melhor chute (chezmoi state) + warning
+    echo "WARN: REPO_ROOT não resolvido — set REPO_SYNC_ROOT manualmente" >&2
+    echo "$HOME/.local/share/dotfiles"
 end
 
 set -g REPO_ROOT (repo_root)
