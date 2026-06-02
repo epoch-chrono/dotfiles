@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# ============================================================================
+# pre-commit — dispatcher global de git hooks
+# ----------------------------------------------------------------------------
+# SemVer: 1.0.0
+#
+# Materializado em ~/.config/git/hooks/, que é o alvo do core.hooksPath global
+# do meu gitconfig. Roteia cada tipo de hook (pre-commit, commit-msg,
+# pre-push) pro pre-commit do repo atual QUANDO existe .pre-commit-config.yaml
+# na raiz. Sem config ou sem o binário pre-commit no PATH, é no-op silencioso
+# e o git segue normalmente — qualquer repo sem config fica intacto.
+#
+# Um único script cobre os 3 stages via basename "$0"; commit-msg e pre-push
+# são symlinks pra este arquivo. A delegação usa `pre-commit hook-impl`, o
+# mesmo mecanismo que `pre-commit install` gera — só que global e condicional,
+# dispensando `pre-commit install` por repo.
+#
+# Limitação: depende do pre-commit estar no PATH do contexto que dispara o
+# hook. Commits via terminal pegam; clientes GUI com PATH reduzido podem
+# no-opar (validação pulada, mas o commit nunca é bloqueado por engano).
+# ============================================================================
+set -euo pipefail
+
+hook_type="$(basename "$0")"
+hook_dir="$(cd "$(dirname "$0")" && pwd)"
+
+# Sem pre-commit no PATH ou sem config no repo: no-op, deixo o git seguir.
+command -v pre-commit >/dev/null 2>&1 || exit 0
+[ -f .pre-commit-config.yaml ] || exit 0
+
+exec pre-commit hook-impl \
+  --config=.pre-commit-config.yaml \
+  --hook-type="$hook_type" \
+  --hook-dir "$hook_dir" \
+  -- "$@"
