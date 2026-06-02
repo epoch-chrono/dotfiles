@@ -48,7 +48,7 @@ SHELL=/opt/homebrew/bin/zsh
 PATH={{ .chezmoi.homeDir }}/.local/bin:{{ .chezmoi.homeDir }}/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/libtool/libexec/gnubin:/opt/homebrew/opt/grep/libexec/gnubin:/opt/homebrew/opt/gpatch/libexec/gnubin:/opt/homebrew/opt/gnu-which/libexec/gnubin:/opt/homebrew/opt/gnu-tar/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/gnu-indent/libexec/gnubin:/opt/homebrew/opt/gawk/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/coreutils/libexec/gnubin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin
 
 # Brew — manutenção diária às 10:00
-00 10 * * * { echo -e "\n\n$(date)" && brew update; brew unlink mongodb-atlas-cli; brew upgrade nim; brew unlink nim; brew upgrade mongodb-atlas-cli; brew link --overwrite --force nim; brew unlink mongodb-atlas-cli; brew link --overwrite --force mongodb-atlas-cli;brew upgrade --formula; brew upgrade --cask --greedy-auto-updates; brew doctor; brew autoremove; brew cleanup --prune=all --scrub && rm -rf "$(brew --cache)"; } 2>&1 |tee -a /tmp/crontab_out_brew.log
+00 5 * * * { echo -e "\n\n$(date)" && brew update; brew upgrade --formula; brew upgrade --cask --greedy-auto-updates; brew doctor; brew autoremove; brew cleanup --prune=all --scrub && rm -rf "$(brew --cache)"; } 2>&1 |tee -a /tmp/crontab_out_brew.log
 CRONTAB_EOF
 
 echo "✓ crontab instalado pra usuário $(whoami)"
