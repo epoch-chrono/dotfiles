@@ -82,3 +82,10 @@ repos:
         language: system
         types: [file]
         pass_filenames: true
+
+      - id: validate-commit
+        name: "drift guard (órfãos .chezmoiremove + bump site.yml)"
+        entry: python3 hooks/validate-commit.py
+        language: system
+        pass_filenames: false
+        always_run: true

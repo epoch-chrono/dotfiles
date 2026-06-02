@@ -28,6 +28,7 @@ bootstrap.sh
 .gitleaks.toml
 .editorconfig
 docs/
+hooks/
 ansible/
 
 
